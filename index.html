@@ -17,16 +17,15 @@
         <aside id="sidebar">
             <div id="sidebar-header">
                 <h2>Klang Valley Forest Patches</h2>
-                <div class="header-buttons"> <!-- Added class for easier targeting -->
+                <div class="header-buttons"> 
                     <button id="dark-mode-toggle" title="Toggle Dark/Light Mode" aria-label="Toggle dark mode">🌓</button>
                     <button id="toggle-sidebar-btn" title="Toggle Sidebar" aria-label="Toggle sidebar" aria-expanded="true">‹</button>
                 </div>
             </div>
 
             <div class="sidebar-section" id="filter-section">
-                <h3>Filter by Category</h3> <!-- Simplified title -->
-                <!-- Checkboxes with color boxes by app.js -->
-            </div>
+                <h3>Filter by Category</h3> 
+                </div>
 
             <div class="sidebar-section" id="info-panel-section">
                 <h3>Patch Details</h3>
@@ -38,9 +37,9 @@
                 <div id="stats-content">
                     <p>Visible Patches: <span id="visible-patches-count">-</span></p>
                     <p>Total Area: <span id="visible-patches-area">-</span> ha</p>
+                    <p>Average ENN: <span id="visible-patches-enn">-</span> m</p>
                     <div id="tier-stats-breakdown">
-                        <!-- Tier stats by app.js -->
-                    </div>
+                        </div>
                 </div>
             </div>
 
@@ -48,7 +47,7 @@
                 <h3>Tools</h3>
                 <div id="search-geocoder-container"></div>
                 
-                <label for="basemap-toggle">Basemap:</label>
+               <label for="basemap-toggle" style="margin-top: 1em; display: block;">Basemap:</label>
                 <select id="basemap-toggle">
                     <option value="custom">Custom Style</option>
                     <option value="satellite">Satellite</option>
@@ -89,10 +88,9 @@
     <div id="about-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <span class="close-modal-btn" role="button" tabindex="0" aria-label="Close modal">×</span>
-            <h2>The Klang Valley Forest Patches Project</h2>
-            <p>This interactive map shows over 9,000 forest patches extracted from the Klang Valley region in Malaysia. Each patch is classified into one of several tiers using a four-step process that considers key ecological attributes: total area, core area, contiguity index, and perimeter-area ratio.</p>
-            <p>Some patches appear in black and are labelled "Excluded." These represent large monoculture plantations that the extraction algorithm could not reliably distinguish from natural forest due to their similar spectral or structural characteristics.</p>
-            <p>Built by Ben Galea</p>
+            <h2>Peninsular Malaysia Forest Patch Connectivity Project</h2>
+            <p>This interactive map shows over 14,000 forest patches extracted from the Klang Valley region in Malaysia. Each patch is classified into one of several tiers using a four-step process that considers key ecological attributes: total area, core area, contiguity index, perimeter-area ratio, and euclidean nearest-neighbor distance (ENN).</p>
+                        <p>Built by Benjamin Galea</p>
             <p>Contact bengalea97@gmail.com for any enquiries</p>
         </div>
     </div>
