@@ -5,7 +5,7 @@ const MAP_STYLE_SATELLITE = 'mapbox://styles/mapbox/satellite-streets-v12';
 
 // --- LAYER & ATTRIBUTE CONFIGURATION ---
 // Removed the accidental leading space. 
-const FOREST_PATCH_LAYER_ID = 'Klang Valley Forest Patches '; 
+const FOREST_PATCH_LAYER_ID = 'Klang Valley Forest Patches'; 
 
 // Updated to perfectly match the column headers from our R CSV
 const TIER_ATTRIBUTE = 'Tier'; 
