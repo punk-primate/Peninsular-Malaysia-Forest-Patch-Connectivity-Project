@@ -241,25 +241,39 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!map.isStyleLoaded()) setTimeout(applyForestFilter, 300);
             return;
         }
+        
         const checkedTiers = Array.from(document.querySelectorAll('.tier-toggle:checked')).map(cb => cb.value);
         const allFilters = [];
-        if (checkedTiers.length > 0 && checkedTiers.length < ALL_TIERS.length) {
-            allFilters.push(['in', ['get', TIER_ATTRIBUTE], ['literal', checkedTiers]]);
-        } else if (checkedTiers.length === 0) {
-            allFilters.push(['in', ['get', TIER_ATTRIBUTE], 'a_value_that_does_not_exist_123']);
+        
+        // 1. TIER FILTER (Using the robust 'match' expression)
+        if (checkedTiers.length === 0) {
+            allFilters.push(['==', ['get', TIER_ATTRIBUTE], 'NO_MATCH_POSSIBLE']);
+        } else if (checkedTiers.length < ALL_TIERS.length) {
+            allFilters.push(['match', ['get', TIER_ATTRIBUTE], checkedTiers, true, false]);
         }
-        const areaPropertyExpression = ['to-number', ['get', PATCH_AREA_ATTRIBUTE]]; 
+        
+        // 2. AREA FILTER (Reading the exact numeric property without forced conversions)
         if (currentMinArea !== null && !isNaN(currentMinArea)) {
-            allFilters.push(['>=', areaPropertyExpression, currentMinArea]);
+            allFilters.push(['>=', ['get', PATCH_AREA_ATTRIBUTE], currentMinArea]);
         }
         if (currentMaxArea !== null && !isNaN(currentMaxArea)) {
-            allFilters.push(['<=', areaPropertyExpression, currentMaxArea]);
+            allFilters.push(['<=', ['get', PATCH_AREA_ATTRIBUTE], currentMaxArea]);
         }
-        let combinedFilterExpression = allFilters.length === 0 ? null : (allFilters.length === 1 ? allFilters[0] : ['all', ...allFilters]);
-        console.log("DEBUG: Combined Filter Expression being applied:", JSON.stringify(combinedFilterExpression));
+        
+        // 3. COMBINE AND APPLY
+        let combinedFilterExpression = null;
+        if (allFilters.length > 0) {
+            combinedFilterExpression = ['all', ...allFilters];
+        }
+        
         try {
+            // Apply the filter to the map
             map.setFilter(FOREST_PATCH_LAYER_ID, combinedFilterExpression);
-            console.log(`DEBUG: Combined filter successfully applied to layer "${FOREST_PATCH_LAYER_ID}".`);
+            
+            // Immediately force the summary stats to update so they match the screen
+            if (typeof updateSummaryStatistics === 'function') {
+                setTimeout(updateSummaryStatistics, 100); 
+            }
         } catch (error) { 
             console.error(`DEBUG: Error applying combined filter:`, error); 
         }
