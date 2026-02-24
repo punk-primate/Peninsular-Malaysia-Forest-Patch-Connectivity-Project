@@ -6,7 +6,8 @@ const METRIC_DESCRIPTIONS = {
     [PATCH_AREA_ATTRIBUTE]: "Patch Area: The total land area of the forest patch in hectares (ha). This indicates the overall size of the habitat.",
     [CORE_AREA_ATTRIBUTE]: "Core Area: The area within a forest patch that is buffered from edge effects (e.g., changes in light, wind, temperature), in hectares (ha). It represents the more stable interior habitat critical for sensitive species.",
     [CONTIGUITY_INDEX_ATTRIBUTE]: "Contiguity Index: A measure of the spatial connectedness or compactness of cells within a patch. Values range from 0 to 1, where higher values indicate more contiguous, less fragmented patches, which is generally better for biodiversity.",
-    [PERIMETER_AREA_RATIO_ATTRIBUTE]: "Perimeter-Area Ratio: The ratio of the patch's perimeter to its area. A higher ratio often indicates a more elongated or irregular shape, leading to a greater proportion of edge habitat compared to core habitat."
+    [PERIMETER_AREA_RATIO_ATTRIBUTE]: "Perimeter-Area Ratio: The ratio of the patch's perimeter to its area. A higher ratio often indicates a more elongated or irregular shape, leading to a greater proportion of edge habitat compared to core habitat.",
+    [ENN_ATTRIBUTE]: "Euclidean Nearest-Neighbor (ENN): The shortest straight-line distance to the nearest neighboring forest patch, in meters. Lower values indicate greater spatial connectivity."
 };
 
 let metricPopup = null; // To keep track of the metric info popup
@@ -265,29 +266,61 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateSummaryStatistics() {
-        console.log("DEBUG: updateSummaryStatistics() EXECUTED (with tier breakdown).");
+        console.log("DEBUG: updateSummaryStatistics() EXECUTED (with tier breakdown and ENN).");
         const countEl = document.getElementById('visible-patches-count');
         const areaEl = document.getElementById('visible-patches-area');
+        const ennEl = document.getElementById('visible-patches-enn');
         const breakdownEl = document.getElementById('tier-stats-breakdown');
+        
         if (!countEl || !areaEl || !breakdownEl) { console.error("Stats elements not found!"); return; }
+        
         if (!map.isStyleLoaded() || !map.getLayer(FOREST_PATCH_LAYER_ID)) {
-             countEl.textContent = '-'; areaEl.textContent = '- ha'; breakdownEl.innerHTML = ''; return;
+             countEl.textContent = '-'; 
+             areaEl.textContent = '- ha'; 
+             if (ennEl) ennEl.textContent = '- m';
+             breakdownEl.innerHTML = ''; 
+             return;
         }
+        
         const features = map.queryRenderedFeatures({ layers: [FOREST_PATCH_LAYER_ID] });
         countEl.textContent = features.length.toLocaleString();
-        let overallTotalArea = 0; const tierStats = {};
+        
+        let overallTotalArea = 0; 
+        let overallTotalEnn = 0;
+        let validEnnCount = 0;
+        const tierStats = {};
+        
         const currentlyCheckedTiers = Array.from(document.querySelectorAll('.tier-toggle:checked')).map(cb => cb.value);
         currentlyCheckedTiers.forEach(tier => { tierStats[tier] = { count: 0, area: 0 }; });
+        
         features.forEach(feature => {
             const area = feature.properties[PATCH_AREA_ATTRIBUTE];
+            const enn = feature.properties[ENN_ATTRIBUTE];
+            
             if (area !== undefined && !isNaN(parseFloat(area))) overallTotalArea += parseFloat(area);
+            if (enn !== undefined && !isNaN(parseFloat(enn))) {
+                overallTotalEnn += parseFloat(enn);
+                validEnnCount++;
+            }
+            
             const tier = feature.properties[TIER_ATTRIBUTE];
             if (tier && tierStats.hasOwnProperty(tier)) {
                 tierStats[tier].count++;
                 if (area !== undefined && !isNaN(parseFloat(area))) tierStats[tier].area += parseFloat(area);
             }
         });
+        
         areaEl.textContent = overallTotalArea.toFixed(2).toLocaleString() + ' ha';
+        
+        if (ennEl) {
+            if (validEnnCount > 0) {
+                const avgEnn = overallTotalEnn / validEnnCount;
+                ennEl.textContent = avgEnn.toFixed(2).toLocaleString() + ' m';
+            } else {
+                ennEl.textContent = '- m';
+            }
+        }
+
         let breakdownHtml = '<h5>Breakdown by Visible Category:</h5>';
         if (features.length > 0 || currentlyCheckedTiers.length > 0 ) { 
              currentlyCheckedTiers.forEach(tier => {
