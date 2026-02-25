@@ -69,7 +69,7 @@ map.on('idle', () => {
         // Slight delay so the user can actually read the "boot sequence"
         setTimeout(() => {
             loadingIndicator.style.display = 'none';
-        }, 1500);
+        }, 3500);
     }
     updateSummaryStatistics();
 });
@@ -598,3 +598,4 @@ map.on('idle', () => {
         console.error("Sidebar toggle elements not found: #toggle-sidebar-btn, #sidebar, or #app-container.");
     }
 }); // End DOMContentLoaded
+
