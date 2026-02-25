@@ -1,59 +1,42 @@
 :root {
-    /* Light Mode (Default) Variables */
     --bg-primary: #ffffff; --bg-secondary: #f8f9fa; --bg-tertiary: #e9ecef;
     --text-primary: #212529; --text-secondary: #495057; --text-tertiary: #6c757d;
     --heading-color: #343a40;
-    --border-primary: #dee2e6; --border-secondary: #ced4da; --section-border-color: #e9ecef;
-    --accent-primary: #007bff; --accent-primary-hover: #0056b3;
-    --accent-secondary: #6c757d; --accent-secondary-hover: #545b62;
+    --border-primary: #dee2e6;
+    --accent-primary: #007bff;
     --text-on-accent: #ffffff;
-    --shadow-color: rgba(0, 0, 0, 0.1);
-    --map-bg: #e0e0e0;
-    --error-text: #721c24; --error-bg: #f8d7da; --error-border: #f5c6cb;
     --popup-bg: rgba(30, 30, 30, 0.9); --popup-text: #ffffff;
-    --legend-hover-bg: #e9ecef; --link-color: #007bff;
-    
-    /* Matrix/Forest Colors for Home Button */
-    --forest-dark: #0f380f;
-    --forest-bright: #9bbc0f;
 }
 
 body.dark-mode {
     --bg-primary: #121212; --bg-secondary: #1e1e1e; --bg-tertiary: #2d2d2d;
-    --text-primary: #e0e0e0; --text-secondary: #b0b0b0; --text-tertiary: #808080;
-    --heading-color: #ffffff;
-    --border-primary: #333333; --border-secondary: #444444; --section-border-color: #333333;
-    --accent-primary: #3d5afe; --accent-primary-hover: #536dfe;
-    --shadow-color: rgba(0, 0, 0, 0.5);
-    --map-bg: #1a1a1a;
-    --legend-hover-bg: #2d2d2d;
+    --text-primary: #e0e0e0; --heading-color: #ffffff;
+    --border-primary: #333333;
 }
 
-* { box-sizing: border-box; }
-body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
+body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
 
 #app-container { display: flex; width: 100%; height: 100vh; position: relative; }
 
-/* --- SIDEBAR & COLLAPSE LOGIC --- */
+/* --- SIDEBAR FIXES --- */
 #sidebar {
     width: 300px;
     height: 100%;
     background-color: var(--bg-secondary);
     border-right: 1px solid var(--border-primary);
-    display: flex;
-    flex-direction: column;
     transition: margin-left 0.3s ease;
     z-index: 1000;
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 #sidebar.collapsed {
-    margin-left: -300px; /* Completely hides the sidebar */
+    margin-left: -300px; /* Fully slides out */
 }
 
-/* --- SIDEBAR HEADER & HOME BUTTON --- */
 #sidebar-header {
-    padding: 20px 15px;
+    padding: 15px;
     border-bottom: 1px solid var(--border-primary);
 }
 
@@ -61,7 +44,7 @@ body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahom
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 #home-btn {
@@ -71,25 +54,11 @@ body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahom
     color: var(--accent-primary);
     padding: 4px 8px;
     border: 1.5px solid var(--accent-primary);
-    background: transparent;
-    transition: all 0.2s steps(4);
 }
 
-#home-btn:hover {
-    background-color: var(--accent-primary);
-    color: var(--text-on-accent);
-}
-
-#sidebar-header h2 {
-    font-size: 0.95rem;
-    margin: 0;
-    color: var(--heading-color);
-}
-
-/* --- TOGGLE BUTTON (Visible when collapsed) --- */
 #toggle-sidebar-btn {
     position: absolute;
-    right: -35px; /* Hangs off the side */
+    right: -35px; /* Floats outside sidebar */
     top: 15px;
     width: 35px;
     height: 35px;
@@ -99,19 +68,13 @@ body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahom
     border-radius: 0 5px 5px 0;
     cursor: pointer;
     z-index: 1100;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-primary);
 }
 
-/* Remaining Styles */
-#map-container { flex-grow: 1; position: relative; height: 100%; background-color: var(--map-bg); }
+#map-container { flex-grow: 1; position: relative; }
 #map { width: 100%; height: 100%; }
 
 .zoom-prompt-box {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: var(--popup-
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--popup-bg); color: #fff; padding: 10px 20px; border-radius: 5px; z-index: 1000;
+}
+.zoom-prompt-box.hidden { opacity: 0; pointer-events: none; }
