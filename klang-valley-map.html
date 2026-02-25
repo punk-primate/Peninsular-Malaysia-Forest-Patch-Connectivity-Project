@@ -13,37 +13,101 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="loading-indicator">
-        <div class="terminal-loader">
-            <div class="terminal-header">[ SYSTEM BOOT: FOREST_CONNECTIVITY_OS ]</div>
-            <p class="typing">> INITIALIZING GEOSPATIAL ENGINE...</p>
-            <p class="typing" style="animation-delay: 1.2s;">> LOADING KLANG_VALLEY_FORESTS.DB...</p>
-            <p class="typing" style="animation-delay: 2.4s;">> CALCULATING CONNECTIVITY TIERS...</p>
-           
-        </div>
-    </div>
-
     <div id="app-container">
         <aside id="sidebar">
             <div id="sidebar-header">
                 <h2>Klang Valley Forest Patches</h2>
                 <div class="header-buttons"> 
                     <button id="dark-mode-toggle" title="Toggle Dark/Light Mode" aria-label="Toggle dark mode">🌓</button>
-                    <button id="toggle-sidebar-btn" title="Toggle Sidebar">‹</button>
+                    <button id="toggle-sidebar-btn" title="Toggle Sidebar" aria-label="Toggle sidebar" aria-expanded="true">‹</button>
                 </div>
             </div>
-            </aside>
 
-        <main id="map-container">
-            <div id="map"></div>
-            <div id="zoom-warning" style="display: none;">
-                [ SYSTEM NOTICE ]<br>
-                ZOOM IN TO VIEW FOREST PATCHES
+            <div class="sidebar-section" id="filter-section">
+                <h3>Filter by Category</h3> 
+                </div>
+
+            <div class="sidebar-section" id="info-panel-section">
+                <h3>Patch Details</h3>
+                <div id="patch-info-content">Select a patch on the map.</div>
             </div>
-        </main>
+
+            <div class="sidebar-section" id="stats-section">
+                <h3>Summary Statistics</h3>
+                <div id="stats-content">
+                    <p>Visible Patches: <span id="visible-patches-count">-</span></p>
+                    <p>Total Area: <span id="visible-patches-area">- ha</span></p>
+                    <p>Average ENN: <span id="visible-patches-enn">- m</span></p>
+                    <div id="tier-stats-breakdown">
+                        </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section" id="tools-section">
+                <h3>Tools</h3>
+                <div id="search-geocoder-container"></div>
+                
+               <label for="basemap-toggle" style="margin-top: 1em; display: block;">Basemap:</label>
+                <select id="basemap-toggle">
+                    <option value="custom">Custom Style</option>
+                    <option value="satellite">Satellite</option>
+                </select>
+
+                <div id="area-filter-controls">
+                    <h4>Filter by Patch Area (ha)</h4>
+                    <div class="area-input-group">
+                        <label for="min-area-input">Min:</label>
+                        <input type="number" id="min-area-input" placeholder="0" min="0">
+                    </div>
+                    <div class="area-input-group">
+                        <label for="max-area-input">Max:</label>
+                        <input type="number" id="max-area-input" placeholder="e.g., 5000" min="0">
+                    </div>
+                    <div id="area-filter-error" class="filter-error-message" style="display: none;"></div>
+                    <div class="area-filter-buttons">
+                        <button id="apply-area-filter-btn">Apply Area</button>
+                        <button id="reset-area-filter-btn">Reset Area</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="sidebar-footer">
+                <button id="about-btn">About This Project</button>
+            </div>
+        </aside>
+
+       <main id="map-container">
+    <div id="map"></div>
+    
+    <div id="zoom-warning">
+        [ SYSTEM NOTICE ]<br>
+        ZOOM IN TO VIEW FOREST PATCHES
+    </div>
+
+    <div id="loading-indicator">
+        <div class="terminal-loader">
+            <p class="typing">> INITIALIZING GEOSPATIAL ENGINE...</p>
+            <p class="typing" style="animation-delay: 1s;">> LOADING KLANG_VALLEY_FRAGMENTS.DB...</p>
+            <p class="typing" style="animation-delay: 2s;">> CALCULATING CONNECTIVITY TIERS...</p>
+            <div class="spinner"></div>
+        </div>
+    </div>
+</main>
+    </div>
+
+    <div id="about-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-modal-btn" role="button" tabindex="0" aria-label="Close modal">×</span>
+            <h2>Peninsular Malaysia Forest Patch Connectivity Project</h2>
+            <p>This interactive map shows over 14,000 forest patches extracted from the Klang Valley region in Malaysia. Each patch is classified into one of several tiers using a Composite Habitat Suitability Index (CHSI), which combines key ecological attributes including total area, core area, contiguity, perimeter–area ratio, and Euclidean nearest-neighbour distance. The index standardises these metrics based on the landscape’s own statistical distribution and applies weighted scoring to prioritise interior habitat stability and connectivity. Patches are then grouped into six tiers, ranging from large core habitats to highly isolated micro patches. Click on the individual patches to view their details. </p>
+                        <p>Built by Benjamin Galea</p>
+            <p>Contact bengalea97@gmail.com for any enquiries</p>
+        </div>
     </div>
 
     <script src="config.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
+
+
