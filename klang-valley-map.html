@@ -10,14 +10,12 @@
     <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="app-container">
         <aside id="sidebar">
             <div id="sidebar-header">
-                <a href="index.html" id="home-btn">HOME</a>
                 <h2>Klang Valley Forest Patches</h2>
                 <div class="header-buttons"> 
                     <button id="dark-mode-toggle" title="Toggle Dark/Light Mode" aria-label="Toggle dark mode">🌓</button>
@@ -27,7 +25,7 @@
 
             <div class="sidebar-section" id="filter-section">
                 <h3>Filter by Category</h3> 
-            </div>
+                </div>
 
             <div class="sidebar-section" id="info-panel-section">
                 <h3>Patch Details</h3>
@@ -40,7 +38,8 @@
                     <p>Visible Patches: <span id="visible-patches-count">-</span></p>
                     <p>Total Area: <span id="visible-patches-area">- ha</span></p>
                     <p>Average ENN: <span id="visible-patches-enn">- m</span></p>
-                    <div id="tier-stats-breakdown"></div>
+                    <div id="tier-stats-breakdown">
+                        </div>
                 </div>
             </div>
 
@@ -48,22 +47,24 @@
                 <h3>Tools</h3>
                 <div id="search-geocoder-container"></div>
                 
-                <div class="tool-group">
-                    <label for="basemap-toggle">Basemap:</label>
-                    <select id="basemap-toggle">
-                        <option value="custom">Custom Dark</option>
-                        <option value="satellite">Satellite</option>
-                    </select>
-                </div>
+               <label for="basemap-toggle" style="margin-top: 1em; display: block;">Basemap:</label>
+                <select id="basemap-toggle">
+                    <option value="custom">Custom Style</option>
+                    <option value="satellite">Satellite</option>
+                </select>
 
-                <div id="area-filter-controls" class="tool-group">
-                    <label>Filter by Area (ha):</label>
-                    <div class="area-inputs">
-                        <input type="number" id="min-area-input" placeholder="Min">
-                        <span>-</span>
-                        <input type="number" id="max-area-input" placeholder="Max">
+                <div id="area-filter-controls">
+                    <h4>Filter by Patch Area (ha)</h4>
+                    <div class="area-input-group">
+                        <label for="min-area-input">Min:</label>
+                        <input type="number" id="min-area-input" placeholder="0" min="0">
                     </div>
-                    <div class="area-buttons">
+                    <div class="area-input-group">
+                        <label for="max-area-input">Max:</label>
+                        <input type="number" id="max-area-input" placeholder="e.g., 5000" min="0">
+                    </div>
+                    <div id="area-filter-error" class="filter-error-message" style="display: none;"></div>
+                    <div class="area-filter-buttons">
                         <button id="apply-area-filter-btn">Apply Area</button>
                         <button id="reset-area-filter-btn">Reset Area</button>
                     </div>
@@ -81,7 +82,6 @@
                 <div class="spinner"></div>
                 Loading Map...
             </div>
-            <div id="zoom-prompt" class="zoom-prompt-box">Zoom in to view forest patches</div>
         </main>
     </div>
 
@@ -90,7 +90,7 @@
             <span class="close-modal-btn" role="button" tabindex="0" aria-label="Close modal">×</span>
             <h2>Peninsular Malaysia Forest Patch Connectivity Project</h2>
             <p>This interactive map shows over 14,000 forest patches extracted from the Klang Valley region in Malaysia. Each patch is classified into one of several tiers using a four-step process that considers key ecological attributes: total area, core area, contiguity index, perimeter-area ratio, and euclidean nearest-neighbor distance (ENN).</p>
-            <p>Built by Benjamin Galea</p>
+                        <p>Built by Benjamin Galea</p>
             <p>Contact bengalea97@gmail.com for any enquiries</p>
         </div>
     </div>
