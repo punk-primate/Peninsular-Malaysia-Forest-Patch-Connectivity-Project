@@ -303,3 +303,31 @@ body.modal-open .modal-content {
     opacity: 0;
     visibility: hidden;
 }
+
+/* Home Button Styling */
+#home-btn {
+    text-decoration: none;
+    font-size: 1.4rem;
+    color: var(--accent-primary);
+    margin-right: 15px;
+    padding: 5px 10px;
+    border: 1px solid var(--border-primary);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#home-btn:hover {
+    background-color: var(--accent-primary);
+    color: var(--text-on-accent);
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 10px var(--accent-primary);
+}
+
+/* Adjust visibility when sidebar is collapsed */
+#sidebar.collapsed #home-btn {
+    margin-right: 0;
+    margin-bottom: 15px;
+}
