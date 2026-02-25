@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Peninsular Malaysia Forest Patch Connectivity Project</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Retro Forest Theme Colors */
+        :root {
+            --forest-dark: #0f380f;
+            --forest-medium: #306230;
+            --forest-light: #8bac0f;
+            --forest-bright: #9bbc0f;
+        }
+
+        body {
+            background-color: var(--forest-dark);
+            color: var(--forest-bright);
+            font-family: 'Press Start 2P', cursive;
+            text-align: center;
+            margin: 0;
+            padding: 50px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            /* Creates a subtle pixel-grid background */
+            background-image: 
+                linear-gradient(var(--forest-medium) 1px, transparent 1px),
+                linear-gradient(90deg, var(--forest-medium) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        h1 {
+            font-size: 28px;
+            line-height: 1.6;
+            margin-bottom: 60px;
+            text-shadow: 4px 4px 0 var(--forest-medium);
+            max-width: 800px;
+        }
+
+        .map-container {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* 8-bit Style Map Cards */
+        .region-card {
+            background-color: var(--forest-medium);
+            border: 4px solid var(--forest-light);
+            padding: 30px;
+            text-decoration: none;
+            color: var(--forest-bright);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 220px;
+            /* steps() makes the animation look choppy and retro */
+            transition: transform 0.2s steps(4), box-shadow 0.2s steps(4), background-color 0.2s;
+            box-shadow: 8px 8px 0 var(--forest-dark);
+        }
+
+        .region-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 12px 18px 0 var(--forest-dark);
+            background-color: var(--forest-light);
+            color: var(--forest-dark);
+            border-color: var(--forest-bright);
+        }
+
+        .region-title {
+            margin-top: 25px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .status {
+            font-size: 10px;
+            margin-top: 10px;
+            opacity: 0.8;
+        }
+
+        .disabled {
+            cursor: not-allowed;
+            filter: grayscale(0.5);
+        }
+        
+        .disabled:hover {
+            transform: none;
+            box-shadow: 8px 8px 0 var(--forest-dark);
+            background-color: var(--forest-medium);
+            color: var(--forest-bright);
+            border-color: var(--forest-light);
+        }
+
+        /* Placeholder pixel shapes for the maps */
+        .pixel-outline {
+            width: 120px;
+            height: 120px;
+            background-color: var(--forest-bright);
+            transition: background-color 0.2s;
+        }
+
+        .region-card:hover .pixel-outline {
+            background-color: var(--forest-dark);
+        }
+
+        /* Blocky, abstract shapes mimicking region outlines */
+        .klang-shape {
+            clip-path: polygon(10% 20%, 40% 10%, 90% 30%, 80% 80%, 30% 90%, 0% 50%);
+        }
+
+        .kuantan-shape {
+            clip-path: polygon(30% 0%, 100% 20%, 90% 100%, 40% 80%, 0% 60%);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>The Peninsular Malaysia<br>Forest Patch Connectivity Project</h1>
+    
+    <div class="map-container">
+        <a href="klang-valley-map.html" class="region-card">
+            <div class="pixel-outline klang-shape"></div>
+            <div class="region-title">Klang Valley</div>
+            <div class="status">[ ACTIVE ]</div>
+        </a>
+
+        <a href="#" class="region-card disabled" title="Map data currently under development">
+            <div class="pixel-outline kuantan-shape"></div>
+            <div class="region-title">Kuantan</div>
+            <div class="status">[ IN PROGRESS ]</div>
+        </a>
+    </div>
+
+</body>
+</html>
