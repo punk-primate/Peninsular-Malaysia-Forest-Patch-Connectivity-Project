@@ -27,6 +27,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingIndicator = document.getElementById('loading-indicator');
     loadingIndicator.style.display = 'block';
 
+    // --- NEW ZOOM PROMPT LOGIC ---
+    const zoomPrompt = document.getElementById('zoom-prompt');
+    const ZOOM_THRESHOLD = 11; 
+
+    function updateZoomPrompt() {
+        if (!zoomPrompt) return;
+        if (map.getZoom() >= ZOOM_THRESHOLD) {
+            zoomPrompt.classList.add('hidden');
+        } else {
+            zoomPrompt.classList.remove('hidden');
+        }
+    }
+
+    map.on('load', updateZoomPrompt);
+    map.on('zoom', updateZoomPrompt);
+    // ----------------------------------
+
     let selectedPatchMapboxId = null;
     let currentMinArea = null;
     let currentMaxArea = null;
