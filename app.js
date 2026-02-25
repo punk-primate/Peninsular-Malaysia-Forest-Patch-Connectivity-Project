@@ -32,22 +32,49 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentMaxArea = null;
 
     map.on('load', () => {
-        console.log('Map "load" event fired.');
-        if (map.getSource('mapbox-dem')) {
-            map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
-        } else {
-            console.log("mapbox-dem source NOT found.");
-        }
-        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    console.log('Map "load" event fired.');
 
-        initializeTierFilters();
-        initializeHoverPopups();
-        initializeClickInfoPanel();
-        initializeGeocoder();
-        initializeBasemapToggle();
-        initializeAreaFilterControls();
-        console.log('Map ready, UI elements being initialized.');
-    });
+    // 1. Terrain and Environment Setup
+    if (map.getSource('mapbox-dem')) {
+        map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+    } else {
+        console.log("mapbox-dem source NOT found.");
+    }
+
+    // 2. Navigation Controls
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+    // 3. UI and Feature Initializations
+    initializeTierFilters();
+    initializeHoverPopups();
+    initializeClickInfoPanel();
+    initializeGeocoder();
+    initializeBasemapToggle();
+    initializeAreaFilterControls();
+    
+    console.log('Map ready, UI elements being initialized.');
+
+    // 4. Zoom Warning Logic
+    const warningBox = document.getElementById('zoom-warning');
+    // Threshold where forest patches typically render/disappear
+    const PATCH_VISIBILITY_THRESHOLD = 11; 
+
+    const checkZoomLevel = () => {
+        const currentZoom = map.getZoom();
+        if (currentZoom < PATCH_VISIBILITY_THRESHOLD) {
+            warningBox.style.display = 'block';
+        } else {
+            warningBox.style.display = 'none';
+        }
+    };
+
+    // Trigger the check every time the user zooms
+    map.on('zoom', checkZoomLevel);
+
+    // Initial check: ensures the message shows up if the map 
+    // loads at a zoom level lower than 11.
+    checkZoomLevel();
+});
 
     map.on('idle', () => {
         console.log('Map "idle" event fired.');
