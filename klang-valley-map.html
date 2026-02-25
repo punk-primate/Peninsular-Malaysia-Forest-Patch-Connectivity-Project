@@ -4,13 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Klang Valley Forest Patches</title>
-
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -49,7 +47,6 @@
             <div class="sidebar-section" id="tools-section">
                 <h3>Tools</h3>
                 <div id="search-geocoder-container"></div>
-                
                 <div class="tool-group">
                     <label for="basemap-toggle">Basemap:</label>
                     <select id="basemap-toggle">
@@ -57,7 +54,6 @@
                         <option value="satellite">Satellite</option>
                     </select>
                 </div>
-
                 <div id="area-filter-controls" class="tool-group">
                     <label>Filter by Area (ha):</label>
                     <div class="area-inputs">
