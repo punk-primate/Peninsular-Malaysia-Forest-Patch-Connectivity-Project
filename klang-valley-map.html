@@ -85,13 +85,21 @@
     </div>
 
     <div id="loading-indicator">
-        <div class="terminal-loader">
-            <p class="typing">> INITIALIZING GEOSPATIAL ENGINE...</p>
-            <p class="typing" style="animation-delay: 1s;">> LOADING KLANG_VALLEY_FRAGMENTS.DB...</p>
-            <p class="typing" style="animation-delay: 2s;">> CALCULATING CONNECTIVITY TIERS...</p>
-            <div class="spinner"></div>
-        </div>
+    <div class="terminal-loader">
+        <div class="terminal-header">[ SYSTEM BOOT: FOREST_CONNECTIVITY_OS ]</div>
+        <p class="typing">> INITIALIZING GEOSPATIAL ENGINE...</p>
+        <p class="typing">> LOADING KLANG_VALLEY_FRAGMENTS.DB (14,000+)...</p>
+        <p class="typing">> CALCULATING CONNECTIVITY TIERS...</p>
+        <p class="typing">> SYSTEM READY. ENJOY YOUR RESEARCH, BEN.</p>
+        <div class="spinner"></div>
     </div>
+</div>
+
+<div id="zoom-warning" style="display: none;">
+    [ SYSTEM NOTICE ]<br>
+    ZOOM IN TO VIEW FOREST PATCHES
+</div>
+           
 </main>
     </div>
 
@@ -109,6 +117,7 @@
     <script src="app.js"></script>
 </body>
 </html>
+
 
 
 
