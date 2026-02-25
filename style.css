@@ -1,101 +1,51 @@
-:root {
-    --bg-primary: #ffffff; --bg-secondary: #f8f9fa; --bg-tertiary: #e9ecef;
-    --text-primary: #212529; --text-secondary: #495057; --text-tertiary: #6c757d;
-    --heading-color: #343a40;
-    --border-primary: #dee2e6; --border-secondary: #ced4da; --section-border-color: #e9ecef;
-    --accent-primary: #007bff; --accent-primary-hover: #0056b3;
-    --text-on-accent: #ffffff;
-    --shadow-color: rgba(0, 0, 0, 0.1);
-    --popup-bg: rgba(30, 30, 30, 0.9); --popup-text: #ffffff;
-}
-
-body.dark-mode {
-    --bg-primary: #121212; --bg-secondary: #1e1e1e; --bg-tertiary: #2d2d2d;
-    --text-primary: #e0e0e0; --heading-color: #ffffff;
-    --border-primary: #333333; --shadow-color: rgba(0, 0, 0, 0.5);
-}
-
-body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
-
-#app-container { display: flex; width: 100%; height: 100vh; position: relative; }
-
-/* --- SIDEBAR FIXES --- */
-#sidebar {
-    width: 300px;
-    height: 100%;
-    background-color: var(--bg-secondary);
-    border-right: 1px solid var(--border-primary);
-    transition: margin-left 0.3s ease;
-    z-index: 1000;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-}
-
-#sidebar.collapsed {
-    margin-left: -300px;
-}
-
-#sidebar-header {
-    padding: 20px 15px;
-    border-bottom: 1px solid var(--border-primary);
-}
-
-.header-top-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
+/* Add this to the TOP of your style.css */
 #home-btn {
-    text-decoration: none;
+    display: inline-block;
     font-family: 'Press Start 2P', cursive;
     font-size: 0.55rem;
     color: var(--accent-primary);
-    padding: 4px 8px;
     border: 1.5px solid var(--accent-primary);
-    background: transparent;
-    transition: all 0.2s steps(4);
+    padding: 4px 8px;
+    text-decoration: none;
+    margin-bottom: 12px;
+    transition: all 0.2s;
 }
 
 #home-btn:hover {
-    background-color: var(--accent-primary);
-    color: var(--text-on-accent);
+    background: var(--accent-primary);
+    color: white;
 }
 
-#sidebar-header h2 { font-size: 0.95rem; margin: 0; color: var(--heading-color); }
-
-.header-buttons { display: flex; gap: 8px; }
-
-#toggle-sidebar-btn {
-    position: absolute;
-    right: -35px; /* Ensures button is visible when sidebar is hidden */
-    top: 15px;
-    width: 35px;
-    height: 35px;
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-primary);
-    border-left: none;
-    border-radius: 0 5px 5px 0;
-    cursor: pointer;
-    z-index: 1100;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* Fix for the Sidebar Peek */
+#sidebar {
+    transition: margin-left 0.3s ease; /* Use margin-left for a clean exit */
 }
 
-/* --- RESTORE ORIGINAL SECTION STYLES --- */
-.sidebar-section { padding: 15px; border-bottom: 1px solid var(--section-border-color); }
-.sidebar-section h3 { font-size: 0.9rem; margin-top: 0; margin-bottom: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+#sidebar.collapsed {
+    margin-left: -300px; /* Moves the whole sidebar off-screen */
+    width: 300px; /* Keep width stable */
+}
 
-#map-container { flex-grow: 1; position: relative; height: 100%; }
-#map { width: 100%; height: 100%; }
-
+/* Styles for the Zoom Prompt */
 .zoom-prompt-box {
-    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-    background: var(--popup-bg); color: #fff; padding: 10px 20px; border-radius: 5px; z-index: 1000;
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--popup-bg);
+    color: var(--popup-text);
+    padding: 10px 20px;
+    border-radius: 5px;
+    z-index: 1000;
+    pointer-events: none;
     transition: opacity 0.3s ease;
 }
-.zoom-prompt-box.hidden { opacity: 0; pointer-events: none; }
+
+.zoom-prompt-box.hidden {
+    opacity: 0;
+}
+
+/* Ensure Toggle Button stays visible */
+#toggle-sidebar-btn {
+    z-index: 1100;
+}
