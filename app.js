@@ -1,4 +1,3 @@
-
 // --- VERY TOP OF app.js for file loading check ---
 console.log("--- app.js LATEST (Improved Modal, Stats on Idle, Info Icons) - Timestamp: " + new Date().toLocaleTimeString() + " ---");
 
@@ -33,32 +32,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentMaxArea = null;
 
     map.on('load', () => {
-    console.log('Map "load" event fired.');
-
-    // 1. Terrain and Environment Setup
+    // Standard initialization logic
     if (map.getSource('mapbox-dem')) {
         map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
-    } else {
-        console.log("mapbox-dem source NOT found.");
     }
-
-    // 2. Navigation Controls
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-    // 3. UI and Feature Initializations
     initializeTierFilters();
     initializeHoverPopups();
     initializeClickInfoPanel();
     initializeGeocoder();
     initializeBasemapToggle();
     initializeAreaFilterControls();
-    
-    console.log('Map ready, UI elements being initialized.');
 
-    // 4. Zoom Warning Logic
+    // --- ZOOM WARNING LOGIC ---
     const warningBox = document.getElementById('zoom-warning');
-    // Threshold where forest patches typically render/disappear
-    const PATCH_VISIBILITY_THRESHOLD = 11; 
+    const PATCH_VISIBILITY_THRESHOLD = 11; // Matches your forest patch minzoom
 
     const checkZoomLevel = () => {
         const currentZoom = map.getZoom();
@@ -69,21 +58,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Trigger the check every time the user zooms
     map.on('zoom', checkZoomLevel);
-
-    // Initial check: ensures the message shows up if the map 
-    // loads at a zoom level lower than 11.
-    checkZoomLevel();
+    checkZoomLevel(); // Run once on load
 });
 
-    map.on('idle', () => {
-        console.log('Map "idle" event fired.');
-        loadingIndicator.style.display = 'none';
-        console.log("DEBUG: Map is idle. Updating summary statistics for current view.");
-        updateSummaryStatistics();
-    });
-
+// Update the idle listener to hide the terminal loader
+map.on('idle', () => {
+    const loadingIndicator = document.getElementById('loading-indicator');
+    if (loadingIndicator) {
+        // Slight delay so the user can actually read the "boot sequence"
+        setTimeout(() => {
+            loadingIndicator.style.display = 'none';
+        }, 1500);
+    }
+    updateSummaryStatistics();
+});
     map.on('error', (e) => {
         console.error('Mapbox GL Error:', e);
         if (loadingIndicator) {
