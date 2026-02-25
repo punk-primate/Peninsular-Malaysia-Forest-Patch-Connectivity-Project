@@ -28,14 +28,12 @@
             justify-content: center;
             min-height: 100vh;
             overflow: hidden;
-            /* Retro Grid Background */
             background-image: 
                 linear-gradient(var(--forest-medium) 1px, transparent 1px),
                 linear-gradient(90deg, var(--forest-medium) 1px, transparent 1px);
             background-size: 20px 20px;
         }
 
-        /* Scanline Effect Overlay */
         body::before {
             content: " ";
             display: block;
@@ -100,7 +98,7 @@
             border-color: white;
         }
 
-        /* --- FLAT 2D MAP SHAPES --- */
+        /* --- ABSTRACT MAP SHAPES --- */
         .shape-wrapper {
             height: 120px;
             display: flex;
@@ -110,23 +108,21 @@
         }
 
         .map-shape {
-            width: 80px;
-            height: 80px;
+            width: 90px;
+            height: 90px;
             background-color: var(--forest-bright);
             transition: transform 0.4s steps(4), background-color 0.2s;
             position: relative;
-            /* 2D Initial State */
-            transform: rotate(0deg);
         }
 
-        /* Klang Valley - 2D Hexagon */
+        /* Klang Valley - Irregular Urban/Inland Hub Shape */
         .klang-shape {
-            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+            clip-path: polygon(20% 10%, 80% 0%, 100% 40%, 70% 60%, 90% 100%, 30% 90%, 0% 50%, 10% 30%);
         }
 
-        /* Kuantan - 2D Diamond */
+        /* Kuantan - Elongated Coastal/Inland Shape */
         .kuantan-shape {
-            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            clip-path: polygon(40% 0%, 100% 20%, 80% 50%, 100% 80%, 40% 100%, 20% 70%, 0% 80%, 10% 20%);
         }
 
         /* 2D Pivot Animation */
@@ -164,14 +160,12 @@
         footer a {
             color: var(--forest-bright);
             text-decoration: underline;
-            transition: color 0.2s;
         }
 
         footer a:hover {
             color: white;
             background-color: var(--forest-medium);
         }
-
     </style>
 </head>
 <body>
@@ -189,7 +183,7 @@
             <div class="status">[ LOAD SECTOR ]</div>
         </a>
 
-        <a href="#" class="region-card disabled" title="System Data Locked">
+        <a href="#" class="region-card disabled">
             <div class="shape-wrapper">
                 <div class="map-shape kuantan-shape"></div>
             </div>
@@ -199,8 +193,8 @@
     </div>
 
     <footer>
-        Built by <a href="https://www.researchgate.net/profile/Benjamin-Galea" target="_blank">Benjamin Galea</a>. 
-        For more questions, contact <a href="mailto:bengalea97@gmail.com">bengalea97@gmail.com</a>.
+        Built by <a href="https://www.researchgate.net/profile/Benjamin-Galea" target="_blank">Benjamin Galea</a>. <br>
+        For any questions, contact <a href="mailto:bengalea97@gmail.com">bengalea97@gmail.com</a>
     </footer>
 
 </body>
