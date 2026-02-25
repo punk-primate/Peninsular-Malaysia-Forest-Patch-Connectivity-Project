@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     
     <style>
+        /* Retro Forest Theme Colors */
         :root {
             --forest-dark: #0f380f;
             --forest-medium: #306230;
@@ -27,6 +28,7 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
+            /* Creates a subtle pixel-grid background */
             background-image: 
                 linear-gradient(var(--forest-medium) 1px, transparent 1px),
                 linear-gradient(90deg, var(--forest-medium) 1px, transparent 1px);
@@ -48,6 +50,7 @@
             flex-wrap: wrap;
         }
 
+        /* 8-bit Style Map Cards */
         .region-card {
             background-color: var(--forest-medium);
             border: 4px solid var(--forest-light);
@@ -58,6 +61,7 @@
             flex-direction: column;
             align-items: center;
             width: 220px;
+            /* steps() makes the animation look choppy and retro */
             transition: transform 0.2s steps(4), box-shadow 0.2s steps(4), background-color 0.2s;
             box-shadow: 8px 8px 0 var(--forest-dark);
         }
@@ -95,23 +99,21 @@
             border-color: var(--forest-light);
         }
 
-        .pixel-outline {
-            width: 120px;
+        /* Styles for the new Emoji Icons */
+        .pixel-icon {
+            font-size: 55px;
             height: 120px;
-            background-color: var(--forest-bright);
-            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Gives the emojis a blocky 8-bit shadow */
+            filter: drop-shadow(4px 4px 0px var(--forest-dark));
+            transition: transform 0.2s steps(3);
         }
 
-        .region-card:hover .pixel-outline {
-            background-color: var(--forest-dark);
-        }
-
-        .klang-shape {
-            clip-path: polygon(10% 20%, 40% 10%, 90% 30%, 80% 80%, 30% 90%, 0% 50%);
-        }
-
-        .kuantan-shape {
-            clip-path: polygon(30% 0%, 100% 20%, 90% 100%, 40% 80%, 0% 60%);
+        /* Makes the icons "jump" slightly when you hover over the card */
+        .region-card:hover .pixel-icon {
+            transform: translateY(-5px);
         }
     </style>
 </head>
@@ -121,13 +123,13 @@
     
     <div class="map-container">
         <a href="klang-valley-map.html" class="region-card">
-            <div class="pixel-outline klang-shape"></div>
+            <div class="pixel-icon">🏙️🐒</div>
             <div class="region-title">Klang Valley</div>
             <div class="status">[ ACTIVE ]</div>
         </a>
 
         <a href="#" class="region-card disabled" title="Map data currently under development">
-            <div class="pixel-outline kuantan-shape"></div>
+            <div class="pixel-icon">🌊🌴</div>
             <div class="region-title">Kuantan</div>
             <div class="status">[ IN PROGRESS ]</div>
         </a>
