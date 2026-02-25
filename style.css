@@ -331,3 +331,57 @@ body.modal-open .modal-content {
     margin-right: 0;
     margin-bottom: 15px;
 }
+
+/* Sidebar Header Layout */
+#sidebar-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 15px;
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.header-main-group {
+    display: flex;
+    flex-direction: column; /* Stacks button above title for better space */
+    align-items: flex-start;
+    gap: 8px;
+}
+
+/* Retro HOME Button Styling */
+#home-btn {
+    text-decoration: none;
+    font-size: 0.65rem; /* Small 8-bit style */
+    font-family: 'Press Start 2P', cursive;
+    color: var(--accent-primary);
+    padding: 5px 8px;
+    border: 2px solid var(--accent-primary);
+    background: transparent;
+    transition: all 0.2s steps(4);
+    display: inline-block;
+}
+
+#home-btn:hover {
+    background-color: var(--accent-primary);
+    color: var(--text-on-accent);
+    box-shadow: 3px 3px 0px var(--forest-dark);
+}
+
+/* Fix for the H2 title to ensure it doesn't overlap */
+#sidebar-header h2 {
+    font-size: 0.9rem;
+    margin: 0;
+    line-height: 1.4;
+    color: var(--heading-color);
+}
+
+/* Adjustments for when sidebar is collapsed */
+#sidebar.collapsed .header-main-group {
+    align-items: center;
+}
+
+#sidebar.collapsed #home-btn {
+    font-size: 0.5rem;
+    padding: 4px;
+    margin-bottom: 10px;
+}
