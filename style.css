@@ -47,8 +47,8 @@ body {
     border-right: 1px solid var(--border-primary); z-index: 10; flex-shrink: 0;
 }
 #sidebar.collapsed {
-    width: 30px; 
-    padding: 10px 0; 
+    width: 25px; 
+    padding: 5px 0; 
     overflow: hidden; 
     box-shadow: none; 
     align-items: center;
@@ -278,4 +278,28 @@ body.modal-open .modal-content {
 #metric-info-popup .close-metric-popup-btn:focus {
     background-color: var(--accent-secondary-hover);
     outline: none; 
+}
+/* Zoom Prompt Styles */
+.zoom-prompt-box {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--popup-bg);
+    color: var(--popup-text);
+    padding: 10px 20px;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px var(--shadow-color);
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 1000;
+    pointer-events: none;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    opacity: 1;
+    visibility: visible;
+}
+
+.zoom-prompt-box.hidden {
+    opacity: 0;
+    visibility: hidden;
 }
