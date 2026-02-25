@@ -20,8 +20,7 @@
             color: var(--forest-bright);
             font-family: 'Press Start 2P', cursive;
             text-align: center;
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -34,6 +33,7 @@
             background-size: 20px 20px;
         }
 
+        /* Scanline Overlay */
         body::before {
             content: " ";
             display: block;
@@ -48,16 +48,12 @@
         .title-container {
             margin-bottom: 60px;
             z-index: 10;
-            padding: 0 20px;
         }
 
         h1 {
-            font-size: 22px;
+            font-size: 20px;
             line-height: 1.8;
             text-shadow: 4px 4px 0 var(--forest-medium);
-            max-width: 900px;
-            margin: 0;
-            display: inline;
         }
 
         .cursor {
@@ -95,77 +91,52 @@
             background-color: var(--forest-light);
             color: var(--forest-dark);
             box-shadow: 15px 20px 0 var(--forest-dark);
-            border-color: white;
         }
 
-        /* --- ABSTRACT MAP SHAPES --- */
-        .shape-wrapper {
+        /* --- 3D "HILL" CONTOUR STACK --- */
+        .hill-stack {
             height: 120px;
+            width: 120px;
+            position: relative;
+            margin-bottom: 25px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 25px;
         }
 
-        .map-shape {
-            width: 90px;
-            height: 90px;
-            background-color: var(--forest-bright);
-            transition: transform 0.4s steps(4), background-color 0.2s;
-            position: relative;
+        .layer {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background-color: transparent;
+            border: 2px solid var(--forest-bright);
+            transition: all 0.5s steps(5);
         }
 
-        /* Klang Valley - Irregular Urban/Inland Hub Shape */
-        .klang-shape {
-            clip-path: polygon(20% 10%, 80% 0%, 100% 40%, 70% 60%, 90% 100%, 30% 90%, 0% 50%, 10% 30%);
-        }
+        /* Create the "Peak" through scale and offset */
+        .layer-1 { transform: scale(0.4) translateY(-30px); opacity: 1; z-index: 4; }
+        .layer-2 { transform: scale(0.6) translateY(-20px); opacity: 0.7; z-index: 3; }
+        .layer-3 { transform: scale(0.8) translateY(-10px); opacity: 0.4; z-index: 2; }
+        .layer-4 { transform: scale(1.0) translateY(0px); opacity: 0.2; z-index: 1; }
 
-        /* Kuantan - Elongated Coastal/Inland Shape */
-        .kuantan-shape {
-            clip-path: polygon(40% 0%, 100% 20%, 80% 50%, 100% 80%, 40% 100%, 20% 70%, 0% 80%, 10% 20%);
-        }
+        /* Abstract Shapes */
+        .klang-path { clip-path: polygon(20% 10%, 80% 0%, 100% 40%, 70% 60%, 90% 100%, 30% 90%, 0% 50%, 10% 30%); }
+        .kuantan-path { clip-path: polygon(40% 0%, 100% 20%, 80% 50%, 100% 80%, 40% 100%, 20% 70%, 0% 80%, 10% 20%); }
 
-        /* 2D Pivot Animation */
-        .region-card:hover .map-shape {
-            transform: rotate(180deg) scale(1.1);
+        /* Hover: Pivot and Flatten into 2D */
+        .region-card:hover .layer {
+            transform: rotate(180deg) scale(0.9) translateY(0);
+            border-color: var(--forest-dark);
+            opacity: 1;
             background-color: white;
         }
 
-        .region-title {
-            font-size: 11px;
-            margin-top: 10px;
-            letter-spacing: 1px;
-        }
+        .region-title { font-size: 11px; margin-top: 10px; }
+        .status { font-size: 9px; margin-top: 20px; opacity: 0.8; }
+        .disabled { opacity: 0.4; cursor: not-allowed; }
 
-        .status {
-            font-size: 9px;
-            margin-top: 20px;
-            opacity: 0.8;
-        }
-
-        .disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-
-        /* Footer Styles */
-        footer {
-            z-index: 10;
-            font-size: 10px;
-            line-height: 2;
-            max-width: 800px;
-            padding: 0 20px;
-        }
-
-        footer a {
-            color: var(--forest-bright);
-            text-decoration: underline;
-        }
-
-        footer a:hover {
-            color: white;
-            background-color: var(--forest-medium);
-        }
+        footer { z-index: 10; font-size: 10px; line-height: 2; }
+        footer a { color: var(--forest-bright); text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -176,16 +147,22 @@
     
     <div class="map-container">
         <a href="klang-valley-map.html" class="region-card">
-            <div class="shape-wrapper">
-                <div class="map-shape klang-shape"></div>
+            <div class="hill-stack">
+                <div class="layer layer-1 klang-path"></div>
+                <div class="layer layer-2 klang-path"></div>
+                <div class="layer layer-3 klang-path"></div>
+                <div class="layer layer-4 klang-path"></div>
             </div>
             <div class="region-title">KLANG VALLEY</div>
             <div class="status">[ LOAD SECTOR ]</div>
         </a>
 
         <a href="#" class="region-card disabled">
-            <div class="shape-wrapper">
-                <div class="map-shape kuantan-shape"></div>
+            <div class="hill-stack">
+                <div class="layer layer-1 kuantan-path"></div>
+                <div class="layer layer-2 kuantan-path"></div>
+                <div class="layer layer-3 kuantan-path"></div>
+                <div class="layer layer-4 kuantan-path"></div>
             </div>
             <div class="region-title">KUANTAN</div>
             <div class="status">[ LOCKED ]</div>
