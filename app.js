@@ -31,27 +31,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentMinArea = null;
     let currentMaxArea = null;
 
-    map.on('load', () => {
-    // Standard initialization logic
-    if (map.getSource('mapbox-dem')) {
-        map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
-    }
-    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+  map.on('load', () => {
+    // ... all your existing initializers (initializeTierFilters, etc.)
 
-    initializeTierFilters();
-    initializeHoverPopups();
-    initializeClickInfoPanel();
-    initializeGeocoder();
-    initializeBasemapToggle();
-    initializeAreaFilterControls();
-
-    // --- ZOOM WARNING LOGIC ---
     const warningBox = document.getElementById('zoom-warning');
-    const PATCH_VISIBILITY_THRESHOLD = 11; // Matches your forest patch minzoom
+    const PATCH_VISIBILITY_THRESHOLD = 11; 
 
     const checkZoomLevel = () => {
-        const currentZoom = map.getZoom();
-        if (currentZoom < PATCH_VISIBILITY_THRESHOLD) {
+        if (map.getZoom() < PATCH_VISIBILITY_THRESHOLD) {
             warningBox.style.display = 'block';
         } else {
             warningBox.style.display = 'none';
@@ -59,27 +46,24 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     map.on('zoom', checkZoomLevel);
-    checkZoomLevel(); // Run once on load
+    checkZoomLevel();
 });
 
-// Update the idle listener to hide the terminal loader
+// THE UPDATED IDLE LISTENER
 map.on('idle', () => {
     const loadingIndicator = document.getElementById('loading-indicator');
     if (loadingIndicator) {
-        // Slight delay so the user can actually read the "boot sequence"
+        // We set a 5000ms (5 second) delay. 
+        // This gives the "typing" animations in the CSS enough time to finish.
         setTimeout(() => {
-            loadingIndicator.style.display = 'none';
-        }, 1500);
+            loadingIndicator.style.opacity = '0';
+            setTimeout(() => {
+                loadingIndicator.style.display = 'none';
+            }, 500); // Smooth fade out
+        }, 5000);
     }
     updateSummaryStatistics();
 });
-    map.on('error', (e) => {
-        console.error('Mapbox GL Error:', e);
-        if (loadingIndicator) {
-            loadingIndicator.innerHTML = '<div class="spinner"></div>Error loading map. <br>Check console.';
-            loadingIndicator.style.display = 'block';
-        }
-    });
 
     function initializeTierFilters() {
         console.log("DEBUG: initializeTierFilters() function EXECUTED (with color boxes).");
@@ -598,4 +582,5 @@ map.on('idle', () => {
         console.error("Sidebar toggle elements not found: #toggle-sidebar-btn, #sidebar, or #app-container.");
     }
 }); // End DOMContentLoaded
+
 
