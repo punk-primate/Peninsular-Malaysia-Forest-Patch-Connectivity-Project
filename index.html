@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     
     <style>
-        /* Retro Forest Theme Colors */
         :root {
             --forest-dark: #0f380f;
             --forest-medium: #306230;
@@ -28,19 +27,57 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            /* Creates a subtle pixel-grid background */
+            overflow: hidden;
+            /* Retro Grid Background */
             background-image: 
                 linear-gradient(var(--forest-medium) 1px, transparent 1px),
                 linear-gradient(90deg, var(--forest-medium) 1px, transparent 1px);
             background-size: 20px 20px;
         }
 
-        h1 {
-            font-size: 28px;
-            line-height: 1.6;
+        /* Scanline Effect (Matrix Overlay) */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+        }
+
+        /* Typewriter Animation for Title */
+        .title-container {
+            display: inline-block;
             margin-bottom: 60px;
+            max-width: 900px;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 24px;
+            line-height: 1.8;
+            margin: 0;
+            display: inline;
             text-shadow: 4px 4px 0 var(--forest-medium);
-            max-width: 800px;
+        }
+
+        /* The Blinking Cursor */
+        .cursor {
+            display: inline-block;
+            width: 15px;
+            height: 24px;
+            background-color: var(--forest-bright);
+            margin-left: 10px;
+            vertical-align: middle;
+            animation: blink 0.8s steps(2) infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
         }
 
         .map-container {
@@ -48,9 +85,10 @@
             gap: 40px;
             justify-content: center;
             flex-wrap: wrap;
+            position: relative;
+            z-index: 3;
         }
 
-        /* 8-bit Style Map Cards */
         .region-card {
             background-color: var(--forest-medium);
             border: 4px solid var(--forest-light);
@@ -61,7 +99,6 @@
             flex-direction: column;
             align-items: center;
             width: 220px;
-            /* steps() makes the animation look choppy and retro */
             transition: transform 0.2s steps(4), box-shadow 0.2s steps(4), background-color 0.2s;
             box-shadow: 8px 8px 0 var(--forest-dark);
         }
@@ -75,7 +112,7 @@
         }
 
         .region-title {
-            margin-top: 25px;
+            margin-top: 15px;
             font-size: 14px;
             line-height: 1.5;
         }
@@ -99,37 +136,51 @@
             border-color: var(--forest-light);
         }
 
-        /* Styles for the new Emoji Icons */
-        .pixel-icon {
-            font-size: 55px;
-            height: 120px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            /* Gives the emojis a blocky 8-bit shadow */
-            filter: drop-shadow(4px 4px 0px var(--forest-dark));
-            transition: transform 0.2s steps(3);
+        .ascii-icon {
+            font-family: monospace; 
+            font-size: 18px;
+            line-height: 1.1;
+            margin-bottom: 10px;
+            text-align: left;
+            display: inline-block;
+            font-weight: bold;
+            color: var(--forest-bright);
+            text-shadow: 2px 2px 0 var(--forest-dark);
+            transition: transform 0.2s steps(3), color 0.2s;
         }
 
-        /* Makes the icons "jump" slightly when you hover over the card */
-        .region-card:hover .pixel-icon {
+        .region-card:hover .ascii-icon {
             transform: translateY(-5px);
+            color: var(--forest-dark);
+            text-shadow: none;
         }
     </style>
 </head>
 <body>
 
-    <h1>The Peninsular Malaysia<br>Forest Patch Connectivity Project</h1>
+    <div class="title-container">
+        <h1>The Peninsular Malaysia<br>Forest Patch Connectivity Project</h1><span class="cursor"></span>
+    </div>
     
     <div class="map-container">
         <a href="klang-valley-map.html" class="region-card">
-            <div class="pixel-icon">🏙️🐒</div>
+            <pre class="ascii-icon">
+  /\   _ 
+ //\\ | |
+///\\\|_|
+  ||     
+            </pre>
             <div class="region-title">Klang Valley</div>
             <div class="status">[ ACTIVE ]</div>
         </a>
 
         <a href="#" class="region-card disabled" title="Map data currently under development">
-            <div class="pixel-icon">🌊🌴</div>
+            <pre class="ascii-icon">
+  /\  ~ ~
+ //\\  ~ 
+///\\\~ ~
+  ||     
+            </pre>
             <div class="region-title">Kuantan</div>
             <div class="status">[ IN PROGRESS ]</div>
         </a>
