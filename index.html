@@ -3,25 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Peninsular Malaysia Forest Connectivity</title>
+    <title>Peninsular Malaysia Forest Project</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI&family=Ubuntu:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            /* PS2 System Menu Colors */
-            --ps-blue-dark: #000033;
-            --ps-blue-glow: #0000cc;
-            --ps-gold: #d4af37;
-            --ps-gold-bright: #fff380;
-            --ps-trans-white: rgba(255, 255, 255, 0.1);
+            --aeroblue: #00aaff;
+            --aerogreen: #44cc44;
+            --glass: rgba(255, 255, 255, 0.3);
+            --gloss: linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 50%);
         }
 
         body {
-            background: radial-gradient(circle, #000044 0%, #000011 100%);
-            color: white;
-            font-family: 'Press Start 2P', cursive;
             margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', 'Ubuntu', sans-serif;
+            /* Classic Frutiger Aero Aurora Background */
+            background: linear-gradient(135deg, #0055ff, #00ccff, #66ff66);
+            background-size: 400% 400%;
+            animation: aurora 15s ease infinite;
             height: 100vh;
             display: flex;
             flex-direction: column;
@@ -30,136 +31,137 @@
             overflow: hidden;
         }
 
-        /* Analog Scanline Jitter Overlay */
-        body::after {
-            content: "";
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
-            background-size: 100% 3px;
-            z-index: 10;
-            pointer-events: none;
-            opacity: 0.3;
+        /* Moving background animation */
+        @keyframes aurora {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
-        /* Typewriter Title with PS2 Glow */
+        /* Glossy Bubbles in the background */
+        .bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            filter: blur(8px);
+            z-index: 1;
+        }
+
         .title-container {
-            margin-bottom: 80px;
+            position: relative;
+            z-index: 10;
             text-align: center;
-            animation: fadeIn 2s ease-in;
+            margin-bottom: 50px;
         }
 
         h1 {
-            font-size: 18px;
-            line-height: 2;
-            color: #fff;
-            text-shadow: 0 0 10px var(--ps-blue-glow), 0 0 20px var(--ps-blue-glow);
+            color: white;
+            font-size: 2.5rem;
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            font-weight: 700;
+            letter-spacing: -1px;
         }
 
-        .cursor {
-            display: inline-block;
-            width: 12px;
-            height: 20px;
-            background-color: var(--ps-gold);
-            animation: blink 0.6s steps(2) infinite;
-        }
-
+        /* Glassmorphism navigation buttons */
         .map-container {
             display: flex;
-            gap: 50px;
-            z-index: 5;
+            gap: 40px;
+            position: relative;
+            z-index: 10;
         }
 
-        /* The "Memory Card" Buttons */
-        .region-card {
-            position: relative;
-            width: 200px;
-            height: 240px;
-            background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.2));
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            text-decoration: none;
-            color: white;
+        .region-sphere {
+            width: 220px;
+            height: 220px;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%);
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease-out;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            text-decoration: none;
+            color: white;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), inset 0 0 20px rgba(255,255,255,0.2);
+            overflow: hidden;
         }
 
-        /* Hover Effect: Turns Gold like a selected menu item */
-        .region-card:hover {
-            border-color: var(--ps-gold);
-            transform: scale(1.1) rotateX(10deg);
-            background: linear-gradient(145deg, rgba(212,175,55,0.1), rgba(212,175,55,0.3));
-            box-shadow: 0 0 25px var(--ps-blue-glow);
+        /* The Glossy Overlay */
+        .region-sphere::before {
+            content: "";
+            position: absolute;
+            top: 5%;
+            left: 15%;
+            width: 70%;
+            height: 40%;
+            background: var(--gloss);
+            border-radius: 50% 50% 40% 40%;
+            pointer-events: none;
         }
 
-        /* PS1/PS2 Style "Low-Poly" Geometric Icons */
-        .poly-icon {
-            width: 80px;
-            height: 80px;
-            background: var(--ps-blue-glow);
-            margin-bottom: 30px;
-            position: relative;
-            box-shadow: inset -5px -5px 0 rgba(0,0,0,0.3), inset 5px 5px 0 rgba(255,255,255,0.2);
-        }
-
-        /* Makes the "Klang Valley" icon a blocky forest-gem shape */
-        .klang-icon {
-            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-            background: #00aa00;
-        }
-
-        /* Makes the "Kuantan" icon a blocky ocean-gem shape */
-        .kuantan-icon {
-            clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
-            background: #0055ff;
+        .region-sphere:hover {
+            transform: scale(1.1) translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), inset 0 0 40px rgba(255,255,255,0.4);
+            border-color: white;
         }
 
         .region-title {
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            text-align: center;
-            padding: 0 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 10px;
         }
 
-        .status {
-            font-size: 8px;
-            margin-top: 15px;
-            color: var(--ps-gold);
+        .status-tag {
+            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.3);
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-top: 10px;
+            border: 1px solid rgba(255,255,255,0.5);
         }
 
         .disabled {
-            opacity: 0.4;
+            opacity: 0.6;
             cursor: not-allowed;
-            filter: saturate(0);
+            filter: grayscale(0.8);
         }
 
-        @keyframes blink { 0% { opacity: 1; } 100% { opacity: 0; } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .disabled:hover {
+            transform: none;
+        }
+
+        /* Icon styling */
+        .icon-placeholder {
+            font-size: 3rem;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.5));
+        }
 
     </style>
 </head>
 <body>
 
+    <div class="bubble" style="width: 200px; height: 200px; top: 10%; left: 5%;"></div>
+    <div class="bubble" style="width: 150px; height: 150px; bottom: 15%; right: 10%;"></div>
+    <div class="bubble" style="width: 80px; height: 80px; top: 40%; right: 25%;"></div>
+
     <div class="title-container">
-        <h1>PENINSULAR MALAYSIA<br>FOREST CONNECTIVITY</h1>
-        <span class="cursor"></span>
+        <h1>Peninsular Malaysia Forest Connectivity</h1>
     </div>
     
     <div class="map-container">
-        <a href="klang-valley-map.html" class="region-card">
-            <div class="poly-icon klang-icon"></div>
+        <a href="klang-valley-map.html" class="region-sphere">
+            <div class="icon-placeholder">🌿</div>
             <div class="region-title">Klang Valley</div>
-            <div class="status">SELECT SECTOR</div>
+            <div class="status-tag">Enter Map</div>
         </a>
 
-        <a href="#" class="region-card disabled">
-            <div class="poly-icon kuantan-icon"></div>
+        <a href="#" class="region-sphere disabled">
+            <div class="icon-placeholder">💧</div>
             <div class="region-title">Kuantan</div>
-            <div class="status">DATA CORRUPT</div>
+            <div class="status-tag">Coming Soon</div>
         </a>
     </div>
 
