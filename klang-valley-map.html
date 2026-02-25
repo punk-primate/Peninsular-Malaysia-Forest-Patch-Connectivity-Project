@@ -76,19 +76,23 @@
             </div>
         </aside>
 
-        <main id="map-container">
+       <main id="map-container">
     <div id="map"></div>
     
-    <div id="zoom-warning" style="display: none;">
+    <div id="zoom-warning">
         [ SYSTEM NOTICE ]<br>
         ZOOM IN TO VIEW FOREST PATCHES
     </div>
 
-    <div id="loading-indicator" style="display: none;">
-        <div class="spinner"></div>
-                Loading Map...
-            </div>
-        </main>
+    <div id="loading-indicator">
+        <div class="terminal-loader">
+            <p class="typing">> INITIALIZING GEOSPATIAL ENGINE...</p>
+            <p class="typing" style="animation-delay: 1s;">> LOADING KLANG_VALLEY_FRAGMENTS.DB...</p>
+            <p class="typing" style="animation-delay: 2s;">> CALCULATING CONNECTIVITY TIERS...</p>
+            <div class="spinner"></div>
+        </div>
+    </div>
+</main>
     </div>
 
     <div id="about-modal" class="modal" style="display:none;">
@@ -105,5 +109,6 @@
     <script src="app.js"></script>
 </body>
 </html>
+
 
 
