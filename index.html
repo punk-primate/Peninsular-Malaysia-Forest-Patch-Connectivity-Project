@@ -102,7 +102,7 @@
             border-color: white;
         }
 
-        /* --- 3D WIREFRAME MESH (CENTERED) --- */
+        /* --- 3D WIREFRAME MESH (CENTERED & CLEANED) --- */
         .mesh-container {
             height: 150px;
             width: 150px;
@@ -114,12 +114,14 @@
         }
 
         .wireframe-mesh {
-            width: 120px;
-            height: 120px;
+            width: 100px;
+            height: 100px;
             transform: rotateX(60deg) rotateZ(-45deg);
             transform-style: preserve-3d;
             transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+            /* Extra centering fix */
+            margin: auto;
         }
 
         .mesh-layer {
@@ -128,30 +130,21 @@
             width: 100%; height: 100%;
             fill: none;
             stroke: var(--forest-bright);
-            /* Bolder lines */
-            stroke-width: 3; 
+            stroke-width: 3.5; /* Bolder lines */
             transition: all 0.3s;
         }
 
-        .layer-top { transform: translateZ(45px); opacity: 1; stroke-width: 4; }
+        /* 3D Vertical stacking */
+        .layer-top { transform: translateZ(45px); opacity: 1; stroke-width: 4.5; }
         .layer-mid { transform: translateZ(22px); opacity: 0.7; }
         .layer-base { transform: translateZ(0); opacity: 0.4; }
 
-        .ribs {
-            position: absolute;
-            width: 100%; height: 100%;
-            stroke: var(--forest-bright);
-            stroke-width: 1.5;
-            opacity: 0.5;
-        }
-
         /* Hover: Pivot and Flatten */
         .region-card:hover .wireframe-mesh {
-            transform: rotateX(0deg) rotateZ(135deg) scale(0.85);
+            transform: rotateX(0deg) rotateZ(135deg) scale(0.9);
         }
 
-        .region-card:hover .mesh-layer,
-        .region-card:hover .ribs {
+        .region-card:hover .mesh-layer {
             transform: translateZ(0);
             stroke: var(--forest-dark);
             opacity: 1;
@@ -179,7 +172,6 @@
                     <svg viewBox="0 0 100 100" class="mesh-layer layer-base"><path d="M10,50 Q25,10 50,10 T90,50 T50,90 T10,50" /></svg>
                     <svg viewBox="0 0 100 100" class="mesh-layer layer-mid"><path d="M25,50 Q35,25 50,25 T75,50 T50,75 T25,50" /></svg>
                     <svg viewBox="0 0 100 100" class="mesh-layer layer-top"><path d="M40,50 Q45,40 50,40 T60,50 T50,60 T40,50" /></svg>
-                    <svg viewBox="0 0 100 100" class="ribs"><line x1="50" y1="10" x2="50" y2="40" stroke-dasharray="3,3" /></svg>
                 </div>
             </div>
             <div class="region-title">KLANG VALLEY</div>
@@ -189,9 +181,9 @@
         <a href="#" class="region-card disabled">
             <div class="mesh-container">
                 <div class="wireframe-mesh">
-                    <svg viewBox="0 0 100 100" class="mesh-layer layer-base"><path d="M10,10 L90,20 L80,90 L20,80 Z" /></svg>
-                    <svg viewBox="0 0 100 100" class="mesh-layer layer-mid"><path d="M30,30 L70,35 L65,70 L35,65 Z" /></svg>
-                    <svg viewBox="0 0 100 100" class="mesh-layer layer-top"><path d="M45,45 L55,47 L53,55 L47,53 Z" /></svg>
+                    <svg viewBox="0 0 100 100" class="mesh-layer layer-base"><path d="M15,15 L85,25 L75,85 L25,75 Z" /></svg>
+                    <svg viewBox="0 0 100 100" class="mesh-layer layer-mid"><path d="M35,35 L65,40 L60,65 L40,60 Z" /></svg>
+                    <svg viewBox="0 0 100 100" class="mesh-layer layer-top"><path d="M48,48 L52,49 L51,52 L49,51 Z" /></svg>
                 </div>
             </div>
             <div class="region-title">KUANTAN</div>
