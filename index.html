@@ -26,13 +26,14 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            overflow: hidden;
+            overflow-x: hidden;
             background-image: 
                 linear-gradient(var(--forest-medium) 1px, transparent 1px),
                 linear-gradient(90deg, var(--forest-medium) 1px, transparent 1px);
             background-size: 20px 20px;
         }
 
+        /* Scanline Overlay */
         body::before {
             content: " ";
             display: block;
@@ -54,6 +55,8 @@
             line-height: 1.8;
             text-shadow: 4px 4px 0 var(--forest-medium);
             padding: 0 20px;
+            margin: 0;
+            display: inline;
         }
 
         .cursor {
@@ -73,6 +76,7 @@
             gap: 50px;
             z-index: 10;
             margin-bottom: 60px;
+            justify-content: center;
         }
 
         .region-card {
@@ -85,6 +89,9 @@
             transition: all 0.2s steps(4);
             box-shadow: 10px 10px 0 var(--forest-dark);
             perspective: 1000px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .region-card:hover {
@@ -95,7 +102,7 @@
             border-color: white;
         }
 
-        /* --- 3D WIREFRAME MESH --- */
+        /* --- 3D WIREFRAME MESH (CENTERED) --- */
         .mesh-container {
             height: 150px;
             width: 150px;
@@ -103,12 +110,12 @@
             align-items: center;
             justify-content: center;
             margin-bottom: 10px;
+            position: relative;
         }
 
         .wireframe-mesh {
             width: 120px;
             height: 120px;
-            /* The 3D isometric tilt */
             transform: rotateX(60deg) rotateZ(-45deg);
             transform-style: preserve-3d;
             transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
@@ -121,31 +128,31 @@
             width: 100%; height: 100%;
             fill: none;
             stroke: var(--forest-bright);
-            stroke-width: 1.5;
+            /* Bolder lines */
+            stroke-width: 3; 
             transition: all 0.3s;
         }
 
-        /* Stack layers vertically to create the "hill" volume */
-        .layer-top { transform: translateZ(40px); opacity: 1; stroke-width: 2.5; }
-        .layer-mid { transform: translateZ(20px); opacity: 0.6; }
-        .layer-base { transform: translateZ(0); opacity: 0.3; }
+        .layer-top { transform: translateZ(45px); opacity: 1; stroke-width: 4; }
+        .layer-mid { transform: translateZ(22px); opacity: 0.7; }
+        .layer-base { transform: translateZ(0); opacity: 0.4; }
 
-        /* Cross-connecting lines (The "Ribs") */
         .ribs {
             position: absolute;
             width: 100%; height: 100%;
             stroke: var(--forest-bright);
-            stroke-width: 0.5;
-            opacity: 0.4;
+            stroke-width: 1.5;
+            opacity: 0.5;
         }
 
         /* Hover: Pivot and Flatten */
         .region-card:hover .wireframe-mesh {
-            transform: rotateX(0deg) rotateZ(135deg) scale(0.8);
+            transform: rotateX(0deg) rotateZ(135deg) scale(0.85);
         }
 
-        .region-card:hover .mesh-layer {
-            transform: translateZ(0); /* Collapses the hill into a flat map */
+        .region-card:hover .mesh-layer,
+        .region-card:hover .ribs {
+            transform: translateZ(0);
             stroke: var(--forest-dark);
             opacity: 1;
         }
@@ -156,6 +163,7 @@
 
         footer { z-index: 10; font-size: 10px; line-height: 2; margin-top: 20px;}
         footer a { color: var(--forest-bright); text-decoration: underline; }
+        footer a:hover { color: white; background-color: var(--forest-medium); }
     </style>
 </head>
 <body>
@@ -171,7 +179,7 @@
                     <svg viewBox="0 0 100 100" class="mesh-layer layer-base"><path d="M10,50 Q25,10 50,10 T90,50 T50,90 T10,50" /></svg>
                     <svg viewBox="0 0 100 100" class="mesh-layer layer-mid"><path d="M25,50 Q35,25 50,25 T75,50 T50,75 T25,50" /></svg>
                     <svg viewBox="0 0 100 100" class="mesh-layer layer-top"><path d="M40,50 Q45,40 50,40 T60,50 T50,60 T40,50" /></svg>
-                    <svg viewBox="0 0 100 100" class="ribs"><line x1="50" y1="10" x2="50" y2="40" stroke-dasharray="2,2" /></svg>
+                    <svg viewBox="0 0 100 100" class="ribs"><line x1="50" y1="10" x2="50" y2="40" stroke-dasharray="3,3" /></svg>
                 </div>
             </div>
             <div class="region-title">KLANG VALLEY</div>
