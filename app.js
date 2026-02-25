@@ -8,47 +8,32 @@ document.addEventListener('DOMContentLoaded', () => {
         zoom: INITIAL_ZOOM,
     });
 
-    const loadingIndicator = document.getElementById('loading-indicator');
     const zoomPrompt = document.getElementById('zoom-prompt');
-    const ZOOM_THRESHOLD = 11;
-
-    function updateZoomPrompt() {
+    const updateZoom = () => {
         if (!zoomPrompt) return;
-        map.getZoom() >= ZOOM_THRESHOLD ? zoomPrompt.classList.add('hidden') : zoomPrompt.classList.remove('hidden');
-    }
+        map.getZoom() >= 11 ? zoomPrompt.classList.add('hidden') : zoomPrompt.classList.remove('hidden');
+    };
 
-    map.on('load', () => {
-        loadingIndicator.style.display = 'none';
-        updateZoomPrompt();
-    });
+    map.on('zoom', updateZoom);
+    map.on('load', updateZoom);
 
-    map.on('zoom', updateZoomPrompt);
-
-    // --- SIDEBAR TOGGLE LOGIC ---
-    const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
+    // SIDEBAR TOGGLE
+    const toggleBtn = document.getElementById('toggle-sidebar-btn');
     const sidebar = document.getElementById('sidebar');
 
-    if (toggleSidebarBtn && sidebar) {
-        toggleSidebarBtn.addEventListener('click', () => {
+    if (toggleBtn && sidebar) {
+        toggleBtn.addEventListener('click', () => {
             sidebar.classList.toggle('collapsed');
-            
-            // Adjust map size after sidebar animation finishes
-            setTimeout(() => {
-                map.resize();
-            }, 305);
-
-            // Update arrow icon
-            toggleSidebarBtn.textContent = sidebar.classList.contains('collapsed') ? '›' : '‹';
+            setTimeout(() => { map.resize(); }, 305);
+            toggleBtn.textContent = sidebar.classList.contains('collapsed') ? '›' : '‹';
         });
     }
 
-    // --- DARK MODE LOGIC ---
-    const toggleButton = document.getElementById('dark-mode-toggle');
-    if (toggleButton) {
-        toggleButton.addEventListener('click', () => {
+    // DARK MODE
+    const darkBtn = document.getElementById('dark-mode-toggle');
+    if (darkBtn) {
+        darkBtn.addEventListener('click', () => {
             document.body.classList.toggle('dark-mode');
-            const isDark = document.body.classList.contains('dark-mode');
-            toggleButton.textContent = isDark ? '☀️' : '🌓';
         });
     }
 });
