@@ -1,166 +1,131 @@
-/* Import the retro font used on the homepage */
+/* Import retro font */
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 :root {
-    /* HIGH-CONTRAST LIGHT MODE (Parchment & Forest) */
-    --bg-primary: #f4f4e4;          /* Light parchment background */
-    --bg-secondary: #e2e2c7;        /* Slightly darker parchment for sidebar */
-    --bg-tertiary: #0f380f;         /* Deepest forest for primary text/borders */
+    /* LIGHT MODE: Ultra-Clean "Paper" Aesthetic */
+    --bg-primary: #ffffff;           /* Pure white for clarity */
+    --bg-secondary: #f0f0e0;         /* Very light parchment for sidebar */
+    --bg-tertiary: #0f380f;          /* Deepest green for text/borders */
     --text-primary: #0f380f;        
     --text-secondary: #306230;
-    --text-tertiary: #0f380f;
     --heading-color: #0f380f;
     --border-primary: #0f380f; 
-    --border-secondary: #306230; 
-    --section-border-color: #0f380f;
     --accent-primary: #306230; 
-    --accent-primary-hover: #0f380f;
-    --accent-secondary: #0f380f; 
-    --accent-secondary-hover: #ffffff;
-    --text-on-accent: #f4f4e4;
-    --shadow-color: rgba(0, 0, 0, 0.2);
-    --map-bg: #dcdcc6;
-    --error-text: #ffffff; --error-bg: #491217; --error-border: #721c24;
-    --popup-bg: #0f380f; --popup-text: #f4f4e4;
-    --legend-hover-bg: #dcdcc6; --link-color: #306230;
-    
-    /* UI Element Overrides */
-    --input-bg-color: #ffffff; 
-    --input-border-color: #0f380f;
+    --text-on-accent: #ffffff;
+    --input-bg-color: #ffffff;
+    --map-overlay: transparent;
 }
 
 body.dark-mode {
-    /* HIGH-CONTRAST DARK MODE (Deep Forest & Neon Green) */
-    --bg-primary: #0a240a;          /* Very dark green background */
-    --bg-secondary: #0f380f;        /* Forest-dark sidebar */
-    --bg-tertiary: #9bbc0f;         /* Bright green for borders/accents */
-    --text-primary: #9bbc0f;        /* High visibility text */
+    /* DARK MODE: High-Contrast "Terminal" Aesthetic */
+    --bg-primary: #050a05;           /* Near black */
+    --bg-secondary: #0f1a0f;         /* Deep dark green sidebar */
+    --bg-tertiary: #9bbc0f;          /* Bright "GameBoy" green for borders */
+    --text-primary: #9bbc0f;        
     --text-secondary: #8bac0f;      
-    --text-tertiary: #8bac0f;
-    --heading-color: #ffffff;       /* Pure white for headers to pop */
+    --heading-color: #ffffff;        /* White headers for maximum pop */
     --border-primary: #9bbc0f; 
-    --border-secondary: #8bac0f; 
-    --section-border-color: #9bbc0f;
     --accent-primary: #9bbc0f; 
-    --accent-primary-hover: #ffffff;
-    --accent-secondary: #0a240a; 
-    --accent-secondary-hover: #9bbc0f;
-    --input-bg-color: #0a240a; 
-    --input-border-color: #9bbc0f;
-    --map-bg: #051205;
-    --modal-bg-color: #0f380f; --modal-shadow-color: rgba(0,0,0,0.9);
-    --hover-popup-bg: #0f380f; --hover-popup-text: #9bbc0f;
-    --error-text: #f5c6cb; --error-bg: #491217; --error-border: #721c24;
-    --legend-hover-bg: #0a240a; --link-color: #9bbc0f;
+    --text-on-accent: #050a05;
+    --input-bg-color: #000000;
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    font-family: 'Courier New', Courier, monospace; /* Monospace for retro-neatness */
     margin: 0; color: var(--text-primary); background-color: var(--bg-primary);
-    line-height: 1.5; font-size: 14px;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    line-height: 1.4; font-size: 14px; overflow: hidden;
 }
 
-#app-container { display: flex; height: 100vh; overflow: hidden; }
+#app-container { display: flex; height: 100vh; width: 100vw; }
 
+/* --- SIDEBAR: Crisp & Organized --- */
 #sidebar {
-    width: 350px; background-color: var(--bg-secondary); padding: 18px;
-    box-shadow: 4px 0 0 var(--border-primary); display: flex; flex-direction: column;
-    overflow-y: auto; z-index: 10; flex-shrink: 0;
-    border-right: 2px solid var(--border-primary);
-    position: relative;
+    width: 340px; 
+    background-color: var(--bg-secondary); 
+    padding: 20px;
+    border-right: 4px solid var(--border-primary);
+    display: flex; flex-direction: column;
+    z-index: 10; flex-shrink: 0;
+    box-shadow: none; /* Removed muddy shadows */
 }
-
-/* Sidebar Scanline - strictly restricted to sidebar only */
-#sidebar::after {
-    content: " ";
-    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.05) 50%);
-    background-size: 100% 4px;
-    pointer-events: none;
-    z-index: 11;
-}
-
-#sidebar.collapsed { width: 45px; padding: 10px 0; align-items: center; }
-#sidebar.collapsed > .sidebar-section,
-#sidebar.collapsed > #sidebar-footer,
-#sidebar.collapsed > #sidebar-header > h2 { display: none; }
 
 #sidebar-header {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 20px; border-bottom: 4px solid var(--border-primary); padding-bottom: 12px;
+    border-bottom: 4px solid var(--border-primary);
+    margin-bottom: 20px; padding-bottom: 10px;
 }
 
 #sidebar-header h2 { 
-    margin: 0; font-family: 'Press Start 2P', cursive;
-    font-size: 0.75em; font-weight: normal; color: var(--heading-color); 
+    font-family: 'Press Start 2P', cursive;
+    font-size: 10px; line-height: 1.6;
+    margin: 0; color: var(--heading-color); 
 }
-
-.header-buttons button {
-    background: var(--bg-primary); border: 2px solid var(--border-primary);
-    padding: 6px; cursor: pointer; color: var(--text-primary);
-}
-
-.header-buttons button:hover { background: var(--border-primary); color: var(--bg-secondary); }
 
 .sidebar-section h3 {
     font-family: 'Press Start 2P', cursive;
-    font-size: 0.6em; color: var(--heading-color);
-    margin-bottom: 15px; padding-bottom: 5px; border-bottom: 2px solid var(--border-primary);
+    font-size: 8px; border-left: 6px solid var(--border-primary);
+    padding-left: 8px; margin: 20px 0 10px 0;
+    color: var(--heading-color);
 }
 
-#patch-info-content {
-    font-size: 0.8em; background-color: var(--bg-primary);
-    border: 2px solid var(--border-primary); padding: 10px;
-    box-shadow: 4px 4px 0 var(--border-primary);
-}
-
-/* Form Elements */
-#tools-section select, #area-filter-controls input {
+/* --- FORM ELEMENTS: Sharp Edges --- */
+select, input {
     width: 100%; padding: 8px; margin-bottom: 10px;
-    border: 2px solid var(--border-primary); background-color: var(--input-bg-color);
-    color: var(--text-primary); font-family: inherit;
+    border: 2px solid var(--border-primary);
+    background-color: var(--input-bg-color);
+    color: var(--text-primary);
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold; border-radius: 0;
 }
 
-.area-filter-buttons button, #about-btn {
-    width: 100%; padding: 12px; font-family: 'Press Start 2P', cursive;
-    font-size: 0.6em; background: var(--accent-primary); color: var(--text-on-accent);
-    border: none; cursor: pointer; margin-top: 10px;
-    box-shadow: 4px 4px 0 var(--border-primary);
+button {
+    font-family: 'Press Start 2P', cursive; font-size: 8px;
+    cursor: pointer; border: 2px solid var(--border-primary);
+    background: var(--bg-primary); color: var(--text-primary);
+    padding: 10px; border-radius: 0; transition: transform 0.1s;
 }
 
-.area-filter-buttons button:hover, #about-btn:hover {
-    background: var(--accent-primary-hover);
-    transform: translate(-1px, -1px);
+button:hover {
+    background: var(--border-primary);
+    color: var(--bg-primary);
 }
 
-/* Map Visibility Fix: Ensure no background patterns or colors cover the map area */
+/* --- MAP: Visibility Fix --- */
 #map-container { 
     flex-grow: 1; 
-    position: relative; 
-    background-color: var(--map-bg); 
-    overflow: hidden;
+    position: relative;
+    background: #000; /* Base for map loading */
 }
 
-#map { width: 100%; height: 100%; }
-
-/* Modal Styles */
-.modal-content {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 4px solid var(--border-primary);
-    padding: 30px; font-family: inherit;
-    box-shadow: 8px 8px 0 var(--border-primary);
+#map { 
+    position: absolute; top: 0; bottom: 0; width: 100%; 
+    z-index: 1; /* Ensures it stays behind the sidebar but above the container */
 }
 
-.modal-content h2 { font-family: 'Press Start 2P', cursive; font-size: 0.8em; }
-
-/* Custom Popup Aesthetics */
-.mapboxgl-popup-content {
-    background-color: var(--bg-tertiary) !important;
-    color: var(--bg-primary) !important;
-    border-radius: 0 !important;
+/* --- LEGEND & INFO: High Visibility --- */
+#patch-info-content {
+    background: var(--bg-primary);
     border: 2px solid var(--border-primary);
-    font-family: 'Press Start 2P', cursive;
-    font-size: 10px;
+    padding: 12px; font-size: 12px;
+}
+
+.legend-color-box {
+    border: 1px solid var(--border-primary);
+    width: 12px; height: 12px; margin-right: 8px;
+}
+
+/* --- MODALS --- */
+.modal-content {
+    background: var(--bg-secondary);
+    border: 6px solid var(--border-primary);
+    padding: 40px; border-radius: 0;
+    max-width: 600px; color: var(--text-primary);
+}
+
+/* --- POPUPS: Crisp Text --- */
+.mapboxgl-popup-content {
+    background: var(--bg-tertiary) !important;
+    color: var(--bg-primary) !important;
+    font-family: 'Courier New', monospace;
+    font-weight: bold; border-radius: 0 !important;
+    border: 2px solid var(--bg-primary);
 }
