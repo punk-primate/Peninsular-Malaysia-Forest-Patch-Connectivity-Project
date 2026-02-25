@@ -33,7 +33,7 @@
             background-size: 20px 20px;
         }
 
-        /* Scanline Overlay */
+        /* CRT Scanline Overlay */
         body::before {
             content: " ";
             display: block;
@@ -54,6 +54,7 @@
             font-size: 20px;
             line-height: 1.8;
             text-shadow: 4px 4px 0 var(--forest-medium);
+            padding: 0 20px;
         }
 
         .cursor {
@@ -91,44 +92,39 @@
             background-color: var(--forest-light);
             color: var(--forest-dark);
             box-shadow: 15px 20px 0 var(--forest-dark);
+            border-color: white;
         }
 
-        /* --- 3D "HILL" CONTOUR STACK --- */
-        .hill-stack {
+        /* --- WIREFRAME 3D HILL ICONS --- */
+        .icon-box {
             height: 120px;
             width: 120px;
-            position: relative;
-            margin-bottom: 25px;
             display: flex;
             align-items: center;
             justify-content: center;
+            margin-bottom: 25px;
         }
 
-        .layer {
-            position: absolute;
+        .wireframe-hill {
             width: 100px;
             height: 100px;
-            background-color: transparent;
-            border: 2px solid var(--forest-bright);
-            transition: all 0.5s steps(5);
+            transition: transform 0.4s steps(4);
         }
 
-        /* Create the "Peak" through scale and offset */
-        .layer-1 { transform: scale(0.4) translateY(-30px); opacity: 1; z-index: 4; }
-        .layer-2 { transform: scale(0.6) translateY(-20px); opacity: 0.7; z-index: 3; }
-        .layer-3 { transform: scale(0.8) translateY(-10px); opacity: 0.4; z-index: 2; }
-        .layer-4 { transform: scale(1.0) translateY(0px); opacity: 0.2; z-index: 1; }
+        .wireframe-hill path {
+            fill: none;
+            stroke: var(--forest-bright);
+            stroke-width: 2;
+            transition: stroke 0.2s;
+        }
 
-        /* Abstract Shapes */
-        .klang-path { clip-path: polygon(20% 10%, 80% 0%, 100% 40%, 70% 60%, 90% 100%, 30% 90%, 0% 50%, 10% 30%); }
-        .kuantan-path { clip-path: polygon(40% 0%, 100% 20%, 80% 50%, 100% 80%, 40% 100%, 20% 70%, 0% 80%, 10% 20%); }
+        .region-card:hover .wireframe-hill path {
+            stroke: var(--forest-dark);
+        }
 
-        /* Hover: Pivot and Flatten into 2D */
-        .region-card:hover .layer {
-            transform: rotate(180deg) scale(0.9) translateY(0);
-            border-color: var(--forest-dark);
-            opacity: 1;
-            background-color: white;
+        /* 2D Pivot */
+        .region-card:hover .wireframe-hill {
+            transform: rotate(180deg) scale(1.1);
         }
 
         .region-title { font-size: 11px; margin-top: 10px; }
@@ -147,22 +143,25 @@
     
     <div class="map-container">
         <a href="klang-valley-map.html" class="region-card">
-            <div class="hill-stack">
-                <div class="layer layer-1 klang-path"></div>
-                <div class="layer layer-2 klang-path"></div>
-                <div class="layer layer-3 klang-path"></div>
-                <div class="layer layer-4 klang-path"></div>
+            <div class="icon-box">
+                <svg class="wireframe-hill" viewBox="0 0 100 100">
+                    <path d="M20,40 Q50,10 80,40 T50,90 Q10,70 20,40" />
+                    <path d="M30,45 Q50,25 70,45" opacity="0.8" />
+                    <path d="M40,50 Q50,35 60,50" opacity="0.6" />
+                    <path d="M45,55 Q50,45 55,55" opacity="0.4" />
+                </svg>
             </div>
             <div class="region-title">KLANG VALLEY</div>
             <div class="status">[ LOAD SECTOR ]</div>
         </a>
 
         <a href="#" class="region-card disabled">
-            <div class="hill-stack">
-                <div class="layer layer-1 kuantan-path"></div>
-                <div class="layer layer-2 kuantan-path"></div>
-                <div class="layer layer-3 kuantan-path"></div>
-                <div class="layer layer-4 kuantan-path"></div>
+            <div class="icon-box">
+                <svg class="wireframe-hill" viewBox="0 0 100 100">
+                    <path d="M10,50 L40,10 L90,30 L70,90 L20,80 Z" />
+                    <path d="M25,50 L45,25 L75,35" opacity="0.8" />
+                    <path d="M35,60 L45,40 L65,45" opacity="0.6" />
+                </svg>
             </div>
             <div class="region-title">KUANTAN</div>
             <div class="status">[ LOCKED ]</div>
