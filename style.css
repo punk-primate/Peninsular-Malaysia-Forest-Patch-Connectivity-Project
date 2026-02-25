@@ -1,131 +1,124 @@
-/* Import retro font */
+/* Import retro font for specific headers */
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 :root {
-    /* LIGHT MODE: Ultra-Clean "Paper" Aesthetic */
-    --bg-primary: #ffffff;           /* Pure white for clarity */
-    --bg-secondary: #f0f0e0;         /* Very light parchment for sidebar */
-    --bg-tertiary: #0f380f;          /* Deepest green for text/borders */
-    --text-primary: #0f380f;        
-    --text-secondary: #306230;
-    --heading-color: #0f380f;
-    --border-primary: #0f380f; 
-    --accent-primary: #306230; 
-    --text-on-accent: #ffffff;
-    --input-bg-color: #ffffff;
-    --map-overlay: transparent;
+    /* HIGH-CONTRAST LIGHT MODE */
+    --bg-sidebar: #ffffff;
+    --bg-app: #f4f4f4;
+    --text-main: #0f380f;
+    --accent-green: #306230;
+    --border-thick: #0f380f;
+    --input-fill: #ffffff;
 }
 
 body.dark-mode {
-    /* DARK MODE: High-Contrast "Terminal" Aesthetic */
-    --bg-primary: #050a05;           /* Near black */
-    --bg-secondary: #0f1a0f;         /* Deep dark green sidebar */
-    --bg-tertiary: #9bbc0f;          /* Bright "GameBoy" green for borders */
-    --text-primary: #9bbc0f;        
-    --text-secondary: #8bac0f;      
-    --heading-color: #ffffff;        /* White headers for maximum pop */
-    --border-primary: #9bbc0f; 
-    --accent-primary: #9bbc0f; 
-    --text-on-accent: #050a05;
-    --input-bg-color: #000000;
+    /* HIGH-CONTRAST DARK MODE */
+    --bg-sidebar: #0a0a0a;
+    --bg-app: #000000;
+    --text-main: #9bbc0f;
+    --accent-green: #8bac0f;
+    --border-thick: #9bbc0f;
+    --input-fill: #000000;
 }
 
 body {
-    font-family: 'Courier New', Courier, monospace; /* Monospace for retro-neatness */
-    margin: 0; color: var(--text-primary); background-color: var(--bg-primary);
-    line-height: 1.4; font-size: 14px; overflow: hidden;
+    margin: 0;
+    font-family: 'Courier New', Courier, monospace;
+    background-color: var(--bg-app);
+    color: var(--text-main);
 }
 
-#app-container { display: flex; height: 100vh; width: 100vw; }
+#app-container {
+    display: flex;
+    height: 100vh;
+}
 
-/* --- SIDEBAR: Crisp & Organized --- */
+/* --- THE SIDEBAR: Neat & Structured --- */
 #sidebar {
-    width: 340px; 
-    background-color: var(--bg-secondary); 
+    width: 320px;
+    background-color: var(--bg-sidebar);
+    border-right: 4px solid var(--border-thick);
+    display: flex;
+    flex-direction: column;
     padding: 20px;
-    border-right: 4px solid var(--border-primary);
-    display: flex; flex-direction: column;
-    z-index: 10; flex-shrink: 0;
-    box-shadow: none; /* Removed muddy shadows */
+    z-index: 100;
+    overflow-y: auto;
 }
 
-#sidebar-header {
-    border-bottom: 4px solid var(--border-primary);
-    margin-bottom: 20px; padding-bottom: 10px;
-}
-
-#sidebar-header h2 { 
+#sidebar-header h2 {
     font-family: 'Press Start 2P', cursive;
-    font-size: 10px; line-height: 1.6;
-    margin: 0; color: var(--heading-color); 
+    font-size: 10px;
+    line-height: 1.5;
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 4px double var(--border-thick);
+}
+
+.sidebar-section {
+    margin-bottom: 25px;
 }
 
 .sidebar-section h3 {
-    font-family: 'Press Start 2P', cursive;
-    font-size: 8px; border-left: 6px solid var(--border-primary);
-    padding-left: 8px; margin: 20px 0 10px 0;
-    color: var(--heading-color);
+    font-size: 14px;
+    text-transform: uppercase;
+    background: var(--border-thick);
+    color: var(--bg-sidebar);
+    padding: 4px 8px;
+    margin-bottom: 12px;
 }
 
-/* --- FORM ELEMENTS: Sharp Edges --- */
+/* --- FORM ELEMENTS --- */
 select, input {
-    width: 100%; padding: 8px; margin-bottom: 10px;
-    border: 2px solid var(--border-primary);
-    background-color: var(--input-bg-color);
-    color: var(--text-primary);
-    font-family: 'Courier New', Courier, monospace;
-    font-weight: bold; border-radius: 0;
+    width: 100%;
+    padding: 8px;
+    border: 2px solid var(--border-thick);
+    background: var(--input-fill);
+    color: var(--text-main);
+    font-family: inherit;
+    margin-bottom: 10px;
 }
 
 button {
-    font-family: 'Press Start 2P', cursive; font-size: 8px;
-    cursor: pointer; border: 2px solid var(--border-primary);
-    background: var(--bg-primary); color: var(--text-primary);
-    padding: 10px; border-radius: 0; transition: transform 0.1s;
+    width: 100%;
+    padding: 12px;
+    background: var(--bg-sidebar);
+    color: var(--text-main);
+    border: 2px solid var(--border-thick);
+    font-family: 'Press Start 2P', cursive;
+    font-size: 9px;
+    cursor: pointer;
 }
 
 button:hover {
-    background: var(--border-primary);
-    color: var(--bg-primary);
+    background: var(--text-main);
+    color: var(--bg-sidebar);
 }
 
-/* --- MAP: Visibility Fix --- */
-#map-container { 
-    flex-grow: 1; 
+/* --- THE ZOOM WARNING BOX --- */
+#zoom-warning {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--border-thick);
+    color: var(--bg-sidebar);
+    padding: 10px 20px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 8px;
+    z-index: 200;
+    border: 2px solid var(--bg-sidebar);
+    display: none; /* Controlled by JS */
+    pointer-events: none;
+}
+
+/* --- MAP FIX --- */
+#map-container {
+    flex-grow: 1;
     position: relative;
-    background: #000; /* Base for map loading */
+    background: #000;
 }
 
-#map { 
-    position: absolute; top: 0; bottom: 0; width: 100%; 
-    z-index: 1; /* Ensures it stays behind the sidebar but above the container */
-}
-
-/* --- LEGEND & INFO: High Visibility --- */
-#patch-info-content {
-    background: var(--bg-primary);
-    border: 2px solid var(--border-primary);
-    padding: 12px; font-size: 12px;
-}
-
-.legend-color-box {
-    border: 1px solid var(--border-primary);
-    width: 12px; height: 12px; margin-right: 8px;
-}
-
-/* --- MODALS --- */
-.modal-content {
-    background: var(--bg-secondary);
-    border: 6px solid var(--border-primary);
-    padding: 40px; border-radius: 0;
-    max-width: 600px; color: var(--text-primary);
-}
-
-/* --- POPUPS: Crisp Text --- */
-.mapboxgl-popup-content {
-    background: var(--bg-tertiary) !important;
-    color: var(--bg-primary) !important;
-    font-family: 'Courier New', monospace;
-    font-weight: bold; border-radius: 0 !important;
-    border: 2px solid var(--bg-primary);
+#map {
+    position: absolute;
+    top: 0; bottom: 0; width: 100%;
 }
