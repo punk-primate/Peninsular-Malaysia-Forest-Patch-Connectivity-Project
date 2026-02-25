@@ -33,7 +33,6 @@
             background-size: 20px 20px;
         }
 
-        /* CRT Scanline Overlay */
         body::before {
             content: " ";
             display: block;
@@ -82,9 +81,10 @@
             padding: 40px 20px;
             text-decoration: none;
             color: var(--forest-bright);
-            width: 220px;
+            width: 240px;
             transition: all 0.2s steps(4);
             box-shadow: 10px 10px 0 var(--forest-dark);
+            perspective: 1000px;
         }
 
         .region-card:hover {
@@ -95,43 +95,66 @@
             border-color: white;
         }
 
-        /* --- WIREFRAME 3D HILL ICONS --- */
-        .icon-box {
-            height: 120px;
-            width: 120px;
+        /* --- 3D WIREFRAME MESH --- */
+        .mesh-container {
+            height: 150px;
+            width: 150px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 25px;
+            margin-bottom: 10px;
         }
 
-        .wireframe-hill {
-            width: 100px;
-            height: 100px;
-            transition: transform 0.4s steps(4);
+        .wireframe-mesh {
+            width: 120px;
+            height: 120px;
+            /* The 3D isometric tilt */
+            transform: rotateX(60deg) rotateZ(-45deg);
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
         }
 
-        .wireframe-hill path {
+        .mesh-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             fill: none;
             stroke: var(--forest-bright);
-            stroke-width: 2;
-            transition: stroke 0.2s;
+            stroke-width: 1.5;
+            transition: all 0.3s;
         }
 
-        .region-card:hover .wireframe-hill path {
+        /* Stack layers vertically to create the "hill" volume */
+        .layer-top { transform: translateZ(40px); opacity: 1; stroke-width: 2.5; }
+        .layer-mid { transform: translateZ(20px); opacity: 0.6; }
+        .layer-base { transform: translateZ(0); opacity: 0.3; }
+
+        /* Cross-connecting lines (The "Ribs") */
+        .ribs {
+            position: absolute;
+            width: 100%; height: 100%;
+            stroke: var(--forest-bright);
+            stroke-width: 0.5;
+            opacity: 0.4;
+        }
+
+        /* Hover: Pivot and Flatten */
+        .region-card:hover .wireframe-mesh {
+            transform: rotateX(0deg) rotateZ(135deg) scale(0.8);
+        }
+
+        .region-card:hover .mesh-layer {
+            transform: translateZ(0); /* Collapses the hill into a flat map */
             stroke: var(--forest-dark);
+            opacity: 1;
         }
 
-        /* 2D Pivot */
-        .region-card:hover .wireframe-hill {
-            transform: rotate(180deg) scale(1.1);
-        }
-
-        .region-title { font-size: 11px; margin-top: 10px; }
+        .region-title { font-size: 11px; margin-top: 10px; letter-spacing: 1px;}
         .status { font-size: 9px; margin-top: 20px; opacity: 0.8; }
         .disabled { opacity: 0.4; cursor: not-allowed; }
 
-        footer { z-index: 10; font-size: 10px; line-height: 2; }
+        footer { z-index: 10; font-size: 10px; line-height: 2; margin-top: 20px;}
         footer a { color: var(--forest-bright); text-decoration: underline; }
     </style>
 </head>
@@ -143,25 +166,25 @@
     
     <div class="map-container">
         <a href="klang-valley-map.html" class="region-card">
-            <div class="icon-box">
-                <svg class="wireframe-hill" viewBox="0 0 100 100">
-                    <path d="M20,40 Q50,10 80,40 T50,90 Q10,70 20,40" />
-                    <path d="M30,45 Q50,25 70,45" opacity="0.8" />
-                    <path d="M40,50 Q50,35 60,50" opacity="0.6" />
-                    <path d="M45,55 Q50,45 55,55" opacity="0.4" />
-                </svg>
+            <div class="mesh-container">
+                <div class="wireframe-mesh">
+                    <svg viewBox="0 0 100 100" class="mesh-layer layer-base"><path d="M10,50 Q25,10 50,10 T90,50 T50,90 T10,50" /></svg>
+                    <svg viewBox="0 0 100 100" class="mesh-layer layer-mid"><path d="M25,50 Q35,25 50,25 T75,50 T50,75 T25,50" /></svg>
+                    <svg viewBox="0 0 100 100" class="mesh-layer layer-top"><path d="M40,50 Q45,40 50,40 T60,50 T50,60 T40,50" /></svg>
+                    <svg viewBox="0 0 100 100" class="ribs"><line x1="50" y1="10" x2="50" y2="40" stroke-dasharray="2,2" /></svg>
+                </div>
             </div>
             <div class="region-title">KLANG VALLEY</div>
             <div class="status">[ LOAD SECTOR ]</div>
         </a>
 
         <a href="#" class="region-card disabled">
-            <div class="icon-box">
-                <svg class="wireframe-hill" viewBox="0 0 100 100">
-                    <path d="M10,50 L40,10 L90,30 L70,90 L20,80 Z" />
-                    <path d="M25,50 L45,25 L75,35" opacity="0.8" />
-                    <path d="M35,60 L45,40 L65,45" opacity="0.6" />
-                </svg>
+            <div class="mesh-container">
+                <div class="wireframe-mesh">
+                    <svg viewBox="0 0 100 100" class="mesh-layer layer-base"><path d="M10,10 L90,20 L80,90 L20,80 Z" /></svg>
+                    <svg viewBox="0 0 100 100" class="mesh-layer layer-mid"><path d="M30,30 L70,35 L65,70 L35,65 Z" /></svg>
+                    <svg viewBox="0 0 100 100" class="mesh-layer layer-top"><path d="M45,45 L55,47 L53,55 L47,53 Z" /></svg>
+                </div>
             </div>
             <div class="region-title">KUANTAN</div>
             <div class="status">[ LOCKED ]</div>
