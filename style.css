@@ -299,71 +299,50 @@ body.modal-open .modal-content {
     line-height: 1.5;
 }
 
-/* --- Terminal Loading Overlay --- */
-#loading-indicator {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: #0f380f; /* Dark forest green */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 99999;
-    transition: opacity 0.5s ease;
-}
-
-.terminal-loader {
-    width: 80%;
-    max-width: 600px;
-    background: #071a07;
-    border: 2px solid #8bac0f;
-    padding: 30px;
-    box-shadow: 0 0 20px rgba(139, 172, 15, 0.2);
-}
-
-.terminal-header {
-    color: #8bac0f;
-    font-family: 'Press Start 2P', cursive;
-    font-size: 12px;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #8bac0f;
-    padding-bottom: 10px;
-}
-
-.typing {
-    color: #9bbc0f;
-    font-family: 'Press Start 2P', cursive;
-    font-size: 10px;
-    margin: 10px 0;
-    white-space: nowrap;
-    overflow: hidden;
-    width: 0;
-    animation: typing 0.8s steps(30, end) forwards;
-}
-
-@keyframes typing {
-    from { width: 0 }
-    to { width: 100% }
-}
-
-/* --- Zoom Warning --- */
+/* Zoom Warning Styling */
 #zoom-warning {
+    display: none;
     position: absolute;
     top: 30px;
     left: 50%;
     transform: translateX(-50%);
-    background-color: #0f380f;
-    color: #9bbc0f;
+    background-color: #306230; /* --forest-medium */
+    color: #9bbc0f;           /* --forest-bright */
     padding: 15px 25px;
-    border: 3px solid #9bbc0f;
+    border: 4px solid #8bac0f; /* --forest-light */
     font-family: 'Press Start 2P', cursive;
     font-size: 10px;
-    z-index: 2000;
+    z-index: 1000;
     text-align: center;
-    box-shadow: 5px 5px 0px #000;
-    pointer-events: none;
+    box-shadow: 8px 8px 0px #0f380f;
+}
+
+/* Terminal Loader Styling */
+.terminal-loader {
+    text-align: left;
+    display: inline-block;
+    font-family: 'Press Start 2P', cursive;
+    color: #9bbc0f;
+    font-size: 10px;
+}
+
+.typing {
+    width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    border-right: 10px solid #9bbc0f;
+    animation: typing 1.5s steps(30) forwards, blink 0.8s step-end infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes typing { from { width: 0 } to { width: 100% } }
+@keyframes blink { from, to { border-color: transparent } 50% { border-color: #9bbc0f } }
+
+/* Pulse animation for Tier 1 Patches (badass factor) */
+@keyframes pulse-glow {
+    0% { filter: drop-shadow(0 0 2px #9bbc0f); }
+    50% { filter: drop-shadow(0 0 10px #9bbc0f); }
+    100% { filter: drop-shadow(0 0 2px #9bbc0f); }
 }
 
 
