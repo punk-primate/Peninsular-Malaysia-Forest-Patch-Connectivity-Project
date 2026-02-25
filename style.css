@@ -1,196 +1,138 @@
 :root {
-    /* Frutiger Aero Light Mode - High Gloss & Vibrant */
+    /* High-Gloss Frutiger Aero (Light) */
     --bg-primary: #ffffff; 
-    --bg-secondary: linear-gradient(180deg, #e3f2fd 0%, #ffffff 100%); 
-    --bg-tertiary: #bbdefb;
-    --text-primary: #1a3a5a; 
-    --text-secondary: #2c5e8c; 
+    --bg-secondary: linear-gradient(180deg, #f0f9ff 0%, #cbebff 40%, #a2d9ff 100%); 
+    --bg-tertiary: #e1f5fe;
+    --text-primary: #003366; 
+    --text-secondary: #005073; 
     --text-tertiary: #546e7a;
-    --heading-color: #0d47a1;
-    --border-primary: rgba(13, 71, 161, 0.2); 
-    --border-secondary: rgba(13, 71, 161, 0.3); 
-    --section-border-color: rgba(0, 150, 136, 0.2);
-    --accent-primary: #00bcd4; 
-    --accent-primary-hover: #00acc1;
-    --accent-secondary: #8bc34a; 
-    --accent-secondary-hover: #7cb342;
+    --heading-color: #004d40;
+    --border-primary: rgba(0, 188, 212, 0.4); 
+    --border-secondary: rgba(0, 188, 212, 0.6); 
+    --section-border-color: rgba(0, 230, 118, 0.3);
+    --accent-primary: #00d2ff; 
+    --accent-primary-hover: #0099cc;
+    --accent-secondary: #76ff03; 
+    --accent-secondary-hover: #64dd17;
     --text-on-accent: #ffffff;
-    --shadow-color: rgba(0, 188, 212, 0.15);
-    --map-bg: #e1f5fe;
-    --error-text: #b71c1c; --error-bg: #ffcdd2; --error-border: #ef9a9a;
-    --popup-bg: rgba(255, 255, 255, 0.85); --popup-text: #1a3a5a;
-    --legend-hover-bg: rgba(0, 188, 212, 0.1); --link-color: #0288d1;
-
-    /* Frutiger Specific Gloss */
-    --glass-shine: linear-gradient(180deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 51%, rgba(255,255,255,0.1) 100%);
+    --shadow-color: rgba(0, 0, 0, 0.2);
+    --map-bg: #f0f0f0;
+    
+    /* Aero Glass Overlays */
+    --gloss: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.4) 48%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.2) 100%);
 }
 
 body.dark-mode {
-    /* Frutiger Aero Dark Mode - "Aero Glass" Night Theme */
-    --bg-primary: #0b192e; 
-    --bg-secondary: linear-gradient(180deg, #102a43 0%, #0b192e 100%); 
-    --bg-tertiary: #243b53;
-    --text-primary: #f0f4f8; 
-    --text-secondary: #bcccdc; 
-    --text-tertiary: #9fb3c8;
-    --heading-color: #63d2ff;
-    --border-primary: rgba(99, 210, 255, 0.2); 
-    --border-secondary: rgba(99, 210, 255, 0.3); 
-    --section-border-color: rgba(99, 210, 255, 0.1);
-    --accent-primary: #00d2ff; 
-    --accent-primary-hover: #33e0ff;
-    --accent-secondary: #4caf50; 
-    --accent-secondary-hover: #66bb6a;
-    --input-bg-color: rgba(255, 255, 255, 0.1); 
-    --input-border-color: rgba(255, 255, 255, 0.2); 
-    --map-bg: #010a14;
-    --modal-bg-color: #102a43; --modal-shadow-color: rgba(0,0,0,0.8);
-    --hover-popup-bg: rgba(16, 42, 67, 0.95); --hover-popup-text: #f0f4f8;
-    --error-text: #ff8a80; --error-bg: #b71c1c; --error-border: #d32f2f;
-    --legend-hover-bg: rgba(0, 210, 255, 0.15); --link-color: #33e0ff;
+    /* Dark Aero / "Windows Vista" Night Theme */
+    --bg-primary: #010a14; 
+    --bg-secondary: linear-gradient(180deg, #0d253f 0%, #06111c 100%); 
+    --bg-tertiary: #102a43;
+    --text-primary: #e0f7fa; 
+    --text-secondary: #80deea; 
+    --heading-color: #00e5ff;
+    --border-primary: rgba(0, 229, 255, 0.3); 
+    --accent-primary: #00b0ff;
+    --accent-secondary: #00e676;
+    --input-bg-color: rgba(0, 0, 0, 0.4);
+    --map-bg: #000000;
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0; color: var(--text-primary); background-color: var(--bg-primary);
+    font-family: 'Segoe UI', 'Frutiger', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0; color: var(--text-primary); 
+    background-color: var(--bg-primary); /* Keep background solid to avoid map overlap */
     line-height: 1.5; font-size: 15px;
-    transition: background-color 0.4s ease, color 0.4s ease;
     -webkit-font-smoothing: antialiased;
-    background-image: radial-gradient(circle at 50% -20%, #e3f2fd, transparent);
 }
 
 #app-container { display: flex; height: 100vh; overflow: hidden; }
 
+/* --- SIDEBAR: Glossy Glass Panel --- */
 #sidebar {
-    width: 350px; background: var(--bg-secondary); padding: 18px;
-    box-shadow: 4px 0 15px var(--shadow-color); display: flex; flex-direction: column;
-    overflow-y: auto; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
-    border-right: 1px solid var(--border-primary); z-index: 10; flex-shrink: 0;
-    backdrop-filter: blur(10px);
+    width: 350px; 
+    background: var(--bg-secondary); 
+    padding: 18px;
+    box-shadow: 8px 0 20px rgba(0,0,0,0.15); 
+    display: flex; flex-direction: column;
+    overflow-y: auto; transition: width 0.25s ease;
+    border-right: 2px solid var(--border-primary); 
+    z-index: 10; flex-shrink: 0;
+    position: relative;
 }
 
-#sidebar.collapsed { width: 40px; padding: 5px 0; box-shadow: none; align-items: center; }
-
-#sidebar-header {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 18px; border-bottom: 1px solid var(--border-primary); padding-bottom: 12px;
+#sidebar::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 100%;
+    background: var(--gloss); pointer-events: none; opacity: 0.6;
 }
 
 #sidebar-header h2 { 
-    margin: 0; font-size: 1.2em; font-weight: 700; color: var(--heading-color); 
-    text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+    margin: 0; font-size: 1.25em; font-weight: 800; 
+    color: var(--heading-color); 
+    text-shadow: 0px 1px 3px rgba(255,255,255,0.5);
+    letter-spacing: -0.5px;
 }
 
-.header-buttons button {
-    background: var(--glass-shine), var(--bg-tertiary);
-    border: 1px solid var(--border-secondary); border-radius: 50%;
-    font-size: 1.1em; line-height: 1; padding: 8px; cursor: pointer;
-    color: var(--text-secondary); 
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 2px 4px rgba(0,0,0,0.1);
-    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
+/* --- TIER BREAKDOWN: Text Size Fix --- */
+#tier-stats-breakdown p { 
+    margin: 4px 0; 
+    font-size: 0.72rem; /* Reduced to keep on one line */
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
-.header-buttons button:hover { 
-    transform: scale(1.1);
-    background-color: var(--accent-primary); color: white;
-    box-shadow: 0 4px 12px var(--shadow-color);
+#tier-stats-breakdown h5 { 
+    margin-bottom: 8px; font-size: 0.85em; 
+    text-transform: uppercase; color: var(--heading-color);
 }
 
-.sidebar-section { margin-bottom: 25px; }
-.sidebar-section h3 {
-    font-size: 0.95em; font-weight: 700; color: var(--heading-color);
-    text-transform: uppercase; letter-spacing: 0.5px;
-    margin-top: 0; margin-bottom: 12px;
-    padding-bottom: 8px; border-bottom: 2px solid var(--accent-primary);
+/* --- BUTTONS: Plastic Bubble Style --- */
+.header-buttons button, .area-filter-buttons button, #about-btn {
+    background: var(--gloss), var(--accent-primary);
+    border: 1px solid rgba(255,255,255,0.5);
+    border-radius: 50px;
+    box-shadow: 0 4px 10px var(--shadow-color), inset 0 -2px 5px rgba(0,0,0,0.2);
+    color: var(--text-on-accent);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
-#filter-section label.filter-legend-item {
-    display: flex; align-items: center; margin-bottom: 7px;
-    cursor: pointer; font-size: 0.9em; padding: 6px 8px; border-radius: 20px;
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
+.area-filter-buttons button { background: var(--gloss), var(--accent-secondary); }
+
+button:hover {
+    transform: translateY(-2px) scale(1.02);
+    filter: brightness(1.15);
 }
 
-#filter-section label.filter-legend-item:hover { 
-    background: var(--bg-tertiary); 
-    border-color: var(--accent-primary);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+/* --- MAP: Visibility Reset --- */
+#map-container { 
+    flex-grow: 1; 
+    position: relative; 
+    background-color: transparent !important; /* Ensure no colors cover the map */
 }
 
+#map { 
+    position: absolute; 
+    top: 0; bottom: 0; left: 0; right: 0; 
+    z-index: 1; 
+}
+
+/* --- LEGEND: Bubble Orbs --- */
 .legend-color-box {
-    width: 16px; height: 16px; margin-right: 10px;
-    border: 1px solid rgba(0,0,0,0.1); display: inline-block; flex-shrink: 0;
-    border-radius: 50%; /* Bubbles/Orbs */
-    box-shadow: inset -2px -2px 4px rgba(0,0,0,0.2), inset 2px 2px 4px rgba(255,255,255,0.5);
+    width: 14px; height: 14px; 
+    border-radius: 50%; /* Pure circles */
+    box-shadow: inset -2px -2px 4px rgba(0,0,0,0.3), inset 2px 2px 4px rgba(255,255,255,0.8);
+    border: 1px solid rgba(0,0,0,0.1);
 }
 
-#patch-info-content {
-    font-size: 0.85em; background: rgba(255, 255, 255, 0.5);
-    border: 1px solid var(--border-primary); border-radius: 12px;
-    padding: 12px; max-height: 180px; overflow-y: auto;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
-}
-
-#tools-section select,
-#area-filter-controls input[type="number"] {
-    width: 100%; padding: 8px 12px; margin-bottom: 12px;
-    border: 1px solid var(--border-secondary); 
-    background: var(--input-bg-color, white);
-    color: var(--text-primary); border-radius: 20px; box-sizing: border-box; font-size: 0.9em;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.area-filter-buttons button,
-#about-btn {
-    flex-grow: 1; padding: 10px 15px; font-size: 0.85em; font-weight: 600;
-    color: var(--text-on-accent); border: none; border-radius: 25px;
-    cursor: pointer; 
-    background: var(--glass-shine), var(--accent-primary);
-    box-shadow: 0 4px 10px var(--shadow-color), inset 0 1px 0 rgba(255,255,255,0.4);
-    transition: all 0.2s ease;
-}
-
-.area-filter-buttons button { background-color: var(--accent-secondary); }
-.area-filter-buttons button:hover, #about-btn:hover { 
-    transform: translateY(-2px); 
-    filter: brightness(1.1);
-    box-shadow: 0 6px 15px var(--shadow-color);
-}
-
-#map-container { transition: margin-left 0.3s ease; }
-
-.modal-content {
-    background: var(--bg-secondary);
-    border: 1px solid rgba(255,255,255,0.4);
-    border-radius: 20px;
-    backdrop-filter: blur(20px);
-    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-}
-
-.modal-content::before {
-    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 50%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%);
-    border-radius: 20px 20px 0 0; pointer-events: none;
-}
-
-.custom-hover-popup .mapboxgl-popup-content {
-    background: var(--popup-bg);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--accent-primary);
-    border-radius: 12px;
-    padding: 10px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-}
-
-.spinner {
-    border: 4px solid rgba(0, 188, 212, 0.2); 
-    border-top: 4px solid var(--accent-primary);
-}
-
-/* Metric info icons as tiny blue glass orbs */
-.metric-info-icon {
-    background: var(--accent-primary);
-    color: white; width: 16px; height: 16px; 
-    border-radius: 50%; text-align: center; line-height: 16px;
-    font-size: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+/* --- INPUTS --- */
+#tools-section select, #area-filter-controls input {
+    border-radius: 15px;
+    border: 2px solid var(--border-primary);
+    background: white;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    padding: 6px 12px;
 }
