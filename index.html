@@ -13,7 +13,6 @@
             --forest-medium: #306230;
             --forest-light: #8bac0f;
             --forest-bright: #9bbc0f;
-            --matrix-glow: rgba(155, 188, 15, 0.3);
         }
 
         body {
@@ -48,30 +47,32 @@
         }
 
         .title-container {
-            margin-bottom: 60px;
+            margin-bottom: 80px;
             z-index: 10;
         }
 
         h1 {
-            font-size: 20px;
+            font-size: 22px;
             line-height: 1.8;
             text-shadow: 4px 4px 0 var(--forest-medium);
+            max-width: 900px;
         }
 
         .cursor {
             display: inline-block;
             width: 15px;
-            height: 20px;
+            height: 24px;
             background-color: var(--forest-bright);
             animation: blink 0.8s steps(2) infinite;
             vertical-align: middle;
+            margin-left: 10px;
         }
 
         @keyframes blink { 0% { opacity: 1; } 100% { opacity: 0; } }
 
         .map-container {
             display: flex;
-            gap: 40px;
+            gap: 50px;
             z-index: 10;
         }
 
@@ -81,103 +82,115 @@
             padding: 40px 20px;
             text-decoration: none;
             color: var(--forest-bright);
-            width: 200px;
+            width: 220px;
             transition: all 0.2s steps(4);
-            box-shadow: 8px 8px 0 var(--forest-dark);
-            perspective: 1000px; /* Required for the 3D pivot effect */
+            box-shadow: 10px 10px 0 var(--forest-dark);
+            perspective: 800px;
         }
 
         .region-card:hover {
-            transform: translateY(-10px);
+            transform: translateY(-12px);
             background-color: var(--forest-light);
             color: var(--forest-dark);
-            box-shadow: 12px 18px 0 var(--forest-dark);
+            box-shadow: 15px 20px 0 var(--forest-dark);
+            border-color: white;
         }
 
-        /* --- 3D MAP TILE ICONS --- */
-        .map-tile-wrapper {
-            height: 100px;
+        /* --- 3D MAP SHAPES --- */
+        .shape-wrapper {
+            height: 120px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
 
-        .map-tile {
-            width: 60px;
-            height: 60px;
+        .map-shape {
+            width: 80px;
+            height: 80px;
             background-color: var(--forest-bright);
-            /* This creates the "3D map" perspective */
-            transform: rotateX(60deg) rotateZ(45deg);
-            transition: transform 0.3s steps(4), background-color 0.2s;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.2s;
             position: relative;
-            box-shadow: -5px 5px 0 var(--forest-dark);
+            /* Base tilt for the PS1 look */
+            transform: rotateX(45deg) rotateZ(10deg);
+            box-shadow: -6px 6px 0 rgba(0,0,0,0.4);
         }
 
-        /* Add a "thickness" to the map tile */
-        .map-tile::after {
-            content: "";
-            position: absolute;
-            width: 100%; height: 100%;
-            background: var(--forest-medium);
-            top: 5px; left: -5px;
-            z-index: -1;
+        /* Klang Valley - Hexagonal Prism */
+        .klang-shape {
+            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
         }
 
-        /* Hover Pivot Effect */
-        .region-card:hover .map-tile {
-            transform: rotateX(45deg) rotateZ(225deg) translateY(-10px);
+        /* Kuantan - Diamond Prism */
+        .kuantan-shape {
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+        }
+
+        /* Hover Pivot Animation */
+        .region-card:hover .map-shape {
+            transform: rotateX(0deg) rotateZ(180deg) scale(1.1);
             background-color: white;
         }
 
-        /* Different patterns for the tiles */
-        .klang-pattern {
-            background-image: radial-gradient(var(--forest-dark) 20%, transparent 20%);
-            background-size: 15px 15px;
-        }
-
-        .kuantan-pattern {
-            background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, var(--forest-dark) 10px, var(--forest-dark) 12px);
-        }
-
         .region-title {
-            font-size: 12px;
+            font-size: 11px;
             margin-top: 10px;
+            letter-spacing: 1px;
         }
 
         .status {
             font-size: 9px;
-            margin-top: 15px;
-            opacity: 0.7;
+            margin-top: 20px;
+            color: var(--forest-bright);
+            opacity: 0.8;
+        }
+
+        .region-card:hover .status {
+            color: var(--forest-dark);
+            font-weight: bold;
         }
 
         .disabled {
             opacity: 0.4;
             cursor: not-allowed;
+            filter: saturate(0.2);
+        }
+
+        .disabled:hover {
+            transform: none;
+            background-color: var(--forest-medium);
+            color: var(--forest-bright);
+            box-shadow: 10px 10px 0 var(--forest-dark);
+            border-color: var(--forest-light);
+        }
+
+        .disabled:hover .map-shape {
+            transform: rotateX(45deg) rotateZ(10deg);
+            background-color: var(--forest-bright);
         }
     </style>
 </head>
 <body>
 
     <div class="title-container">
-        <h1>MALAYSIA FOREST CONNECTIVITY<br>SYSTEM v2.0</h1><span class="cursor"></span>
+        <h1>The Peninsular Malaysia<br>Forest Patch Connectivity Project</h1><span class="cursor"></span>
     </div>
     
     <div class="map-container">
         <a href="klang-valley-map.html" class="region-card">
-            <div class="map-tile-wrapper">
-                <div class="map-tile klang-pattern"></div>
+            <div class="shape-wrapper">
+                <div class="map-shape klang-shape"></div>
             </div>
             <div class="region-title">KLANG VALLEY</div>
-            <div class="status">[ ONLINE ]</div>
+            <div class="status">LOAD SECTOR</div>
         </a>
 
-        <a href="#" class="region-card disabled">
-            <div class="map-tile-wrapper">
-                <div class="map-tile kuantan-pattern"></div>
+        <a href="#" class="region-card disabled" title="System Data Locked">
+            <div class="shape-wrapper">
+                <div class="map-shape kuantan-shape"></div>
             </div>
             <div class="region-title">KUANTAN</div>
-            <div class="status">[ OFFLINE ]</div>
+            <div class="status">LOCKED</div>
         </a>
     </div>
 
