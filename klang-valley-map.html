@@ -9,22 +9,23 @@
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="app-container">
         <aside id="sidebar">
-           <div id="sidebar-header">
-    <div class="header-top-row">
-        <a href="index.html" id="home-btn" title="Return to System Selection">HOME</a>
-        <div class="header-buttons"> 
-            <button id="dark-mode-toggle" title="Toggle Dark/Light Mode">🌓</button>
-            <button id="toggle-sidebar-btn" title="Toggle Sidebar">‹</button>
-        </div>
-    </div>
-    <h2>Klang Valley Forest Patches</h2>
-</div>
+            <div id="sidebar-header">
+                <div class="header-top-row">
+                    <a href="index.html" id="home-btn">HOME</a>
+                    <div class="header-buttons"> 
+                        <button id="dark-mode-toggle" title="Toggle Dark/Light Mode">🌓</button>
+                        <button id="toggle-sidebar-btn" title="Toggle Sidebar">‹</button>
+                    </div>
+                </div>
+                <h2>Klang Valley Forest Patches</h2>
+            </div>
 
             <div class="sidebar-section" id="filter-section">
                 <h3>Filter by Category</h3> 
@@ -60,11 +61,10 @@
                 <div id="area-filter-controls" class="tool-group">
                     <label>Filter by Area (ha):</label>
                     <div class="area-inputs">
-                        <input type="number" id="min-area-input" placeholder="Min" min="0" step="any">
+                        <input type="number" id="min-area-input" placeholder="Min">
                         <span>-</span>
-                        <input type="number" id="max-area-input" placeholder="Max" min="0" step="any">
+                        <input type="number" id="max-area-input" placeholder="Max">
                     </div>
-                    <div id="area-filter-error" class="error-message" style="display:none;"></div>
                     <div class="area-buttons">
                         <button id="apply-area-filter-btn">Apply Area</button>
                         <button id="reset-area-filter-btn">Reset Area</button>
@@ -83,18 +83,15 @@
                 <div class="spinner"></div>
                 Loading Map...
             </div>
-            
             <div id="zoom-prompt" class="zoom-prompt-box">Zoom in to view forest patches</div>
         </main>
     </div>
 
     <div id="about-modal" class="modal" style="display:none;">
         <div class="modal-content">
-            <span class="close-modal-btn" role="button" tabindex="0" aria-label="Close modal">×</span>
+            <span class="close-modal-btn">×</span>
             <h2>Peninsular Malaysia Forest Patch Connectivity Project</h2>
-            <p>This interactive map shows over 14,000 forest patches extracted from the Klang Valley region in Malaysia. Each patch is classified into one of several tiers using a four-step process that considers key ecological attributes: total area, core area, contiguity index, perimeter-area ratio, and euclidean nearest-neighbor distance (ENN).</p>
             <p>Built by Benjamin Galea</p>
-            <p>Contact bengalea97@gmail.com for any enquiries</p>
         </div>
     </div>
 
