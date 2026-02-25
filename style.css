@@ -1,9 +1,8 @@
 /* ==========================================================================
-   1. ORIGINAL STYLES (Restored from your upload)
+   1. ORIGINAL STABLE STYLES (Restored from your upload)
    ========================================================================== */
 
 :root {
-    /* Light Mode (Default) Variables */
     --bg-primary: #ffffff; --bg-secondary: #f8f9fa; --bg-tertiary: #e9ecef;
     --text-primary: #212529; --text-secondary: #495057; --text-tertiary: #6c757d;
     --heading-color: #343a40;
@@ -19,131 +18,81 @@
 }
 
 body.dark-mode {
-    /* Dark Mode Variables */
-    --bg-primary: #121212; --bg-secondary: #1e1e1e; --bg-tertiary: #2d2d2d;
-    --text-primary: #e0e0e0; --text-secondary: #b0b0b0; --text-tertiary: #808080;
-    --heading-color: #ffffff;
-    --border-primary: #333333; --border-secondary: #444444; --section-border-color: #333333;
-    --accent-primary: #3d5afe; --accent-primary-hover: #536dfe;
-    --accent-secondary: #808080; --accent-secondary-hover: #b0b0b0;
-    --text-on-accent: #ffffff;
-    --shadow-color: rgba(0, 0, 0, 0.5);
-    --map-bg: #1a1a1a;
-    --error-text: #ff8a80; --error-bg: #3c1e1e; --error-border: #f44336;
-    --popup-bg: rgba(0, 0, 0, 0.85); --popup-text: #ffffff;
-    --legend-hover-bg: #2d2d2d; --link-color: #80cbc4;
+    --bg-primary: #212529; --bg-secondary: #2c3034; --bg-tertiary: #343a40;
+    --text-primary: #f8f9fa; --text-secondary: #adb5bd; --text-tertiary: #6c757d;
+    --heading-color: #e9ecef;
+    --border-primary: #495057; --border-secondary: #343a40; --section-border-color: #343a40;
+    --accent-primary: #0d6efd; --accent-primary-hover: #0a58ca;
+    --input-bg-color: #343a40; --input-border-color: #495057; 
+    --map-bg: #2b2b2b;
 }
 
-* { box-sizing: border-box; }
-body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
+body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+#app-container { display: flex; height: 100vh; overflow: hidden; position: relative; }
 
-#app-container { display: flex; width: 100%; height: 100vh; overflow: hidden; position: relative; }
-
-/* --- SIDEBAR --- */
+/* --- SIDEBAR & COLLAPSE FIX --- */
 #sidebar {
-    width: 300px;
+    width: 350px;
     height: 100%;
     background-color: var(--bg-secondary);
     border-right: 1px solid var(--border-primary);
-    display: flex;
-    flex-direction: column;
-    transition: margin-left 0.3s ease; /* Smooth sliding transition */
+    transition: margin-left 0.3s ease; /* Using margin-left prevents peeking */
     z-index: 1000;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 18px;
 }
 
-/* Fix: Completely hide sidebar when collapsed */
 #sidebar.collapsed {
-    margin-left: -300px;
+    margin-left: -350px; /* Fully slides out */
 }
 
 #sidebar-header {
-    padding: 20px 15px;
-    border-bottom: 1px solid var(--border-primary);
-    background-color: var(--bg-secondary);
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 18px; border-bottom: 1px solid var(--border-primary); padding-bottom: 12px;
 }
 
-.header-buttons { display: flex; gap: 8px; margin-top: 10px; }
+.header-buttons { display: flex; gap: 8px; }
 
-#dark-mode-toggle, #toggle-sidebar-btn {
-    background: none; border: 1px solid var(--border-primary); color: var(--text-primary);
-    padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 1.1rem;
-    transition: background-color 0.2s, color 0.2s;
-}
-
-/* Fix: Position toggle button so it's always visible */
 #toggle-sidebar-btn {
     position: absolute;
-    right: -35px; /* Hangs off the edge of the sidebar */
+    right: -35px; /* Floats button outside so it's always accessible */
     top: 15px;
+    width: 35px;
+    height: 35px;
     background-color: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
     border-left: none;
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 5px 5px 0;
+    cursor: pointer;
+    z-index: 1100;
 }
 
-#dark-mode-toggle:hover, #toggle-sidebar-btn:hover { background-color: var(--bg-tertiary); }
-
-.sidebar-section { padding: 15px; border-bottom: 1px solid var(--section-border-color); }
-.sidebar-section:last-child { border-bottom: none; }
-.sidebar-section h3 { font-size: 0.9rem; margin-top: 0; margin-bottom: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
-
-#sidebar-footer { padding: 15px; border-top: 1px solid var(--border-primary); background-color: var(--bg-tertiary); margin-top: auto; }
-#about-btn { width: 100%; padding: 10px; background-color: var(--accent-secondary); color: var(--text-on-accent); border: none; border-radius: 4px; cursor: pointer; font-weight: 500; transition: background-color 0.2s; }
-#about-btn:hover { background-color: var(--accent-secondary-hover); }
-
-/* --- MAP --- */
-#map-container { flex-grow: 1; position: relative; height: 100%; background-color: var(--map-bg); }
-#map { width: 100%; height: 100%; }
-
 /* ==========================================================================
-   2. NEW FEATURES (Home Button, Zoom Prompt, etc.)
+   2. NEW FEATURES (Home Button & Zoom Prompt)
    ========================================================================== */
 
-/* Compact Home Button */
 #home-btn {
     display: inline-block;
     font-family: 'Press Start 2P', cursive;
-    font-size: 0.5rem;
+    font-size: 0.55rem;
     color: var(--accent-primary);
-    border: 1px solid var(--accent-primary);
-    padding: 3px 6px;
+    border: 1.5px solid var(--accent-primary);
+    padding: 4px 8px;
     text-decoration: none;
-    margin-bottom: 8px;
-    transition: background-color 0.2s, color 0.2s;
+    margin-bottom: 10px;
 }
 
-#home-btn:hover {
-    background-color: var(--accent-primary);
-    color: white;
-}
-
-/* Zoom Level Prompt Box */
 .zoom-prompt-box {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: var(--popup-bg);
-    color: var(--popup-text);
-    padding: 10px 20px;
-    border-radius: 5px;
-    z-index: 1000;
-    pointer-events: none;
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--popup-bg); color: #fff; padding: 10px 20px; border-radius: 5px; z-index: 1000;
     transition: opacity 0.3s ease;
-    font-size: 0.9rem;
 }
+.zoom-prompt-box.hidden { opacity: 0; pointer-events: none; }
 
-.zoom-prompt-box.hidden {
-    opacity: 0;
-}
-
-/* --- Keep the rest of your original metric/modal styles below --- */
-
-#patch-info-content { font-size: 0.85rem; line-height: 1.5; color: var(--text-primary); }
-#stats-content p { margin: 5px 0; font-size: 0.85rem; display: flex; justify-content: space-between; }
-#stats-content p span { font-weight: 600; color: var(--accent-primary); }
-
-.modal { position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-.modal-content { background-color: var(--bg-primary); padding: 30px; border-radius: 8px; max-width: 600px; width: 90%; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3); line-height: 1.6; color: var(--text-primary); }
-.close-modal-btn { position: absolute; top: 15px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer; color: var(--text-tertiary); transition: color 0.2s; }
-.close-modal-btn:hover { color: var(--text-primary); }
+/* Restoring original metric/section styles */
+.sidebar-section { margin-bottom: 20px; }
+#map-container { flex-grow: 1; position: relative; height: 100%; }
+#map { width: 100%; height: 100%; }
