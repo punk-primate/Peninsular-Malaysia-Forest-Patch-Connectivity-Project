@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuantan Forest Patches</title>
+
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="loading-indicator">
+        <div class="terminal-loader">
+            <div class="terminal-header">[ SYSTEM BOOT: FOREST_CONNECTIVITY_OS ]</div>
+            <p class="typing">> INITIALIZING GEOSPATIAL ENGINE...</p>
+            <p class="typing" style="animation-delay: 1.2s;">> LOADING KUANTAN_FORESTS.DB...</p>
+            <p class="typing" style="animation-delay: 2.4s;">> CALCULATING CONNECTIVITY TIERS...</p>
+        </div>
+    </div>
+
+    <div id="app-container">
+        <aside id="sidebar">
+            <div id="sidebar-header">
+                <h2>Kuantan Forest Patches</h2>
+                <div class="header-buttons"> 
+                    <button id="dark-mode-toggle" title="Toggle Dark/Light Mode" aria-label="Toggle dark mode">🌓</button>
+                    <button id="toggle-sidebar-btn" title="Toggle Sidebar" aria-label="Toggle Sidebar">‹</button>
+                </div>
+            </div>
+            </aside>
+
+        <main id="map-container">
+            <div id="map"></div>
+            
+            <div id="zoom-warning" style="display: none;">
+                [ SYSTEM NOTICE ]<br>
+                ZOOM IN TO VIEW FOREST PATCHES
+            </div>
+        </main>
+    </div>
+
+    <div id="about-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-modal-btn" role="button" tabindex="0" aria-label="Close modal">×</span>
+            <h2>Peninsular Malaysia Forest Patch Connectivity Project</h2>
+            <p>This interactive map shows forest patches extracted from the Kuantan region in Malaysia. Each patch is classified into one of several tiers using a Composite Habitat Suitability Index (CHSI), which combines key ecological attributes including total area, core area, contiguity, perimeter–area ratio, and Euclidean nearest-neighbour distance. The index standardises these metrics based on the landscape’s own statistical distribution and applies weighted scoring to prioritise interior habitat stability and connectivity. Patches are then grouped into six tiers, ranging from large core habitats to highly isolated micro patches. Click on the individual patches to view their details.</p>
+            <p>Built by Benjamin Galea</p>
+            <p>Contact bengalea97@gmail.com for any enquiries</p>
+        </div>
+    </div>
+
+    <script src="config-kuantan.js"></script>
+    <script src="app-kuantan.js"></script>
+</body>
+</html>
