@@ -4,7 +4,12 @@ const MAP_STYLE_CUSTOM = 'mapbox://styles/bengalea/cmb60zyax00o501sdahv19e6q';
 const MAP_STYLE_SATELLITE = 'mapbox://styles/mapbox/satellite-streets-v12';
 
 // --- LAYER & ATTRIBUTE CONFIGURATION ---
+
+// 🔴 CRITICAL FIX REQUIRED HERE 🔴
+// This MUST perfectly match the name of the Kuantan layer in your Mapbox Studio style.
+// If your patches aren't clickable, this name is currently wrong or has a hidden trailing space.
 const FOREST_PATCH_LAYER_ID = 'Kuantan Forest Patches'; 
+
 
 // Updated to perfectly match the column headers from our R CSV
 const TIER_ATTRIBUTE = 'Tier'; 
@@ -39,12 +44,4 @@ const ALL_TIERS = [
 const TIER_COLORS = {
     "Tier 1 (Core Habitat)": "#b1eaac",
     "Tier 2 (Major Stepping Stones)": "#8ad284",
-    "Tier 3 (Connected Fragments)": "#5aaf64",
-    "Tier 4 (Vulnerable Edge Fragments)": "#2a8234",
-    "Tier 5 (Isolated Fragments)": "#1e6b27",
-    "Tier 6 (Isolated Micro Patches)": "#0a4c12"
-};
-
-// --- MAP INITIAL VIEW ---
-const INITIAL_CENTER = [103.3256, 3.8126];
-const INITIAL_ZOOM = 11;
+    "Tier 3 (Connected
