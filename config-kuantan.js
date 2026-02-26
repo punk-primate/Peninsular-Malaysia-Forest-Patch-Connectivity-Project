@@ -18,7 +18,7 @@ const CONTIGUITY_INDEX_ATTRIBUTE = 'contig';
 const PERIMETER_AREA_RATIO_ATTRIBUTE = 'para';
 const ENN_ATTRIBUTE = 'enn'; 
 
-// Attributes to display in the info panel
+// Attributes to display in the info panel.
 const INFO_PANEL_ATTRIBUTES = [
     'Tier',
     'id',
@@ -51,3 +51,4 @@ const TIER_COLORS = {
 // --- MAP INITIAL VIEW ---
 const INITIAL_CENTER = [103.3256, 3.8126];
 const INITIAL_ZOOM = 11;
+
