@@ -1,4 +1,4 @@
-// --- VERY TOP OF app-kuantan.js for file loading check ---
+// --- VERY TOP OfF app-kuantan.js for file loading check ---
 console.log("--- app-kuantan.js LATEST - Timestamp: " + new Date().toLocaleTimeString() + " ---");
 
 // Define descriptions for metrics. These constants (PATCH_AREA_ATTRIBUTE, etc.) are from config-kuantan.js
@@ -383,3 +383,4 @@ document.addEventListener('DOMContentLoaded', () => {
                     infoIcon.setAttribute('role', 'button');
                     infoIcon.setAttribute('tabindex', '0');
                     infoIcon.setAttribute('data
+
