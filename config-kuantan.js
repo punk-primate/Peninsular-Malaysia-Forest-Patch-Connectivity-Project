@@ -4,10 +4,9 @@ const MAP_STYLE_CUSTOM = 'mapbox://styles/bengalea/cmb60zyax00o501sdahv19e6q';
 const MAP_STYLE_SATELLITE = 'mapbox://styles/mapbox/satellite-streets-v12';
 
 // --- LAYER & ATTRIBUTE CONFIGURATION ---
-// Removed the accidental leading space. 
+// IMPORTANT: Verify this exactly matches your Mapbox Studio Layer name.
 const FOREST_PATCH_LAYER_ID = 'Kuantan Forest Patches'; 
 
-// Updated to perfectly match the column headers from our R CSV
 const TIER_ATTRIBUTE = 'Tier'; 
 const PATCH_ID_ATTRIBUTE = 'id';
 const PATCH_AREA_ATTRIBUTE = 'area';
