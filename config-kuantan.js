@@ -4,8 +4,9 @@ const MAP_STYLE_CUSTOM = 'mapbox://styles/bengalea/cmb60zyax00o501sdahv19e6q';
 const MAP_STYLE_SATELLITE = 'mapbox://styles/mapbox/satellite-streets-v12';
 
 // --- LAYER & ATTRIBUTE CONFIGURATION ---
+// Ensure these EXACTLY match the layer names in your Mapbox Studio style sidebar
 const FOREST_PATCH_LAYER_ID = 'Kuantan Forest Patches'; 
-const OUTLINE_LAYER_ID = 'Kuantan Outline'; // Added reference for the outline
+const OUTLINE_LAYER_ID = 'Kuantan Outline'; 
 
 const TIER_ATTRIBUTE = 'Tier'; 
 const PATCH_ID_ATTRIBUTE = 'id';
@@ -46,5 +47,5 @@ const TIER_COLORS = {
 };
 
 // --- MAP INITIAL VIEW (KUANTAN) ---
-const INITIAL_CENTER = [103.32, 3.81];
+const INITIAL_CENTER = [103.32, 3.81]; // Centered on Kuantan city
 const INITIAL_ZOOM = 11;
