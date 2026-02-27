@@ -1,5 +1,6 @@
 // --- VERY TOP OF app.js for file loading check ---
 console.log("--- app-kuantan.js LATEST - Timestamp: " + new Date().toLocaleTimeString() + " ---");
+
 // Define descriptions for metrics. These constants (PATCH_AREA_ATTRIBUTE, etc.) are from config.js
 const METRIC_DESCRIPTIONS = {
     [PATCH_AREA_ATTRIBUTE]: "Patch Area: The total land area of the forest patch in hectares (ha). This indicates the overall size of the habitat.",
@@ -597,3 +598,4 @@ map.on('idle', () => {
         console.error("Sidebar toggle elements not found: #toggle-sidebar-btn, #sidebar, or #app-container.");
     }
 }); // End DOMContentLoaded
+
