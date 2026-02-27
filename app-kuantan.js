@@ -1,4 +1,6 @@
-// --- app-kuantan.js ---
+// --- app-kuantan.js LATEST - Mirroring Working KV Logic ---
+console.log("--- app-kuantan.js INITIALIZING ---");
+
 const METRIC_DESCRIPTIONS = {
     [PATCH_AREA_ATTRIBUTE]: "Patch Area: The total land area of the forest patch in hectares (ha).",
     [CORE_AREA_ATTRIBUTE]: "Core Area: Stable interior habitat critical for sensitive species.",
@@ -10,6 +12,8 @@ const METRIC_DESCRIPTIONS = {
 let metricPopup = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("DEBUG: DOMContentLoaded fired.");
+
     mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
 
     const map = new mapboxgl.Map({
@@ -24,27 +28,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingIndicator = document.getElementById('loading-indicator');
     loadingIndicator.style.display = 'block';
 
-    let selectedPatchMapboxId = null;
     let currentMinArea = null;
     let currentMaxArea = null;
 
     map.on('load', () => {
+        console.log("DEBUG: Map Load Event Fired.");
+        
+        // Navigation
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
+        // Verify Layer Existence
+        const layers = map.getStyle().layers;
+        const layerExists = layers.some(l => l.id === FOREST_PATCH_LAYER_ID);
+        if (!layerExists) {
+            console.error(`CRITICAL: Layer "${FOREST_PATCH_LAYER_ID}" NOT FOUND in current style.`);
+        }
+
+        // Initialize Components
         initializeTierFilters();
         initializeHoverPopups();
         initializeClickInfoPanel();
         initializeGeocoder();
         initializeBasemapToggle();
         initializeAreaFilterControls();
+        initializeAboutModal();
+        initializeDarkModeToggle();
+        initializeSidebarToggle();
 
-        // ZOOM WARNING LOGIC
+        // Zoom Warning Logic
         const warningBox = document.getElementById('zoom-warning');
         const checkZoom = () => {
             if (map.getZoom() < 11) {
-                warningBox.style.display = 'block';
+                if(warningBox) warningBox.style.display = 'block';
             } else {
-                warningBox.style.display = 'none';
+                if(warningBox) warningBox.style.display = 'none';
             }
         };
         map.on('zoom', checkZoom);
@@ -55,28 +72,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (loadingIndicator && loadingIndicator.style.display !== 'none') {
             setTimeout(() => {
                 loadingIndicator.style.opacity = '0';
-                setTimeout(() => {
-                    loadingIndicator.style.display = 'none';
-                }, 500);
-            }, 3500); // 3.5 seconds as requested
+                setTimeout(() => { loadingIndicator.style.display = 'none'; }, 500);
+            }, 3500);
         }
         updateSummaryStatistics();
     });
 
     function initializeTierFilters() {
-        const filterContainer = document.querySelector('#filter-section');
-        filterContainer.innerHTML = '<h3>Filter by Category</h3>';
+        const container = document.querySelector('#filter-section');
+        if (!container) return;
+        container.innerHTML = '<h3>Filter by Category</h3>';
         ALL_TIERS.forEach(tier => {
             const label = document.createElement('label');
             label.className = 'filter-legend-item';
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox'; checkbox.className = 'tier-toggle';
-            checkbox.value = tier; checkbox.checked = true;
-            checkbox.addEventListener('change', () => applyForestFilter());
-            const colorBox = document.createElement('span');
-            colorBox.className = 'legend-color-box'; colorBox.style.backgroundColor = TIER_COLORS[tier];
-            label.append(colorBox, checkbox, ` ${tier}`);
-            filterContainer.appendChild(label);
+            const cb = document.createElement('input');
+            cb.type = 'checkbox'; cb.className = 'tier-toggle';
+            cb.value = tier; cb.checked = true;
+            cb.addEventListener('change', () => applyForestFilter());
+            const box = document.createElement('span');
+            box.className = 'legend-color-box'; box.style.backgroundColor = TIER_COLORS[tier];
+            label.append(box, cb, ` ${tier}`);
+            container.appendChild(label);
         });
         applyForestFilter();
     }
@@ -84,9 +100,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeHoverPopups() {
         const hoverPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false });
         map.on('mousemove', FOREST_PATCH_LAYER_ID, (e) => {
-            map.getCanvas().style.cursor = 'pointer';
-            const feat = e.features[0];
-            hoverPopup.setLngLat(e.lngLat).setHTML(`ID: ${feat.properties[PATCH_ID_ATTRIBUTE]}<br>Tier: ${feat.properties[TIER_ATTRIBUTE]}`).addTo(map);
+            if (e.features.length > 0) {
+                map.getCanvas().style.cursor = 'pointer';
+                const feat = e.features[0];
+                const content = `<strong>ID:</strong> ${feat.properties[PATCH_ID_ATTRIBUTE]}<br><strong>Tier:</strong> ${feat.properties[TIER_ATTRIBUTE]}`;
+                hoverPopup.setLngLat(e.lngLat).setHTML(content).addTo(map);
+            }
         });
         map.on('mouseleave', FOREST_PATCH_LAYER_ID, () => {
             map.getCanvas().style.cursor = ''; hoverPopup.remove();
@@ -102,14 +121,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initializeGeocoder() {
+        const container = document.getElementById('search-geocoder-container');
+        if (!container) return;
         const geocoder = new MapboxGeocoder({
             accessToken: mapboxgl.accessToken, mapboxgl: mapboxgl, placeholder: 'Search Kuantan'
         });
-        document.getElementById('search-geocoder-container').appendChild(geocoder.onAdd(map));
+        container.innerHTML = '';
+        container.appendChild(geocoder.onAdd(map));
     }
 
     function initializeBasemapToggle() {
-        document.getElementById('basemap-toggle').addEventListener('change', (e) => {
+        const toggle = document.getElementById('basemap-toggle');
+        if (!toggle) return;
+        toggle.addEventListener('change', (e) => {
             const style = e.target.value === 'satellite' ? MAP_STYLE_SATELLITE : MAP_STYLE_CUSTOM;
             map.setStyle(style);
             map.once('style.load', () => {
@@ -119,12 +143,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initializeAreaFilterControls() {
-        document.getElementById('apply-area-filter-btn').addEventListener('click', () => {
+        const applyBtn = document.getElementById('apply-area-filter-btn');
+        const resetBtn = document.getElementById('reset-area-filter-btn');
+        if (!applyBtn) return;
+
+        applyBtn.addEventListener('click', () => {
             currentMinArea = parseFloat(document.getElementById('min-area-input').value) || null;
             currentMaxArea = parseFloat(document.getElementById('max-area-input').value) || null;
             applyForestFilter();
         });
-        document.getElementById('reset-area-filter-btn').addEventListener('click', () => {
+
+        resetBtn.addEventListener('click', () => {
             document.getElementById('min-area-input').value = '';
             document.getElementById('max-area-input').value = '';
             currentMinArea = null; currentMaxArea = null;
@@ -134,38 +163,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function applyForestFilter() {
         if (!map.getLayer(FOREST_PATCH_LAYER_ID)) return;
-        const checkedTiers = Array.from(document.querySelectorAll('.tier-toggle:checked')).map(cb => cb.value);
+        const tiers = Array.from(document.querySelectorAll('.tier-toggle:checked')).map(cb => cb.value);
         const filters = ['all'];
-        if (checkedTiers.length < ALL_TIERS.length) {
-            filters.push(['match', ['get', TIER_ATTRIBUTE], checkedTiers, true, false]);
-        }
+        if (tiers.length < ALL_TIERS.length) filters.push(['match', ['get', TIER_ATTRIBUTE], tiers, true, false]);
         if (currentMinArea) filters.push(['>=', ['get', PATCH_AREA_ATTRIBUTE], currentMinArea]);
         if (currentMaxArea) filters.push(['<=', ['get', PATCH_AREA_ATTRIBUTE], currentMaxArea]);
         map.setFilter(FOREST_PATCH_LAYER_ID, filters.length > 1 ? filters : null);
     }
 
     function updateSummaryStatistics() {
-        const features = map.queryRenderedFeatures({ layers: [FOREST_PATCH_LAYER_ID] });
-        document.getElementById('visible-patches-count').textContent = features.length.toLocaleString();
+        if (!map.getLayer(FOREST_PATCH_LAYER_ID)) return;
+        const feats = map.queryRenderedFeatures({ layers: [FOREST_PATCH_LAYER_ID] });
+        document.getElementById('visible-patches-count').textContent = feats.length.toLocaleString();
         let totalArea = 0;
-        features.forEach(f => totalArea += f.properties[PATCH_AREA_ATTRIBUTE]);
+        feats.forEach(f => totalArea += (f.properties[PATCH_AREA_ATTRIBUTE] || 0));
         document.getElementById('visible-patches-area').textContent = totalArea.toFixed(2) + ' ha';
     }
 
     function displayPatchInfo(props) {
-        const content = document.getElementById('patch-info-content');
+        const panel = document.getElementById('patch-info-content');
+        if (!panel) return;
         let html = '<ul>';
         INFO_PANEL_ATTRIBUTES.forEach(attr => {
-            html += `<li><strong>${attr}:</strong> ${props[attr]}</li>`;
+            html += `<li><strong>${attr}:</strong> ${props[attr] || 'N/A'}</li>`;
         });
-        content.innerHTML = html + '</ul>';
+        panel.innerHTML = html + '</ul>';
     }
 
-    // Modal and Sidebar Helpers
-    document.getElementById('about-btn').onclick = () => document.getElementById('about-modal').style.display = 'block';
-    document.querySelector('.close-modal-btn').onclick = () => document.getElementById('about-modal').style.display = 'none';
-    document.getElementById('toggle-sidebar-btn').onclick = () => {
-        document.getElementById('sidebar').classList.toggle('collapsed');
-        setTimeout(() => map.resize(), 300);
-    };
+    function initializeAboutModal() {
+        const btn = document.getElementById('about-btn');
+        const modal = document.getElementById('about-modal');
+        const close = document.querySelector('.close-modal-btn');
+        if (btn && modal && close) {
+            btn.onclick = () => modal.style.display = 'block';
+            close.onclick = () => modal.style.display = 'none';
+            window.onclick = (e) => { if (e.target == modal) modal.style.display = 'none'; };
+        }
+    }
+
+    function initializeDarkModeToggle() {
+        const btn = document.getElementById('dark-mode-toggle');
+        if (btn) {
+            btn.onclick = () => {
+                document.body.classList.toggle('dark-mode');
+                btn.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌓';
+            };
+        }
+    }
+
+    function initializeSidebarToggle() {
+        const btn = document.getElementById('toggle-sidebar-btn');
+        const sidebar = document.getElementById('sidebar');
+        if (btn && sidebar) {
+            btn.onclick = () => {
+                sidebar.classList.toggle('collapsed');
+                btn.textContent = sidebar.classList.contains('collapsed') ? '›' : '‹';
+                setTimeout(() => map.resize(), 300);
+            };
+        }
+    }
 });
