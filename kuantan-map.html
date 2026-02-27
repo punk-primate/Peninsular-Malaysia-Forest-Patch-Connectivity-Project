@@ -18,8 +18,8 @@
             <div id="sidebar-header">
                 <h2>Kuantan Forest Patches</h2>
                 <div class="header-buttons"> 
-                    <button id="dark-mode-toggle" title="Toggle Dark/Light Mode" aria-label="Toggle dark mode">🌓</button>
-                    <button id="toggle-sidebar-btn" title="Toggle Sidebar" aria-label="Toggle sidebar" aria-expanded="true">‹</button>
+                    <button id="dark-mode-toggle" title="Toggle Dark/Light Mode">🌓</button>
+                    <button id="toggle-sidebar-btn" title="Toggle Sidebar">‹</button>
                 </div>
             </div>
 
@@ -38,7 +38,6 @@
                     <p>Visible Patches: <span id="visible-patches-count">-</span></p>
                     <p>Total Area: <span id="visible-patches-area">- ha</span></p>
                     <p>Average ENN: <span id="visible-patches-enn">- m</span></p>
-                    <div id="tier-stats-breakdown"></div>
                 </div>
             </div>
 
@@ -54,37 +53,24 @@
 
                 <div id="area-filter-controls">
                     <h4>Filter by Patch Area (ha)</h4>
-                    <div class="area-input-group">
-                        <label for="min-area-input">Min:</label>
-                        <input type="number" id="min-area-input" placeholder="0" min="0">
-                    </div>
-                    <div class="area-input-group">
-                        <label for="max-area-input">Max:</label>
-                        <input type="number" id="max-area-input" placeholder="e.g., 5000" min="0">
-                    </div>
-                    <div class="area-filter-buttons">
-                        <button id="apply-area-filter-btn">Apply Area</button>
-                        <button id="reset-area-filter-btn">Reset Area</button>
-                    </div>
+                    <input type="number" id="min-area-input" placeholder="Min Area">
+                    <input type="number" id="max-area-input" placeholder="Max Area">
+                    <button id="apply-area-filter-btn">Apply</button>
+                    <button id="reset-area-filter-btn">Reset</button>
                 </div>
             </div>
 
             <div id="sidebar-footer">
-                <button id="about-btn">About This Project</button>
+                <button id="about-btn">About</button>
             </div>
         </aside>
 
         <main id="map-container">
             <div id="map"></div>
-            <div id="zoom-warning">
-                [ SYSTEM NOTICE ]<br>
-                ZOOM IN TO VIEW FOREST PATCHES
-            </div>
-
+            <div id="zoom-warning">ZOOM IN TO VIEW PATCHES</div>
             <div id="loading-indicator">
                 <div class="terminal-loader">
-                    <p class="typing">> INITIALIZING GEOSPATIAL ENGINE...</p>
-                    <p class="typing" style="animation-delay: 1s;">> LOADING KUANTAN_FORESTS.DB...</p>
+                    <p>> INITIALIZING KUANTAN ENGINE...</p>
                     <div class="spinner"></div>
                 </div>
             </div>
@@ -93,10 +79,9 @@
 
     <div id="about-modal" class="modal" style="display:none;">
         <div class="modal-content">
-            <span class="close-modal-btn" role="button" tabindex="0" aria-label="Close modal">×</span>
-            <h2>Forest Patch Connectivity: Kuantan</h2>
-            <p>Interactive analysis of forest connectivity for the Kuantan region.</p>
-            <p>Built by Benjamin Galea</p>
+            <span class="close-modal-btn">×</span>
+            <h2>Kuantan Forest Connectivity</h2>
+            <p>Analysis of forest fragmentation in Kuantan.</p>
         </div>
     </div>
 
