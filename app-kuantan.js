@@ -1,11 +1,19 @@
+console.log("--- app-kuantan.js LOADED - " + new Date().toLocaleTimeString() + " ---");
+
+const METRIC_DESCRIPTIONS = {
+    [PATCH_AREA_ATTRIBUTE]: "Patch Area in hectares.",
+    [CORE_AREA_ATTRIBUTE]: "Interior habitat buffered from edge effects.",
+    [CONTIGUITY_INDEX_ATTRIBUTE]: "Spatial connectedness of patch cells (0–1).",
+    [PERIMETER_AREA_RATIO_ATTRIBUTE]: "Shape complexity indicator.",
+    [ENN_ATTRIBUTE]: "Distance to nearest neighbouring patch in metres."
+};
+
+let metricPopup = null;
+
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Verify Config Loaded
-    if (typeof MAPBOX_ACCESS_TOKEN === 'undefined') {
-        console.error("CRITICAL: config-kuantan.js not found or loaded incorrectly.");
-        return;
-    }
 
     mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
+
     const map = new mapboxgl.Map({
         container: 'map',
         style: MAP_STYLE_CUSTOM,
@@ -13,101 +21,158 @@ document.addEventListener('DOMContentLoaded', () => {
         zoom: INITIAL_ZOOM
     });
 
-    const safeGet = (id) => document.getElementById(id);
+    const loadingIndicator = document.getElementById('loading-indicator');
+    loadingIndicator.style.display = 'block';
+
+    let selectedPatchMapboxId = null;
+    let currentMinArea = null;
+    let currentMaxArea = null;
 
     map.on('load', () => {
+
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-        
-        // Initialize interactive parts
-        initTierFilters();
-        initSearch();
-        initAreaFilters();
-        initUI();
 
-        // Click interaction
-        map.on('click', FOREST_PATCH_LAYER_ID, (e) => {
-            if (e.features.length > 0) {
-                const p = e.features[0].properties;
-                const info = safeGet('patch-info-content');
-                if (info) {
-                    info.innerHTML = `<ul>
-                        <li><strong>ID:</strong> ${p[PATCH_ID_ATTRIBUTE]}</li>
-                        <li><strong>Tier:</strong> ${p[TIER_ATTRIBUTE]}</li>
-                        <li><strong>Area:</strong> ${p[PATCH_AREA_ATTRIBUTE]} ha</li>
-                    </ul>`;
-                }
-            }
-        });
+        initializeTierFilters();
+        initializeHoverPopups();
+        initializeClickInfoPanel();
+        initializeGeocoder();
+        initializeBasemapToggle();
+        initializeAreaFilterControls();
 
-        map.on('mouseenter', FOREST_PATCH_LAYER_ID, () => map.getCanvas().style.cursor = 'pointer');
-        map.on('mouseleave', FOREST_PATCH_LAYER_ID, () => map.getCanvas().style.cursor = '');
+        const warningBox = document.getElementById('zoom-warning');
+        const PATCH_VISIBILITY_THRESHOLD = 11;
+
+        const checkZoomLevel = () => {
+            warningBox.style.display = map.getZoom() < PATCH_VISIBILITY_THRESHOLD ? 'block' : 'none';
+        };
+
+        map.on('zoom', checkZoomLevel);
+        checkZoomLevel();
     });
 
-    function initTierFilters() {
-        const container = safeGet('filter-section');
-        if (!container) return;
-        ALL_TIERS.forEach(tier => {
-            const label = document.createElement('label');
-            label.style.display = "block";
-            label.innerHTML = `<input type="checkbox" class="tier-toggle" value="${tier}" checked> ${tier}`;
-            label.querySelector('input').addEventListener('change', applyFilters);
-            container.appendChild(label);
-        });
-    }
+    map.on('idle', () => {
+        setTimeout(() => loadingIndicator.style.display = 'none', 2500);
+        updateSummaryStatistics();
+    });
 
-    function applyFilters() {
-        if (!map.getLayer(FOREST_PATCH_LAYER_ID)) return;
-        const checked = Array.from(document.querySelectorAll('.tier-toggle:checked')).map(i => i.value);
-        const min = parseFloat(safeGet('min-area-input')?.value) || 0;
-        const max = parseFloat(safeGet('max-area-input')?.value) || Infinity;
-
-        const filters = ['all'];
-        filters.push(['match', ['get', TIER_ATTRIBUTE], checked, true, false]);
-        filters.push(['>=', ['get', PATCH_AREA_ATTRIBUTE], min]);
-        if (max !== Infinity) filters.push(['<=', ['get', PATCH_AREA_ATTRIBUTE], max]);
-
-        map.setFilter(FOREST_PATCH_LAYER_ID, filters);
-        updateStats();
-    }
-
-    function updateStats() {
-        const features = map.queryRenderedFeatures({ layers: [FOREST_PATCH_LAYER_ID] });
-        if (safeGet('visible-patches-count')) safeGet('visible-patches-count').textContent = features.length;
-    }
-
-    function initSearch() {
-        const container = safeGet('search-geocoder-container');
-        if (!container) return;
+    function initializeGeocoder() {
+        const geocoderContainer = document.getElementById('search-geocoder-container');
         const geocoder = new MapboxGeocoder({
             accessToken: mapboxgl.accessToken,
             mapboxgl: mapboxgl,
-            placeholder: 'Search Kuantan...',
-            bbox: [103.1, 3.6, 103.5, 4.0]
+            placeholder: 'Search in Kuantan',
+            bbox: [103.1, 3.6, 103.6, 4.1],
+            countries: 'MY'
         });
-        container.appendChild(geocoder.onAdd(map));
+        geocoderContainer.appendChild(geocoder.onAdd(map));
     }
 
-    function initAreaFilters() {
-        safeGet('apply-area-filter-btn')?.addEventListener('click', applyFilters);
-        safeGet('reset-area-filter-btn')?.addEventListener('click', () => {
-            if (safeGet('min-area-input')) safeGet('min-area-input').value = '';
-            if (safeGet('max-area-input')) safeGet('max-area-input').value = '';
-            applyFilters();
+    function initializeTierFilters() {
+        const container = document.getElementById('filter-section');
+        container.innerHTML = '<h3>Filter by Category</h3>';
+
+        ALL_TIERS.forEach(tier => {
+            const label = document.createElement('label');
+            label.className = 'filter-legend-item';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = tier;
+            checkbox.checked = true;
+            checkbox.className = 'tier-toggle';
+            checkbox.addEventListener('change', applyForestFilter);
+
+            const colorBox = document.createElement('span');
+            colorBox.className = 'legend-color-box';
+            colorBox.style.backgroundColor = TIER_COLORS[tier];
+
+            label.appendChild(colorBox);
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(" " + tier));
+
+            container.appendChild(label);
+        });
+
+        applyForestFilter();
+    }
+
+    function initializeHoverPopups() {
+        const popup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false });
+
+        map.on('mousemove', FOREST_PATCH_LAYER_ID, (e) => {
+            const feature = e.features[0];
+            popup
+                .setLngLat(e.lngLat)
+                .setHTML(`<strong>ID:</strong> ${feature.properties[PATCH_ID_ATTRIBUTE]}`)
+                .addTo(map);
+        });
+
+        map.on('mouseleave', FOREST_PATCH_LAYER_ID, () => popup.remove());
+    }
+
+    function initializeClickInfoPanel() {
+        map.on('click', FOREST_PATCH_LAYER_ID, (e) => {
+            const feature = e.features[0];
+            displayPatchInfo(feature.properties);
         });
     }
 
-    function initUI() {
-        safeGet('dark-mode-toggle')?.addEventListener('click', () => document.body.classList.toggle('dark-mode'));
-        safeGet('toggle-sidebar-btn')?.addEventListener('click', () => {
-            safeGet('sidebar')?.classList.toggle('collapsed');
-            setTimeout(() => map.resize(), 300);
-        });
-        safeGet('about-btn')?.addEventListener('click', () => safeGet('about-modal').style.display = 'block');
-        document.querySelector('.close-modal-btn')?.addEventListener('click', () => safeGet('about-modal').style.display = 'none');
+    function applyForestFilter() {
+        const checkedTiers = Array.from(document.querySelectorAll('.tier-toggle:checked')).map(cb => cb.value);
+        const filters = [];
+
+        if (checkedTiers.length > 0 && checkedTiers.length < ALL_TIERS.length) {
+            filters.push(['match', ['get', TIER_ATTRIBUTE], checkedTiers, true, false]);
+        }
+
+        if (currentMinArea !== null) {
+            filters.push(['>=', ['get', PATCH_AREA_ATTRIBUTE], currentMinArea]);
+        }
+
+        if (currentMaxArea !== null) {
+            filters.push(['<=', ['get', PATCH_AREA_ATTRIBUTE], currentMaxArea]);
+        }
+
+        const combined = filters.length ? ['all', ...filters] : null;
+        map.setFilter(FOREST_PATCH_LAYER_ID, combined);
     }
 
-    map.on('idle', () => {
-        if (safeGet('loading-indicator')) safeGet('loading-indicator').style.display = 'none';
-        updateStats();
-    });
+    function updateSummaryStatistics() {
+        const features = map.queryRenderedFeatures({ layers: [FOREST_PATCH_LAYER_ID] });
+
+        const countEl = document.getElementById('visible-patches-count');
+        const areaEl = document.getElementById('visible-patches-area');
+        const ennEl = document.getElementById('visible-patches-enn');
+
+        countEl.textContent = features.length;
+
+        let totalArea = 0;
+        let totalEnn = 0;
+
+        features.forEach(f => {
+            totalArea += Number(f.properties[PATCH_AREA_ATTRIBUTE]) || 0;
+            totalEnn += Number(f.properties[ENN_ATTRIBUTE]) || 0;
+        });
+
+        areaEl.textContent = totalArea.toFixed(2) + ' ha';
+        ennEl.textContent = features.length ? (totalEnn / features.length).toFixed(2) + ' m' : '- m';
+    }
+
+    function displayPatchInfo(properties) {
+        const container = document.getElementById('patch-info-content');
+        container.innerHTML = '';
+
+        const ul = document.createElement('ul');
+
+        INFO_PANEL_ATTRIBUTES.forEach(attr => {
+            if (properties[attr] !== undefined) {
+                const li = document.createElement('li');
+                li.innerHTML = `<strong>${attr}:</strong> ${properties[attr]}`;
+                ul.appendChild(li);
+            }
+        });
+
+        container.appendChild(ul);
+    }
+
 });
