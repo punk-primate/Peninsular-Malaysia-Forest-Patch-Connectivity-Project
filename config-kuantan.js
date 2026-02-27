@@ -1,5 +1,5 @@
 // --- config-kuantan.js ---
-// This must match the name in the top-left of your Mapbox screenshot exactly.
+// This must matchc the name in the top-left of your Mapbox screenshot exactly.
 const FOREST_PATCH_LAYER_ID = 'Kuantan Forest Patches'; 
 
 const TIER_ATTRIBUTE = 'Tier'; 
@@ -32,3 +32,4 @@ const TIER_COLORS = {
 
 const INITIAL_CENTER = [103.3256, 3.8126];
 const INITIAL_ZOOM = 11;
+
