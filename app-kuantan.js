@@ -1,11 +1,15 @@
-// --- app-kuantan.js ---
+// --- VERY TOP OF app-kuantan.js for file loading check ---
+console.log("--- app-kuantan.js LATEST - Timestamp: " + new Date().toLocaleTimeString() + " ---");
+
 const METRIC_DESCRIPTIONS = {
     [PATCH_AREA_ATTRIBUTE]: "Patch Area: The total land area of the forest patch in hectares (ha).",
-    [CORE_AREA_ATTRIBUTE]: "Core Area: Stable interior habitat critical for sensitive species.",
-    [CONTIGUITY_INDEX_ATTRIBUTE]: "Contiguity Index: Connectedness of cells within a patch.",
-    [PERIMETER_AREA_RATIO_ATTRIBUTE]: "Perimeter-Area Ratio: Ratio of perimeter to area.",
-    [ENN_ATTRIBUTE]: "Euclidean Nearest-Neighbor (ENN): Shortest distance to nearest patch."
+    [CORE_AREA_ATTRIBUTE]: "Core Area: Interior habitat buffered from edge effects, in hectares (ha).",
+    [CONTIGUITY_INDEX_ATTRIBUTE]: "Contiguity Index: Connectedness of cells (0-1). Higher is more contiguous.",
+    [PERIMETER_AREA_RATIO_ATTRIBUTE]: "Perimeter-Area Ratio: Ratio of perimeter to area. Higher indicates more edge habitat.",
+    [ENN_ATTRIBUTE]: "Euclidean Nearest-Neighbor (ENN): Shortest distance to nearest patch in meters."
 };
+
+let metricPopup = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
@@ -15,23 +19,20 @@ document.addEventListener('DOMContentLoaded', () => {
         style: MAP_STYLE_CUSTOM,
         center: INITIAL_CENTER,
         zoom: INITIAL_ZOOM,
-        pitch: 0,
-        bearing: 0
     });
 
     const loadingIndicator = document.getElementById('loading-indicator');
-    if (loadingIndicator) loadingIndicator.style.display = 'block';
+    loadingIndicator.style.display = 'block';
 
+    let selectedPatchMapboxId = null;
     let currentMinArea = null;
     let currentMaxArea = null;
 
     map.on('load', () => {
-        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-
-        // Check for layer presence
-        if (!map.getStyle().layers.find(l => l.id === FOREST_PATCH_LAYER_ID)) {
-            console.error(`Layer "${FOREST_PATCH_LAYER_ID}" not found.`);
+        if (map.getSource('mapbox-dem')) {
+            map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
         }
+        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
         initializeTierFilters();
         initializeHoverPopups();
@@ -40,55 +41,58 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeBasemapToggle();
         initializeAreaFilterControls();
 
-        // Zoom Warning
         const warningBox = document.getElementById('zoom-warning');
-        const checkZoom = () => {
-            if (map.getZoom() < 11) {
-                if(warningBox) warningBox.style.display = 'block';
+        const PATCH_VISIBILITY_THRESHOLD = 11;
+
+        const checkZoomLevel = () => {
+            if (map.getZoom() < PATCH_VISIBILITY_THRESHOLD) {
+                warningBox.style.display = 'block';
             } else {
-                if(warningBox) warningBox.style.display = 'none';
+                warningBox.style.display = 'none';
             }
         };
-        map.on('zoom', checkZoom);
-        checkZoom();
+
+        map.on('zoom', checkZoomLevel);
+        checkZoomLevel();
     });
 
     map.on('idle', () => {
-        if (loadingIndicator && loadingIndicator.style.display !== 'none') {
-            setTimeout(() => {
-                loadingIndicator.style.opacity = '0';
-                setTimeout(() => { loadingIndicator.style.display = 'none'; }, 500);
-            }, 3500); // 3.5s delay
+        if (loadingIndicator) {
+            setTimeout(() => { loadingIndicator.style.display = 'none'; }, 3500);
         }
         updateSummaryStatistics();
     });
 
     function initializeTierFilters() {
-        const container = document.querySelector('#filter-section');
-        if (!container) return;
-        container.innerHTML = '<h3>Filter by Category</h3>';
-        ALL_TIERS.forEach(tier => {
+        const filterContainer = document.querySelector('#filter-section');
+        if (!filterContainer) return;
+        filterContainer.innerHTML = '<h3>Filter by Category</h3>';
+
+        ALL_TIERS.forEach(tierValueFromConfig => {
             const label = document.createElement('label');
             label.className = 'filter-legend-item';
-            const cb = document.createElement('input');
-            cb.type = 'checkbox'; cb.className = 'tier-toggle';
-            cb.value = tier; cb.checked = true;
-            cb.addEventListener('change', () => applyForestFilter());
-            const box = document.createElement('span');
-            box.className = 'legend-color-box'; box.style.backgroundColor = TIER_COLORS[tier];
-            label.append(box, cb, ` ${tier}`);
-            container.appendChild(label);
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox'; checkbox.className = 'tier-toggle';
+            checkbox.value = tierValueFromConfig; 
+            checkbox.checked = true;
+            checkbox.addEventListener('change', () => applyForestFilter());
+            const colorBox = document.createElement('span');
+            colorBox.className = 'legend-color-box'; colorBox.style.backgroundColor = TIER_COLORS[tierValueFromConfig] || '#ccc';
+            label.appendChild(colorBox); label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(` ${tierValueFromConfig}`));
+            filterContainer.appendChild(label);
         });
         applyForestFilter();
     }
 
     function initializeHoverPopups() {
-        const hoverPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false });
+        const hoverPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'custom-hover-popup' });
         map.on('mousemove', FOREST_PATCH_LAYER_ID, (e) => {
-            if (e.features.length > 0) {
+            if (e.features && e.features.length > 0) {
                 map.getCanvas().style.cursor = 'pointer';
-                const feat = e.features[0];
-                hoverPopup.setLngLat(e.lngLat).setHTML(`ID: ${feat.properties[PATCH_ID_ATTRIBUTE]}<br>Tier: ${feat.properties[TIER_ATTRIBUTE]}`).addTo(map);
+                const f = e.features[0];
+                const content = `<strong>ID:</strong> ${f.properties[PATCH_ID_ATTRIBUTE]}<br><strong>Category:</strong> ${f.properties[TIER_ATTRIBUTE]}`;
+                hoverPopup.setLngLat(e.lngLat).setHTML(content).addTo(map);
             }
         });
         map.on('mouseleave', FOREST_PATCH_LAYER_ID, () => {
@@ -98,99 +102,139 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initializeClickInfoPanel() {
         map.on('click', FOREST_PATCH_LAYER_ID, (e) => {
-            if (e.features.length > 0) {
-                displayPatchInfo(e.features[0].properties);
+            if (e.features && e.features.length > 0) {
+                const feature = e.features[0];
+                displayPatchInfo(feature.properties);
+                if (selectedPatchMapboxId !== null) {
+                    map.setFeatureState({ source: feature.source, sourceLayer: feature.sourceLayer, id: selectedPatchMapboxId }, { selected: false });
+                }
+                selectedPatchMapboxId = feature.id;
+                map.setFeatureState({ source: feature.source, sourceLayer: feature.sourceLayer, id: selectedPatchMapboxId }, { selected: true });
             }
         });
     }
 
     function initializeGeocoder() {
-        const container = document.getElementById('search-geocoder-container');
-        if (!container) return;
+        const geocoderContainer = document.getElementById('search-geocoder-container');
+        if (!geocoderContainer || typeof MapboxGeocoder === 'undefined') return;
         const geocoder = new MapboxGeocoder({
-            accessToken: mapboxgl.accessToken, mapboxgl: mapboxgl, placeholder: 'Search Kuantan'
+            accessToken: mapboxgl.accessToken, mapboxgl: mapboxgl, marker: { color: '#FF6347' },
+            placeholder: 'Search in Kuantan',
+            bbox: [103.1, 3.6, 103.5, 4.0], // Updated Bounding Box for Kuantan
+            countries: 'MY', limit: 7
         });
-        container.innerHTML = '';
-        container.appendChild(geocoder.onAdd(map));
+        geocoderContainer.innerHTML = '';
+        geocoderContainer.appendChild(geocoder.onAdd(map));
     }
 
     function initializeBasemapToggle() {
-        const toggle = document.getElementById('basemap-toggle');
-        if (!toggle) return;
-        toggle.addEventListener('change', (e) => {
-            const style = e.target.value === 'satellite' ? MAP_STYLE_SATELLITE : MAP_STYLE_CUSTOM;
-            map.setStyle(style);
+        const basemapToggle = document.getElementById('basemap-toggle');
+        basemapToggle.addEventListener('change', (e) => {
+            const newStyleUrl = e.target.value === 'satellite' ? MAP_STYLE_SATELLITE : MAP_STYLE_CUSTOM;
+            loadingIndicator.style.display = 'block';
+            map.setStyle(newStyleUrl);
             map.once('style.load', () => {
-                if (style === MAP_STYLE_CUSTOM) applyForestFilter();
+                loadingIndicator.style.display = 'none';
+                if (map.getSource('mapbox-dem')) map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+                if (newStyleUrl === MAP_STYLE_CUSTOM) {
+                    setTimeout(() => { applyForestFilter(); }, 250);
+                }
             });
         });
     }
 
     function initializeAreaFilterControls() {
-        const applyBtn = document.getElementById('apply-area-filter-btn');
-        const resetBtn = document.getElementById('reset-area-filter-btn');
-        if (applyBtn) {
-            applyBtn.onclick = () => {
-                currentMinArea = parseFloat(document.getElementById('min-area-input').value) || null;
-                currentMaxArea = parseFloat(document.getElementById('max-area-input').value) || null;
-                applyForestFilter();
-            };
-        }
-        if (resetBtn) {
-            resetBtn.onclick = () => {
-                document.getElementById('min-area-input').value = '';
-                document.getElementById('max-area-input').value = '';
-                currentMinArea = null; currentMaxArea = null;
-                applyForestFilter();
-            };
-        }
+        const minAreaInput = document.getElementById('min-area-input');
+        const maxAreaInput = document.getElementById('max-area-input');
+        const applyAreaBtn = document.getElementById('apply-area-filter-btn');
+        const resetAreaBtn = document.getElementById('reset-area-filter-btn');
+
+        applyAreaBtn.addEventListener('click', () => {
+            currentMinArea = parseFloat(minAreaInput.value) || null;
+            currentMaxArea = parseFloat(maxAreaInput.value) || null;
+            applyForestFilter();
+        });
+        resetAreaBtn.addEventListener('click', () => {
+            minAreaInput.value = ''; maxAreaInput.value = '';
+            currentMinArea = null; currentMaxArea = null;
+            applyForestFilter();
+        });
     }
 
     function applyForestFilter() {
-        if (!map.getLayer(FOREST_PATCH_LAYER_ID)) return;
-        const tiers = Array.from(document.querySelectorAll('.tier-toggle:checked')).map(cb => cb.value);
-        const filters = ['all'];
-        if (tiers.length < ALL_TIERS.length) filters.push(['match', ['get', TIER_ATTRIBUTE], tiers, true, false]);
-        if (currentMinArea) filters.push(['>=', ['get', PATCH_AREA_ATTRIBUTE], currentMinArea]);
-        if (currentMaxArea) filters.push(['<=', ['get', PATCH_AREA_ATTRIBUTE], currentMaxArea]);
-        map.setFilter(FOREST_PATCH_LAYER_ID, filters.length > 1 ? filters : null);
+        if (!map.isStyleLoaded() || !map.getLayer(FOREST_PATCH_LAYER_ID)) return;
+        const checkedTiers = Array.from(document.querySelectorAll('.tier-toggle:checked')).map(cb => cb.value);
+        const allFilters = [];
+        if (checkedTiers.length === 0) {
+            allFilters.push(['==', ['get', TIER_ATTRIBUTE], 'NO_MATCH']);
+        } else if (checkedTiers.length < ALL_TIERS.length) {
+            allFilters.push(['match', ['get', TIER_ATTRIBUTE], checkedTiers, true, false]);
+        }
+        if (currentMinArea !== null) allFilters.push(['>=', ['get', PATCH_AREA_ATTRIBUTE], currentMinArea]);
+        if (currentMaxArea !== null) allFilters.push(['<=', ['get', PATCH_AREA_ATTRIBUTE], currentMaxArea]);
+        
+        const combinedFilter = allFilters.length > 0 ? ['all', ...allFilters] : null;
+        map.setFilter(FOREST_PATCH_LAYER_ID, combinedFilter);
+        setTimeout(updateSummaryStatistics, 100);
     }
 
     function updateSummaryStatistics() {
-        if (!map.getLayer(FOREST_PATCH_LAYER_ID)) return;
-        const feats = map.queryRenderedFeatures({ layers: [FOREST_PATCH_LAYER_ID] });
         const countEl = document.getElementById('visible-patches-count');
         const areaEl = document.getElementById('visible-patches-area');
-        if (countEl) countEl.textContent = feats.length.toLocaleString();
-        let total = 0;
-        feats.forEach(f => total += (f.properties[PATCH_AREA_ATTRIBUTE] || 0));
-        if (areaEl) areaEl.textContent = total.toFixed(2) + ' ha';
+        const ennEl = document.getElementById('visible-patches-enn');
+        const breakdownEl = document.getElementById('tier-stats-breakdown');
+        
+        if (!map.getLayer(FOREST_PATCH_LAYER_ID)) return;
+        const features = map.queryRenderedFeatures({ layers: [FOREST_PATCH_LAYER_ID] });
+        
+        let totalArea = 0; let totalEnn = 0; let validEnn = 0;
+        features.forEach(f => {
+            totalArea += parseFloat(f.properties[PATCH_AREA_ATTRIBUTE] || 0);
+            if (f.properties[ENN_ATTRIBUTE]) { totalEnn += f.properties[ENN_ATTRIBUTE]; validEnn++; }
+        });
+
+        countEl.textContent = features.length.toLocaleString();
+        areaEl.textContent = totalArea.toFixed(2) + ' ha';
+        ennEl.textContent = validEnn > 0 ? (totalEnn / validEnn).toFixed(2) + ' m' : '- m';
     }
 
-    function displayPatchInfo(props) {
-        const panel = document.getElementById('patch-info-content');
-        if (!panel) return;
-        let html = '<ul>';
-        INFO_PANEL_ATTRIBUTES.forEach(attr => { html += `<li><strong>${attr}:</strong> ${props[attr] || 'N/A'}</li>`; });
-        panel.innerHTML = html + '</ul>';
+    function displayPatchInfo(properties) {
+        const patchInfoContent = document.getElementById('patch-info-content');
+        patchInfoContent.innerHTML = '';
+        const ul = document.createElement('ul');
+        INFO_PANEL_ATTRIBUTES.forEach(attrKey => {
+            if (properties.hasOwnProperty(attrKey)) {
+                const li = document.createElement('li');
+                li.innerHTML = `<strong>${formatPropertyName(attrKey)}:</strong> ${properties[attrKey]}`;
+                ul.appendChild(li);
+            }
+        });
+        patchInfoContent.appendChild(ul);
     }
 
-    // Static interactions (About, Sidebar, Dark Mode)
-    const aboutBtn = document.getElementById('about-btn');
-    if (aboutBtn) aboutBtn.onclick = () => document.getElementById('about-modal').style.display = 'block';
-    
-    const closeModal = document.querySelector('.close-modal-btn');
-    if (closeModal) closeModal.onclick = () => document.getElementById('about-modal').style.display = 'none';
-    
-    const dmBtn = document.getElementById('dark-mode-toggle');
-    if (dmBtn) dmBtn.onclick = () => document.body.classList.toggle('dark-mode');
-    
-    const sidebarBtn = document.getElementById('toggle-sidebar-btn');
-    if (sidebarBtn) {
-        sidebarBtn.onclick = () => {
-            document.getElementById('sidebar').classList.toggle('collapsed');
-            sidebarBtn.textContent = document.getElementById('sidebar').classList.contains('collapsed') ? '›' : '‹';
-            setTimeout(() => map.resize(), 300);
-        };
+    function formatPropertyName(name) {
+        if (name === TIER_ATTRIBUTE) return 'Category';
+        if (name === PATCH_AREA_ATTRIBUTE) return 'Patch Area';
+        if (name === CORE_AREA_ATTRIBUTE) return 'Core Area';
+        return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    initializeAboutModal();
+    initializeDarkModeToggle();
+
+    function initializeAboutModal() {
+        const aboutBtn = document.getElementById('about-btn');
+        const aboutModal = document.getElementById('about-modal');
+        const closeModalBtn = aboutModal.querySelector('.close-modal-btn');
+        aboutBtn.addEventListener('click', () => { aboutModal.style.display = 'block'; document.body.classList.add('modal-open'); });
+        closeModalBtn.addEventListener('click', () => { aboutModal.style.display = 'none'; document.body.classList.remove('modal-open'); });
+    }
+
+    function initializeDarkModeToggle() {
+        const toggleButton = document.getElementById('dark-mode-toggle'); 
+        toggleButton.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            toggleButton.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+        });
     }
 });
