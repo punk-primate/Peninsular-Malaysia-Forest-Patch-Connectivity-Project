@@ -5,6 +5,7 @@ const MAP_STYLE_SATELLITE = 'mapbox://styles/mapbox/satellite-streets-v12';
 
 // --- LAYER & ATTRIBUTE CONFIGURATION ---
 const FOREST_PATCH_LAYER_ID = 'Kuantan Forest Patches'; 
+const OUTLINE_LAYER_ID = 'Kuantan Outline'; 
 
 const TIER_ATTRIBUTE = 'Tier'; 
 const PATCH_ID_ATTRIBUTE = 'id';
@@ -43,6 +44,5 @@ const TIER_COLORS = {
     "Tier 6 (Isolated Micro Patches)": "#0a4c12"
 };
 
-// --- MAP INITIAL VIEW ---
-const INITIAL_CENTER = [103.33, 3.82];  // Kuantan
+const INITIAL_CENTER = [103.32, 3.81];
 const INITIAL_ZOOM = 11;
