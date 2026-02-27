@@ -4,7 +4,6 @@ const MAP_STYLE_CUSTOM = 'mapbox://styles/bengalea/cmb60zyax00o501sdahv19e6q';
 const MAP_STYLE_SATELLITE = 'mapbox://styles/mapbox/satellite-streets-v12';
 
 // --- LAYER & ATTRIBUTE CONFIGURATION ---
-// PASTE YOUR EXACT LAYER NAME HERE
 const FOREST_PATCH_LAYER_ID = 'Kuantan Forest Patches'; 
 
 const TIER_ATTRIBUTE = 'Tier'; 
@@ -36,6 +35,6 @@ const TIER_COLORS = {
     "Tier 6 (Isolated Micro Patches)": "#0a4c12"
 };
 
-// --- MAP INITIAL VIEW (KUANTAN) ---
+// --- MAP INITIAL VIEW ---
 const INITIAL_CENTER = [103.3256, 3.8126];
 const INITIAL_ZOOM = 11;
