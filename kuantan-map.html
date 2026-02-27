@@ -4,74 +4,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kuantan Forest Patches</title>
+
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css">
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="app-container">
-        <aside id="sidebar">
-            <div id="sidebar-header">
-                <h2>Kuantan Forest</h2>
-                <div class="header-buttons"> 
-                    <button id="dark-mode-toggle">🌓</button>
-                    <button id="toggle-sidebar-btn">‹</button>
-                </div>
-            </div>
 
-            <div class="sidebar-section" id="filter-section">
-                <h3>Filter by Category</h3> 
-            </div>
+<div id="app-container">
+    <aside id="sidebar">
+        <div id="sidebar-header">
+            <h2>Kuantan Forest Patches</h2>
+        </div>
 
-            <div class="sidebar-section" id="info-panel-section">
-                <h3>Patch Details</h3>
-                <div id="patch-info-content">Select a patch on the map.</div>
-            </div>
+        <div class="sidebar-section" id="filter-section"></div>
 
-            <div class="sidebar-section" id="stats-section">
-                <h3>Summary Statistics</h3>
-                <div id="stats-content">
-                    <p>Visible Patches: <span id="visible-patches-count">-</span></p>
-                    <p>Total Area: <span id="visible-patches-area">- ha</span></p>
-                    <div id="tier-stats-breakdown"></div>
-                </div>
-            </div>
+        <div class="sidebar-section" id="info-panel-section">
+            <h3>Patch Details</h3>
+            <div id="patch-info-content">Select a patch on the map.</div>
+        </div>
 
-            <div class="sidebar-section" id="tools-section">
-                <div id="search-geocoder-container"></div>
-                <label for="basemap-toggle" style="margin-top:10px; display:block;">Basemap:</label>
-                <select id="basemap-toggle">
-                    <option value="custom">Custom Style</option>
-                    <option value="satellite">Satellite</option>
-                </select>
-                <div id="area-filter-controls" style="margin-top:15px;">
-                    <h4>Filter Area (ha)</h4>
-                    <input type="number" id="min-area-input" placeholder="Min">
-                    <input type="number" id="max-area-input" placeholder="Max">
-                    <button id="apply-area-filter-btn">Apply</button>
-                    <button id="reset-area-filter-btn">Reset</button>
-                </div>
-            </div>
-            
-            <div id="sidebar-footer"><button id="about-btn">About Project</button></div>
-        </aside>
+        <div class="sidebar-section" id="stats-section">
+            <h3>Summary Statistics</h3>
+            <p>Visible Patches: <span id="visible-patches-count">-</span></p>
+            <p>Total Area: <span id="visible-patches-area">- ha</span></p>
+            <p>Average ENN: <span id="visible-patches-enn">- m</span></p>
+        </div>
 
-        <main id="map-container">
-            <div id="map"></div>
-            <div id="zoom-warning">ZOOM IN TO VIEW PATCHES</div>
-            <div id="loading-indicator">
-                <div class="terminal-loader"><p>> LOADING KUANTAN DATA...</p><div class="spinner"></div></div>
-            </div>
-        </main>
-    </div>
+        <div class="sidebar-section">
+            <div id="search-geocoder-container"></div>
+        </div>
+    </aside>
 
-    <div id="about-modal" class="modal" style="display:none;">
-        <div class="modal-content"><span class="close-modal-btn">×</span><h2>Kuantan Project</h2><p>Ecological connectivity analysis for Kuantan.</p></div>
-    </div>
+    <main id="map-container">
+        <div id="map"></div>
+        <div id="zoom-warning">ZOOM IN TO VIEW FOREST PATCHES</div>
+        <div id="loading-indicator">Loading Kuantan forest data...</div>
+    </main>
+</div>
 
-    <script src="config-kuantan.js"></script>
-    <script src="app-kuantan.js"></script>
+<script src="config-kuantan.js"></script>
+<script src="app-kuantan.js"></script>
+
 </body>
 </html>
