@@ -1,22 +1,27 @@
+// --- MAPBOX CONFIGURATION ---
 const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoiYmVuZ2FsZWEiLCJhIjoiY21iNjBvbXp0MWpiejJpb2Vmc3FyeWdweSJ9.9gzKml0FN_5I30w33iqg3A';
 const MAP_STYLE_CUSTOM = 'mapbox://styles/bengalea/cmb60zyax00o501sdahv19e6q';
 const MAP_STYLE_SATELLITE = 'mapbox://styles/mapbox/satellite-streets-v12';
 
-// Ensure this matches your Mapbox Studio layer name exactly
+// --- LAYER & ATTRIBUTE CONFIGURATION ---
 const FOREST_PATCH_LAYER_ID = 'Kuantan Forest Patches'; 
+const OUTLINE_LAYER_ID = 'Kuantan Outline'; 
 
 const TIER_ATTRIBUTE = 'Tier'; 
 const PATCH_ID_ATTRIBUTE = 'id';
 const PATCH_AREA_ATTRIBUTE = 'area';
+const CORE_AREA_ATTRIBUTE = 'core'; 
+const CONTIGUITY_INDEX_ATTRIBUTE = 'contig'; 
+const PERIMETER_AREA_RATIO_ATTRIBUTE = 'para';
 const ENN_ATTRIBUTE = 'enn'; 
 
+const INFO_PANEL_ATTRIBUTES = ['Tier', 'id', 'area', 'core', 'contig', 'para', 'enn'];
+
+// --- TIER CONFIGURATION ---
 const ALL_TIERS = [
-    "Tier 1 (Core Habitat)", 
-    "Tier 2 (Major Stepping Stones)", 
-    "Tier 3 (Connected Fragments)", 
-    "Tier 4 (Vulnerable Edge Fragments)", 
-    "Tier 5 (Isolated Fragments)", 
-    "Tier 6 (Isolated Micro Patches)"
+    "Tier 1 (Core Habitat)", "Tier 2 (Major Stepping Stones)", 
+    "Tier 3 (Connected Fragments)", "Tier 4 (Vulnerable Edge Fragments)", 
+    "Tier 5 (Isolated Fragments)", "Tier 6 (Isolated Micro Patches)"
 ];
 
 const TIER_COLORS = {
@@ -28,5 +33,6 @@ const TIER_COLORS = {
     "Tier 6 (Isolated Micro Patches)": "#0a4c12"
 };
 
+// --- MAP INITIAL VIEW (KUANTAN) ---
 const INITIAL_CENTER = [103.32, 3.81];
 const INITIAL_ZOOM = 11;
