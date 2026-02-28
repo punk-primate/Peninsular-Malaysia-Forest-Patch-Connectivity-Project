@@ -44,5 +44,6 @@ const TIER_COLORS = {
     "Tier 6 (Isolated Micro Patches)": "#0a4c12"
 };
 
-const INITIAL_CENTER = [103.32, 3.81];
+// --- MAP INITIAL VIEW ---
+const INITIAL_CENTER = [103.33, 3.82];  // Kuantan Coordinates
 const INITIAL_ZOOM = 11;
