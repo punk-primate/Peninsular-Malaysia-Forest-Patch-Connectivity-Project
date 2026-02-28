@@ -1,9 +1,9 @@
  (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
 diff --git a/app-kuantan.js b/app-kuantan.js
-index 6d0a5268bd5aaf8e1fe62c8d3ddc576f0466a50c..3f3e0fabea1f24e4603d3f96fd734a83788125c7 100644
+index 6d0a5268bd5aaf8e1fe62c8d3ddc576f0466a50c..ff94b5c8612b41c369c95cd7d4138d3a1372d487 100644
 --- a/app-kuantan.js
 +++ b/app-kuantan.js
-@@ -1,268 +1,399 @@
+@@ -1,268 +1,397 @@
 -console.log("--- app-kuantan.js Initialized ---");
 -
 -const METRIC_DESCRIPTIONS = {
@@ -272,8 +272,6 @@ index 6d0a5268bd5aaf8e1fe62c8d3ddc576f0466a50c..3f3e0fabea1f24e4603d3f96fd734a83
 -        if(ennEl) ennEl.textContent = validEnn > 0 ? (totalEnn / validEnn).toFixed(2) + ' m' : '- m';
 -    }
 -});
-+console.log('app-kuantan.js loaded');
-+
 +document.addEventListener('DOMContentLoaded', function () {
 +    var toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
 +    var sidebar = document.getElementById('sidebar');
