@@ -1,4 +1,4 @@
-// --- VERY TOP OF app-kuantan.js for file loading check ---
+// --- VERY TOP OF app-kuantan.js for file looading check ---
 console.log("--- app-kuantan.js LATEST (Improved Modal, Stats on Idle, Info Icons) - Timestamp: " + new Date().toLocaleTimeString() + " ---");
 
 // Define descriptions for metrics. These constants (PATCH_AREA_ATTRIBUTE, etc.) are from config-kuantan.js
@@ -160,14 +160,11 @@ map.on('idle', () => {
         }
         try {
             const geocoder = new MapboxGeocoder({
-                accessToken: mapboxgl.accessToken, 
-                mapboxgl: mapboxgl, 
-                marker: { color: '#FF6347' },
-                placeholder: 'Search Kuantan area...',
-                // Generous bounding box covering greater Kuantan to force local results without cutting off valid searches
-                bbox: [103.0000, 3.5000, 103.5500, 4.2000], 
-                countries: 'MY', 
-                limit: 10 // Increased from 7 to show more local neighborhood/street results
+                accessToken: mapboxgl.accessToken, mapboxgl: mapboxgl, marker: { color: '#FF6347' },
+                placeholder: 'Search in Kuantan',
+                bbox: [102.9, 3.5, 103.6, 4.2], // Updated bounding box for Kuantan area
+                proximity: { longitude: INITIAL_CENTER[0], latitude: INITIAL_CENTER[1] },
+                countries: 'MY', types: 'country,region,postcode,district,place,locality,neighborhood,address,poi', limit: 7
             });
             geocoderContainer.innerHTML = '';
             geocoderContainer.appendChild(geocoder.onAdd(map));
@@ -566,3 +563,38 @@ map.on('idle', () => {
         if (!toggleButton) { console.error("CRITICAL DEBUG: Dark mode toggle button ('dark-mode-toggle') NOT FOUND!"); return; }
         console.log("DEBUG: Dark mode toggle button FOUND:", toggleButton);
         if (localStorage.getItem('darkMode') === 'enabled') {
+            document.body.classList.add('dark-mode');
+            toggleButton.textContent = '☀️'; toggleButton.setAttribute('aria-label', 'Switch to light mode');
+        } else {
+            toggleButton.textContent = '🌙'; toggleButton.setAttribute('aria-label', 'Switch to dark mode');
+        }
+        toggleButton.addEventListener('click', () => {
+            console.log("DEBUG: Dark mode toggle CLICKED!");
+            document.body.classList.toggle('dark-mode');
+            console.log("Body classes after toggle:", document.body.className);
+            if (document.body.classList.contains('dark-mode')) {
+                localStorage.setItem('darkMode', 'enabled');
+                toggleButton.textContent = '☀️'; toggleButton.setAttribute('aria-label', 'Switch to light mode');
+            } else {
+                localStorage.setItem('darkMode', 'disabled');
+                toggleButton.textContent = '🌙'; toggleButton.setAttribute('aria-label', 'Switch to dark mode');
+            }
+        });
+    }
+
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
+    const sidebar = document.getElementById('sidebar');
+    const appContainer = document.getElementById('app-container');
+    if (toggleSidebarBtn && sidebar && appContainer) {
+        toggleSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            appContainer.classList.toggle('sidebar-collapsed');
+            setTimeout(() => { map.resize(); }, 250);
+            toggleSidebarBtn.textContent = sidebar.classList.contains('collapsed') ? '›' : '‹';
+            toggleSidebarBtn.setAttribute('aria-label', sidebar.classList.contains('collapsed') ? 'Open sidebar' : 'Close sidebar');
+            toggleSidebarBtn.setAttribute('aria-expanded', String(!sidebar.classList.contains('collapsed')));
+        });
+    } else {
+        console.error("Sidebar toggle elements not found: #toggle-sidebar-btn, #sidebar, or #app-container.");
+    }
+}); // End DOMContentLoaded
