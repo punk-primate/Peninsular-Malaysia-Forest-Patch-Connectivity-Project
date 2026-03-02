@@ -50,4 +50,3 @@ const TIER_COLORS = {
 const INITIAL_CENTER = [103.326, 3.812];
 const INITIAL_ZOOM = 11;
 
-
