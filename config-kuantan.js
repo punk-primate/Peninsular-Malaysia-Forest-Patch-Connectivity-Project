@@ -5,8 +5,8 @@ const MAP_STYLE_SATELLITE = 'mapbox://styles/mapbox/satellite-streets-v12';
 
 // --- LAYER & ATTRIBUTE CONFIGURATION ---
 const FOREST_PATCH_LAYER_ID = 'Kuantan Forest Patches'; 
-const OUTLINE_LAYER_ID = 'Kuantan Outline'; 
 
+// Updated to perfectly match the column headers from our R CSV
 const TIER_ATTRIBUTE = 'Tier'; 
 const PATCH_ID_ATTRIBUTE = 'id';
 const PATCH_AREA_ATTRIBUTE = 'area';
@@ -15,6 +15,7 @@ const CONTIGUITY_INDEX_ATTRIBUTE = 'contig';
 const PERIMETER_AREA_RATIO_ATTRIBUTE = 'para';
 const ENN_ATTRIBUTE = 'enn'; 
 
+// Attributes to display in the info panel
 const INFO_PANEL_ATTRIBUTES = [
     'Tier',
     'id',
@@ -45,6 +46,6 @@ const TIER_COLORS = {
 };
 
 // --- MAP INITIAL VIEW ---
-const INITIAL_CENTER = [103.33, 3.82];  // Kuantan Coordinates
+// Centered roughly on Kuantan
+const INITIAL_CENTER = [103.326, 3.812];
 const INITIAL_ZOOM = 11;
-
