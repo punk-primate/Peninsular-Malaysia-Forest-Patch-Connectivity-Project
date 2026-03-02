@@ -1,4 +1,4 @@
-// --- VERY TOP OF app-kuantan.js for file loading check ---
+// --- VERY TOP OF app-kuantan.js for file looading check ---
 console.log("--- app-kuantan.js LATEST (Improved Modal, Stats on Idle, Info Icons) - Timestamp: " + new Date().toLocaleTimeString() + " ---");
 
 // Define descriptions for metrics. These constants (PATCH_AREA_ATTRIBUTE, etc.) are from config-kuantan.js
@@ -598,3 +598,4 @@ map.on('idle', () => {
         console.error("Sidebar toggle elements not found: #toggle-sidebar-btn, #sidebar, or #app-container.");
     }
 }); // End DOMContentLoaded
+
