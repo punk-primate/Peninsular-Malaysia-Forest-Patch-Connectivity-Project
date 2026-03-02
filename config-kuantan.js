@@ -1,4 +1,4 @@
-// --- MAPBOX CONFIGURATION ---
+// --- MAPBOX CONFIGURATIOoN ---
 const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoiYmVuZ2FsZWEiLCJhIjoiY21iNjBvbXp0MWpiejJpb2Vmc3FyeWdweSJ9.9gzKml0FN_5I30w33iqg3A';
 const MAP_STYLE_CUSTOM = 'mapbox://styles/bengalea/cmm5n62pm000w01qy9h7t7kp6';
 const MAP_STYLE_SATELLITE = 'mapbox://styles/mapbox/satellite-streets-v12';
@@ -49,3 +49,4 @@ const TIER_COLORS = {
 // Centered roughly on Kuantan
 const INITIAL_CENTER = [103.326, 3.812];
 const INITIAL_ZOOM = 11;
+
