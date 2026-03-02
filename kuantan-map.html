@@ -11,41 +11,6 @@
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
 
     <link rel="stylesheet" href="style.css">
-    
-    <style>
-        /* Floating Home Button Styles */
-        #floating-home-btn {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            z-index: 1000;
-            background-color: var(--bg-primary, #ffffff);
-            color: var(--text-primary, #212529);
-            border: 2px solid var(--border-secondary, #ced4da);
-            padding: 8px 15px;
-            font-family: inherit;
-            font-weight: bold;
-            font-size: 13px;
-            text-decoration: none;
-            border-radius: 4px;
-            box-shadow: 0 2px 5px var(--shadow-color, rgba(0,0,0,0.15));
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-        }
-
-        #floating-home-btn:hover {
-            background-color: var(--legend-hover-bg, #e9ecef);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px var(--shadow-color, rgba(0,0,0,0.25));
-        }
-
-        body.dark-mode #floating-home-btn {
-            background-color: var(--bg-primary, #2b2b2b);
-            color: var(--text-primary, #ffffff);
-            border-color: var(--border-secondary, #555555);
-        }
-    </style>
 </head>
 <body>
     <div id="app-container">
@@ -60,7 +25,7 @@
 
             <div class="sidebar-section" id="filter-section">
                 <h3>Filter by Category</h3> 
-            </div>
+                </div>
 
             <div class="sidebar-section" id="info-panel-section">
                 <h3>Patch Details</h3>
@@ -112,26 +77,22 @@
         </aside>
 
        <main id="map-container">
-            <a href="index.html" id="floating-home-btn" aria-label="Return to Home">
-                ◄ HOME
-            </a>
+    <div id="map"></div>
+    
+    <div id="zoom-warning">
+        [ SYSTEM NOTICE ]<br>
+        ZOOM IN TO VIEW FOREST PATCHES
+    </div>
 
-            <div id="map"></div>
-            
-            <div id="zoom-warning">
-                [ SYSTEM NOTICE ]<br>
-                ZOOM IN TO VIEW FOREST PATCHES
-            </div>
-
-            <div id="loading-indicator">
-                <div class="terminal-loader">
-                    <p class="typing">> INITIALIZING GEOSPATIAL ENGINE...</p>
-                    <p class="typing" style="animation-delay: 1s;">> LOADING KUANTAN_FORESTS.DB...</p>
-                    <p class="typing" style="animation-delay: 2s;">> CALCULATING CONNECTIVITY TIERS...</p>
-                    <div class="spinner"></div>
-                </div>
-            </div>
-        </main>
+    <div id="loading-indicator">
+        <div class="terminal-loader">
+            <p class="typing">> INITIALIZING GEOSPATIAL ENGINE...</p>
+            <p class="typing" style="animation-delay: 1s;">> LOADING KUANTAN_FORESTS.DB...</p>
+            <p class="typing" style="animation-delay: 2s;">> CALCULATING CONNECTIVITY TIERS...</p>
+            <div class="spinner"></div>
+        </div>
+    </div>
+</main>
     </div>
 
     <div id="about-modal" class="modal" style="display:none;">
