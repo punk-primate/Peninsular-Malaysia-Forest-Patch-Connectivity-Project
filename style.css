@@ -280,7 +280,7 @@ body.modal-open .modal-content {
     outline: none; 
 }
 
-/* Zoom Warning Styling */
+/* Zoom Warning Styling (Desktop) */
 #zoom-warning {
     display: none;
     position: absolute;
@@ -296,9 +296,10 @@ body.modal-open .modal-content {
     z-index: 1000;
     text-align: center;
     box-shadow: 8px 8px 0px #0f380f;
+    pointer-events: none;
 }
 
-/* Terminal Loader Styling */
+/* Terminal Loader Styling (Desktop) */
 .terminal-loader {
     text-align: left;
     display: inline-block;
@@ -378,24 +379,30 @@ body.modal-open .modal-content {
         font-size: 10px;
     }
 
-    /* 8. Fix retro font wrapping and scaling for mobile screens */
+    /* 8. Change retro font to a clean, readable normal font for mobile devices */
+    #zoom-warning, .terminal-loader {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 12px; /* Increased from 10px to be perfectly readable on phones */
+        letter-spacing: 0.5px;
+    }
+
     #zoom-warning {
-        font-size: 7.5px;
         padding: 10px 15px;
         width: 80%;
         max-width: 280px;
         box-sizing: border-box;
-        line-height: 1.6;
+        line-height: 1.4;
         top: 15px;
+        border-width: 2px; /* Slimmer border for phone screens */
+        box-shadow: 4px 4px 0px #0f380f; /* Smaller shadow for phone screens */
     }
 
     .terminal-loader {
-        font-size: 7.5px;
         max-width: 90vw; 
     }
 
     .terminal-loader .typing {
-        border-right: 5px solid #9bbc0f;
+        border-right: 3px solid #9bbc0f; /* Thinner blinking cursor to match the normal font */
         margin-bottom: 8px;
     }
 }
