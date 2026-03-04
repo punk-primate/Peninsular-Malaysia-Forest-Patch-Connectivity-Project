@@ -345,4 +345,58 @@ body.modal-open .modal-content {
     100% { filter: drop-shadow(0 0 2px #9bbc0f); }
 }
 
+/* =========================================
+   MOBILE RESPONSIVENESS (Screens under 768px)
+   ========================================= */
+@media (max-width: 768px) {
+    /* 1. Float the sidebar over the map */
+    #sidebar {
+        position: absolute;
+        height: 100%;
+        width: 85%;
+        max-width: 320px;
+        z-index: 1000;
+        box-shadow: 4px 0 15px rgba(0,0,0,0.5);
+    }
+
+    /* 2. Map takes full width behind the sidebar */
+    #map-container,
+    #app-container.sidebar-collapsed #map-container {
+        margin-left: 0 !important;
+        width: 100%;
+    }
+
+    /* 3. Make the collapsed sidebar slightly wider for easier tapping */
+    #sidebar.collapsed {
+        width: 45px; 
+    }
+
+    /* 4. Enlarge form inputs to prevent iOS auto-zoom and improve tapping */
+    #tools-section select,
+    #area-filter-controls input[type="number"],
+    .area-filter-buttons button,
+    #about-btn,
+    .mapboxgl-ctrl-geocoder input[type="text"] {
+        padding: 12px 10px;
+        font-size: 16px !important; 
+    }
+
+    /* 5. Adjust text sizing for cramped space */
+    #sidebar-header h2 {
+        font-size: 1.1em;
+    }
+
+    /* 6. Push Mapbox zoom controls down so they don't overlap your home button */
+    .mapboxgl-ctrl-top-right {
+        top: 60px;
+    }
+    
+    /* 7. Make the floating home button easier to tap */
+    #floating-home-btn {
+        padding: 12px 16px;
+        font-size: 10px;
+    }
+}
+
+
 
