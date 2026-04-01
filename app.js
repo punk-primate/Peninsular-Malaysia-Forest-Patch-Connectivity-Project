@@ -698,7 +698,7 @@ map.on('idle', () => {
                         li.appendChild(infoIcon);
                     }
                     ul.appendChild(li);
-                    continue;
+                    return; // skip to next attribute (replaces invalid 'continue' in forEach)
                 }
                 
                 li.innerHTML = `<strong>${displayKey}:</strong> ${valueToDisplay} `; // Note the space for the icon
