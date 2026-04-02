@@ -10,6 +10,73 @@
     <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
     <link rel="stylesheet" href="style.css">
+
+    <style>
+        #map-top-bar {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 6px;
+            padding: 6px 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            white-space: nowrap;
+        }
+        #howto-btn {
+            background: none;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #333;
+        }
+        #howto-btn:hover { background: #f0f0f0; }
+        #corridor-controls { display: flex; align-items: center; gap: 6px; }
+        #corridor-toggle-fab {
+            background: #2a8234;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        #corridor-toggle-fab:hover  { background: #1e6b27; }
+        #corridor-toggle-fab.active { background: #00b8d9; }
+        #conn-level-toggles { display: flex; gap: 4px; align-items: center; }
+        .conn-level-btn {
+            background: transparent;
+            border: 2px solid currentColor;
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            opacity: 0.4;
+        }
+        .conn-level-btn.active { opacity: 1; }
+        .conn-level-btn:hover   { opacity: 0.75; }
+        #home-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            font-size: 16px;
+            text-decoration: none;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #home-btn:hover { background: #f0f0f0; }
+    </style>
 </head>
 <body>
     <div id="app-container">
@@ -75,19 +142,16 @@
         <main id="map-container">
             <div id="map"></div>
 
-            <!-- Map overlay controls: How to use | Show Corridors + level toggles | Home -->
             <div id="map-top-bar">
                 <button id="howto-btn">How to use this map</button>
-
                 <div id="corridor-controls">
                     <button id="corridor-toggle-fab">Show Corridors</button>
                     <div id="conn-level-toggles" style="display:none">
-                        <button id="conn-filter-high" class="conn-level-btn">High</button>
-                        <button id="conn-filter-moderate" class="conn-level-btn">Moderate</button>
-                        <button id="conn-filter-low" class="conn-level-btn">Low</button>
+                        <button id="conn-filter-high"     class="conn-level-btn" style="color:#00e5ff">High</button>
+                        <button id="conn-filter-moderate" class="conn-level-btn" style="color:#0097b2">Moderate</button>
+                        <button id="conn-filter-low"      class="conn-level-btn" style="color:#005f73">Low</button>
                     </div>
                 </div>
-
                 <a href="index.html" id="home-btn" title="Back to home">🏠</a>
             </div>
 
