@@ -29,8 +29,7 @@ const INFO_PANEL_ATTRIBUTES = [
     'para',
     'enn',
     'connectivity',
-    'mean_flow',
-    'pinch_pct'
+    'mean_flow'
 ];
 
 // --- TIER CONFIGURATION ---
