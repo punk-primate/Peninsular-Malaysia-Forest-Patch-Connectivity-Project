@@ -3,13 +3,11 @@ console.log("--- app.js LATEST (Improved Modal, Stats on Idle, Info Icons) - Tim
 
 // Define descriptions for metrics. These constants (PATCH_AREA_ATTRIBUTE, etc.) are from config.js
 const METRIC_DESCRIPTIONS = {
-    [PATCH_AREA_ATTRIBUTE]: "Total area of the forest patch in hectares. Larger patches can support more species and are more resilient to edge effects.",
-    [CORE_AREA_ATTRIBUTE]: "The interior area of the patch that is sufficiently buffered from the edge. Edge zones experience altered conditions such as increased light and wind. Core area represents the stable interior habitat that sensitive arboreal animals depend on.",
-    [CONTIGUITY_INDEX_ATTRIBUTE]: "A measure of how compact and internally connected the patch is. Values range from 0 to 1, where 1 indicates a perfectly contiguous patch. More contiguous patches allow easier movement within the patch.",
-    [PERIMETER_AREA_RATIO_ATTRIBUTE]: "The ratio of the patch perimeter to its area. A higher ratio means the patch has a more irregular or elongated shape, with a greater proportion of edge habitat relative to interior.",
-    [ENN_ATTRIBUTE]: "The straight-line distance to the nearest adjacent forest patch, in metres. Lower values indicate the patch is closer to other forest areas and more likely to be reached by dispersing animals.",
-    [CONNECTIVITY_ATTRIBUTE]: "A connectivity rating derived from circuit theory modelling across the landscape. High indicates the patch sits within an active movement corridor. Moderate indicates partial connectivity. Low indicates the surrounding landscape presents significant resistance. Barrier indicates the patch is surrounded by an impermeable urban or agricultural matrix.",
-    [MEAN_FLOW_ATTRIBUTE]: "The mean composite current flow value within this patch, on a 0 to 300 scale. Higher values indicate the patch carries more movement current and is more central to the regional connectivity network."
+    [PATCH_AREA_ATTRIBUTE]: "Patch Area: The total land area of the forest patch in hectares (ha). This indicates the overall size of the habitat.",
+    [CORE_AREA_ATTRIBUTE]: "Core Area: The area within a forest patch that is buffered from edge effects (e.g., changes in light, wind, temperature), in hectares (ha). It represents the more stable interior habitat critical for sensitive species.",
+    [CONTIGUITY_INDEX_ATTRIBUTE]: "Contiguity Index: A measure of the spatial connectedness or compactness of cells within a patch. Values range from 0 to 1, where higher values indicate more contiguous, less fragmented patches, which is generally better for biodiversity.",
+    [PERIMETER_AREA_RATIO_ATTRIBUTE]: "Perimeter-Area Ratio: The ratio of the patch's perimeter to its area. A higher ratio often indicates a more elongated or irregular shape, leading to a greater proportion of edge habitat compared to core habitat.",
+    [ENN_ATTRIBUTE]: "Euclidean Nearest-Neighbor (ENN): The shortest straight-line distance to the nearest neighboring forest patch, in meters. Lower values indicate greater spatial connectivity."
 };
 
 let metricPopup = null; // To keep track of the metric info popup
@@ -134,12 +132,12 @@ map.on('idle', () => {
         } else {
             map.setPaintProperty(FOREST_PATCH_LAYER_ID, 'fill-color',
                 ['match', ['get', TIER_ATTRIBUTE],
-                    'Tier 1 (Core Habitat)', '#b1eaac',
-                    'Tier 2 (Major Stepping Stones)', '#8ad284',
-                    'Tier 3 (Connected Fragments)', '#5aaf64',
-                    'Tier 4 (Vulnerable Edge Fragments)', '#2a8234',
-                    'Tier 5 (Isolated Fragments)', '#1e6b27',
-                    'Tier 6 (Isolated Micro Patches)', '#0a4c12',
+                    'Tier 1 (Core Habitat)',            '#b1eaac',
+                    'Tier 2 (Major Stepping Stones)',   '#8ad284',
+                    'Tier 3 (Connected Fragments)',     '#5aaf64',
+                    'Tier 4 (Vulnerable Edge Fragments)','#2a8234',
+                    'Tier 5 (Isolated Fragments)',      '#1e6b27',
+                    'Tier 6 (Isolated Micro Patches)',  '#0a4c12',
                     '#cccccc']);
         }
     }
@@ -151,15 +149,42 @@ map.on('idle', () => {
             if (btn) btn.style.display = 'none';
             return;
         }
+
+        // Start hidden
         map.setLayoutProperty(CONNECTOR_LAYER_ID, 'visibility', 'none');
 
-        // Style by connectivity
-        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-color',
-            ['match', ['get', 'connectivity'],
-                'High', '#f7ce46', 'Moderate', '#e07c1f', 'Low', '#a03030', '#888888']);
-        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-width', 3);
-        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-opacity', 0.9);
+        // Colour the main layer by connectivity
+        const lineColor = ['match', ['get', 'connectivity'],
+            'High',     '#f7ce46',
+            'Moderate', '#e07c1f',
+            'Low',      '#c04040',
+            '#888888'
+        ];
 
+        // Main connector line
+        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-color', lineColor);
+        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-width', 3);
+        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-opacity', 0.95);
+
+        // Add a glow layer beneath the connector for the plasma effect
+        const existingStyle = map.getStyle().layers.find(l => l.id === CONNECTOR_LAYER_ID);
+        if (existingStyle && !map.getLayer('connector-glow')) {
+            map.addLayer({
+                id:     'connector-glow',
+                type:   'line',
+                source: existingStyle.source,
+                'source-layer': existingStyle['source-layer'],
+                minzoom: 11,
+                layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
+                paint: {
+                    'line-color': lineColor,
+                    'line-width': 10,
+                    'line-opacity': 0.15
+                }
+            }, CONNECTOR_LAYER_ID); // insert below main layer
+        }
+
+        // Hover popup
         const connPopup = new mapboxgl.Popup({
             closeButton: false, closeOnClick: false, className: 'custom-hover-popup'
         });
@@ -168,7 +193,7 @@ map.on('idle', () => {
                 map.getCanvas().style.cursor = 'pointer';
                 const f = e.features[0].properties;
                 connPopup.setLngLat(e.lngLat)
-                    .setHTML('<strong>Potential movement corridor</strong><br>Gap to nearest patch: ' + f.gap_m + ' m<br>Connectivity: ' + f.connectivity)
+                    .setHTML('<strong>Potential movement corridor</strong><br>Gap: ' + f.gap_m + ' m &nbsp;|&nbsp; Connectivity: ' + f.connectivity)
                     .addTo(map);
             }
         });
@@ -176,6 +201,8 @@ map.on('idle', () => {
             map.getCanvas().style.cursor = '';
             connPopup.remove();
         });
+
+        // Click — show corridor info in sidebar
         map.on('click', CONNECTOR_LAYER_ID, (e) => {
             if (e.features && e.features.length > 0) {
                 const f = e.features[0].properties;
@@ -198,14 +225,53 @@ map.on('idle', () => {
             }
         });
 
+        // Toggle button with animated plasma effect
         const btn = document.getElementById('connector-toggle');
         if (btn) {
             let visible = false;
+            let animFrame = null;
+            let animStep  = 0;
+            let lastTs    = 0;
+
+            // Dash array sequences that create a flowing "marching" effect
+            const dashSeq = [
+                [0, 4, 3], [0.5, 4, 2.5], [1, 4, 2], [1.5, 4, 1.5],
+                [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0],
+                [0, 0.5, 3, 3.5], [0, 1, 3, 3], [0, 1.5, 3, 2.5],
+                [0, 2, 3, 2], [0, 2.5, 3, 1.5], [0, 3, 3, 1],
+                [0, 3.5, 3, 0.5], [0, 4, 3, 0]
+            ];
+
+            function animate(timestamp) {
+                if (timestamp - lastTs > 55) {
+                    animStep = (animStep + 1) % dashSeq.length;
+                    if (map.getLayer(CONNECTOR_LAYER_ID)) {
+                        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-dasharray', dashSeq[animStep]);
+                    }
+                    lastTs = timestamp;
+                }
+                animFrame = requestAnimationFrame(animate);
+            }
+
             btn.addEventListener('click', () => {
                 visible = !visible;
+
                 map.setLayoutProperty(CONNECTOR_LAYER_ID, 'visibility', visible ? 'visible' : 'none');
-                btn.textContent = visible ? 'Hide Corridors' : 'Show Corridors';
-                btn.classList.toggle('active', visible);
+                if (map.getLayer('connector-glow')) {
+                    map.setLayoutProperty('connector-glow', 'visibility', visible ? 'visible' : 'none');
+                }
+
+                if (visible) {
+                    animStep = 0;
+                    animFrame = requestAnimationFrame(animate);
+                    btn.textContent = 'Hide Corridors';
+                    btn.classList.add('active');
+                } else {
+                    if (animFrame) cancelAnimationFrame(animFrame);
+                    animFrame = null;
+                    btn.textContent = 'Show Corridors';
+                    btn.classList.remove('active');
+                }
             });
         }
     }
@@ -467,93 +533,72 @@ map.on('idle', () => {
     }
 
     function displayPatchInfo(properties) {
-        console.log("DEBUG: displayPatchInfo() function EXECUTED.", properties);
+        console.log("DEBUG: displayPatchInfo() EXECUTED.", properties);
         const patchInfoContent = document.getElementById('patch-info-content');
         patchInfoContent.innerHTML = '';
         if (!properties) { patchInfoContent.innerHTML = 'No data for this patch.'; return; }
 
-        const tier = properties[TIER_ATTRIBUTE];
+        const tier         = properties[TIER_ATTRIBUTE];
         const connectivity = properties[CONNECTIVITY_ATTRIBUTE];
-        const area = properties[PATCH_AREA_ATTRIBUTE];
-        const core = properties[CORE_AREA_ATTRIBUTE];
-        const enn  = properties[ENN_ATTRIBUTE];
-        const flow = properties[MEAN_FLOW_ATTRIBUTE];
-        const id   = properties[PATCH_ID_ATTRIBUTE];
+        const area         = properties[PATCH_AREA_ATTRIBUTE];
+        const core         = properties[CORE_AREA_ATTRIBUTE];
+        const enn          = properties[ENN_ATTRIBUTE];
+        const flow         = properties[MEAN_FLOW_ATTRIBUTE];
+        const id           = properties[PATCH_ID_ATTRIBUTE];
 
         const tierDesc = {
-            'Tier 1 (Core Habitat)':
-                'This is one of the most structurally important forest patches in the landscape. It is large enough to support a resident group of arboreal animals and has substantial interior area protected from edge effects.',
-            'Tier 2 (Major Stepping Stones)':
-                'A high-quality patch that functions as a key hub or stepping stone within the movement network. Critical for regional habitat connectivity.',
-            'Tier 3 (Connected Fragments)':
-                'A moderately connected forest fragment that plays a bridging role between larger patches in the landscape.',
-            'Tier 4 (Vulnerable Edge Fragments)':
-                'A patch with significant edge exposure relative to its size. Functionally important but vulnerable to further habitat loss or degradation.',
-            'Tier 5 (Isolated Fragments)':
-                'A small, isolated forest fragment with limited connectivity to the surrounding landscape. May support a small number of individuals but is poorly linked to the wider network.',
-            'Tier 6 (Isolated Micro Patches)':
-                'A highly isolated micro-patch or remnant forest fragment. These patches are generally too small and disconnected to support resident populations of arboreal animals, but may provide temporary shelter.'
+            'Tier 1 (Core Habitat)': 'One of the most structurally important forest patches in this landscape. Large enough to support a resident group of arboreal animals, with substantial interior area protected from edge effects.',
+            'Tier 2 (Major Stepping Stones)': 'A high-quality patch that functions as a key hub or stepping stone in the movement network. Critical for regional habitat connectivity.',
+            'Tier 3 (Connected Fragments)': 'A moderately connected forest fragment that plays a bridging role between larger patches in the landscape.',
+            'Tier 4 (Vulnerable Edge Fragments)': 'A patch with significant edge exposure relative to its size. Functionally important but vulnerable to further habitat loss or degradation.',
+            'Tier 5 (Isolated Fragments)': 'A small, isolated forest fragment with limited connectivity to the surrounding landscape. May support a small number of individuals but is poorly linked to the wider network.',
+            'Tier 6 (Isolated Micro Patches)': 'A highly isolated micro-patch or remnant forest fragment. Generally too small and disconnected to support resident populations of arboreal animals, but may provide temporary shelter.'
         };
 
         const connDesc = {
             'High':    'This patch sits within an active movement corridor. The surrounding landscape allows relatively free movement to neighbouring patches.',
-            'Moderate':'This patch has moderate connectivity. Movement to neighbouring patches is possible but depends on the specific routes available through the landscape.',
+            'Moderate':'This patch has moderate connectivity. Movement to neighbouring patches is possible but depends on the routes available through the landscape.',
             'Low':     'This patch has low connectivity. The surrounding landscape presents significant resistance to movement between patches.',
             'Barrier': 'This patch is surrounded by an impermeable barrier zone such as dense urban development. Unaided movement to neighbouring patches is effectively impossible.',
             'No Data': 'Connectivity data is not available for this patch.'
         };
 
         const ennNum = typeof enn === 'number' ? enn : parseFloat(enn);
-        let ennMsg;
+        let ennMsg = 'Distance data not available.';
         if (!isNaN(ennNum)) {
-            if (ennNum <= 30) {
-                ennMsg = 'This patch is directly adjacent to another forest area.';
-            } else if (ennNum <= 800) {
-                ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, within the typical dispersal range for arboreal animals.';
-            } else if (ennNum <= 2000) {
-                ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, beyond the typical single-generation dispersal distance for most arboreal animals.';
-            } else {
-                ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away. This patch is functionally isolated at the landscape scale.';
-            }
-        } else { ennMsg = 'Distance data not available.'; }
-
-        let html = '<div class="plain-info-panel">';
-
-        // Tier
-        html += '<div class="info-tier-badge" style="background:' + (TIER_COLORS[tier] || '#555') + ';color:#fff;padding:6px 10px;border-radius:3px;font-weight:bold;margin-bottom:8px">' + (tier || 'Unknown') + '</div>';
-        html += '<p style="margin:6px 0 12px">' + (tierDesc[tier] || '') + '</p>';
-
-        // Connectivity
-        if (connectivity && connectivity !== 'No Data') {
-            html += '<strong>Connectivity:</strong> <span style="display:inline-block;padding:2px 8px;border-radius:3px;background:' +
-                (CONNECTIVITY_COLORS[connectivity] || '#888') + ';color:' +
-                (connectivity === 'High' || connectivity === 'Moderate' ? '#1a1a1a' : '#fff') + '">' +
-                connectivity + '</span>';
-            html += '<p style="margin:4px 0 12px">' + (connDesc[connectivity] || '') + '</p>';
+            if      (ennNum <= 30)   ennMsg = 'This patch is directly adjacent to another forest area.';
+            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, within the typical dispersal range for arboreal animals.';
+            else if (ennNum <= 2000) ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, beyond the typical single-generation dispersal distance for most arboreal animals.';
+            else                     ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away. This patch is functionally isolated at the landscape scale.';
         }
 
-        // Nearest patch
-        html += '<strong>Nearest patch:</strong><p style="margin:4px 0 12px">' + ennMsg + '</p>';
+        const tierColor = TIER_COLORS[tier] || '#555';
+        const connColor = CONNECTIVITY_COLORS[connectivity] || '#888';
+        const connTextColor = (connectivity === 'High' || connectivity === 'Moderate') ? '#1a1a1a' : '#fff';
 
-        // Technical details (collapsed)
-        html += '<details style="margin-top:8px"><summary style="cursor:pointer">Show technical details</summary><ul style="margin:8px 0;padding-left:16px">';
-        html += '<li><strong>Patch ID:</strong> ' + (id || 'N/A') + '</li>';
+        let html = '<div class="plain-info-panel">';
+        html += '<div style="background:' + tierColor + ';color:#fff;padding:6px 10px;border-radius:3px;font-weight:bold;margin-bottom:8px;font-size:0.85em">' + (tier || 'Unknown') + '</div>';
+        html += '<p style="margin:4px 0 12px;line-height:1.5">' + (tierDesc[tier] || '') + '</p>';
+
+        if (connectivity && connectivity !== 'No Data') {
+            html += '<strong>Connectivity:</strong> <span style="display:inline-block;padding:2px 8px;border-radius:3px;background:' + connColor + ';color:' + connTextColor + ';font-weight:bold">' + connectivity + '</span>';
+            html += '<p style="margin:4px 0 12px;line-height:1.5">' + (connDesc[connectivity] || '') + '</p>';
+        }
+
+        html += '<strong>Nearest patch:</strong><p style="margin:4px 0 12px;line-height:1.5">' + ennMsg + '</p>';
+
+        html += '<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:bold;padding:4px 0">Show technical details</summary>';
+        html += '<ul style="margin:8px 0;padding-left:16px;font-size:0.85em">';
+        html += '<li><strong>Patch ID:</strong> ' + (id !== undefined ? id : 'N/A') + '</li>';
         if (typeof area === 'number') html += '<li><strong>Total area:</strong> ' + area.toFixed(2) + ' ha</li>';
-        if (typeof core === 'number') html += '<li><strong>Core area:</strong> ' + core.toFixed(2) + ' ha <span class="metric-info-icon" data-metric-key="' + CORE_AREA_ATTRIBUTE + '" role="button" tabindex="0">i</span></li>';
-        if (typeof properties[CONTIGUITY_INDEX_ATTRIBUTE] === 'number') html += '<li><strong>Contiguity index:</strong> ' + properties[CONTIGUITY_INDEX_ATTRIBUTE].toFixed(3) + ' <span class="metric-info-icon" data-metric-key="' + CONTIGUITY_INDEX_ATTRIBUTE + '" role="button" tabindex="0">i</span></li>';
-        if (typeof properties[PERIMETER_AREA_RATIO_ATTRIBUTE] === 'number') html += '<li><strong>Perimeter-area ratio:</strong> ' + properties[PERIMETER_AREA_RATIO_ATTRIBUTE].toFixed(5) + ' <span class="metric-info-icon" data-metric-key="' + PERIMETER_AREA_RATIO_ATTRIBUTE + '" role="button" tabindex="0">i</span></li>';
-        if (!isNaN(ennNum)) html += '<li><strong>Distance to nearest patch:</strong> ' + Math.round(ennNum) + ' m <span class="metric-info-icon" data-metric-key="' + ENN_ATTRIBUTE + '" role="button" tabindex="0">i</span></li>';
-        if (flow !== undefined && flow !== null) html += '<li><strong>Mean composite flow:</strong> ' + (typeof flow === 'number' ? flow.toFixed(2) : flow) + ' <span class="metric-info-icon" data-metric-key="' + MEAN_FLOW_ATTRIBUTE + '" role="button" tabindex="0">i</span></li>';
+        if (typeof core === 'number') html += '<li><strong>Core area:</strong> ' + core.toFixed(2) + ' ha</li>';
+        if (typeof properties[CONTIGUITY_INDEX_ATTRIBUTE] === 'number') html += '<li><strong>Contiguity index:</strong> ' + properties[CONTIGUITY_INDEX_ATTRIBUTE].toFixed(3) + '</li>';
+        if (typeof properties[PERIMETER_AREA_RATIO_ATTRIBUTE] === 'number') html += '<li><strong>Perimeter-area ratio:</strong> ' + properties[PERIMETER_AREA_RATIO_ATTRIBUTE].toFixed(5) + '</li>';
+        if (!isNaN(ennNum)) html += '<li><strong>Distance to nearest patch:</strong> ' + Math.round(ennNum) + ' m</li>';
+        if (flow !== undefined && flow !== null) html += '<li><strong>Mean composite flow:</strong> ' + (typeof flow === 'number' ? flow.toFixed(2) : flow) + '</li>';
         html += '</ul></details></div>';
 
         patchInfoContent.innerHTML = html;
-
-        patchInfoContent.querySelectorAll('.metric-info-icon').forEach(icon => {
-            icon.addEventListener('click', (e) => {
-                e.stopPropagation();
-                showMetricInfoPopup(icon.getAttribute('data-metric-key'), icon);
-            });
-        });
     }
 
     function showMetricInfoPopup(metricKey, iconElement) {
@@ -688,12 +733,12 @@ map.on('idle', () => {
         const howtoModal = document.getElementById('howto-modal');
         const closeBtn   = document.getElementById('close-howto-btn');
         if (!howtoBtn || !howtoModal || !closeBtn) return;
-        function open()  { howtoModal.style.display = 'block'; requestAnimationFrame(() => document.body.classList.add('modal-open')); }
-        function close() { document.body.classList.remove('modal-open'); setTimeout(() => { howtoModal.style.display = 'none'; }, 300); }
-        howtoBtn.addEventListener('click', open);
-        closeBtn.addEventListener('click', close);
-        window.addEventListener('click', (e) => { if (e.target === howtoModal) close(); });
-        window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('modal-open')) close(); });
+        function openHowTo()  { howtoModal.style.display = 'block'; requestAnimationFrame(() => document.body.classList.add('modal-open')); }
+        function closeHowTo() { document.body.classList.remove('modal-open'); setTimeout(() => { howtoModal.style.display = 'none'; }, 300); }
+        howtoBtn.addEventListener('click', openHowTo);
+        closeBtn.addEventListener('click', closeHowTo);
+        window.addEventListener('click', (e) => { if (e.target === howtoModal) closeHowTo(); });
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('modal-open')) closeHowTo(); });
     }
 
     function initializeDarkModeToggle() {
