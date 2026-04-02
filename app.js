@@ -439,11 +439,23 @@ map.on('idle', () => {
             allFilters.push(['match', ['get', TIER_ATTRIBUTE], checkedTiers, true, false]);
         }
 
-        // 2. CONNECTIVITY FILTER
+        // 2. CONNECTIVITY FILTER — only apply if attribute exists in tileset
+        // Guards against old tilesets that do not yet have the connectivity column
         if (checkedConnectivity.length === 0) {
-            allFilters.push(['==', ['get', CONNECTIVITY_ATTRIBUTE], 'NO_MATCH_POSSIBLE']);
+            // only block if we know the attribute exists — otherwise skip silently
+            const testFeatures = map.queryRenderedFeatures({ layers: [FOREST_PATCH_LAYER_ID] });
+            const hasConnectivity = testFeatures.length > 0 &&
+                testFeatures[0].properties.hasOwnProperty(CONNECTIVITY_ATTRIBUTE);
+            if (hasConnectivity) {
+                allFilters.push(['==', ['get', CONNECTIVITY_ATTRIBUTE], 'NO_MATCH_POSSIBLE']);
+            }
         } else if (checkedConnectivity.length < ALL_CONNECTIVITY_LABELS.length) {
-            allFilters.push(['match', ['get', CONNECTIVITY_ATTRIBUTE], checkedConnectivity, true, false]);
+            const testFeatures = map.queryRenderedFeatures({ layers: [FOREST_PATCH_LAYER_ID] });
+            const hasConnectivity = testFeatures.length > 0 &&
+                testFeatures[0].properties.hasOwnProperty(CONNECTIVITY_ATTRIBUTE);
+            if (hasConnectivity) {
+                allFilters.push(['match', ['get', CONNECTIVITY_ATTRIBUTE], checkedConnectivity, true, false]);
+            }
         }
         
         // 2. AREA FILTER (Reading the exact numeric property without forced conversions)
@@ -743,6 +755,7 @@ map.on('idle', () => {
     
     console.log("DEBUG: Attempting to call initializeAboutModal...");
     initializeAboutModal();
+    initializeHowToModal();
     console.log("DEBUG: Attempting to call initializeDarkModeToggle...");
     initializeDarkModeToggle();
 
@@ -777,7 +790,28 @@ map.on('idle', () => {
         window.addEventListener('keydown', (event) => { if (event.key === 'Escape' && document.body.classList.contains('modal-open')) closeModal(); });
     }
 
-    function initializeDarkModeToggle() {
+    function initializeHowToModal() {
+        const howtoBtn   = document.getElementById('howto-btn');
+        const howtoModal = document.getElementById('howto-modal');
+        const closeBtn   = document.getElementById('close-howto-btn');
+        if (!howtoBtn || !howtoModal || !closeBtn) return;
+
+        howtoBtn.addEventListener('click', () => {
+            howtoModal.style.display = 'block';
+            requestAnimationFrame(() => document.body.classList.add('modal-open'));
+        });
+
+        const close = () => {
+            document.body.classList.remove('modal-open');
+            setTimeout(() => { howtoModal.style.display = 'none'; }, 300);
+        };
+
+        closeBtn.addEventListener('click', close);
+        window.addEventListener('click', (e) => { if (e.target === howtoModal) close(); });
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.body.classList.contains('modal-open')) close();
+        });
+    }
         console.log("DEBUG: initializeDarkModeToggle() function EXECUTED.");
         const toggleButton = document.getElementById('dark-mode-toggle'); 
         if (!toggleButton) { console.error("CRITICAL DEBUG: Dark mode toggle button ('dark-mode-toggle') NOT FOUND!"); return; }
