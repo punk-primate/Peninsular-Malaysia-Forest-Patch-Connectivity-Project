@@ -25,7 +25,11 @@
 
             <div class="sidebar-section" id="filter-section">
                 <h3>Filter by Category</h3> 
-                </div>
+            </div>
+
+            <div class="sidebar-section" id="connectivity-filter-section">
+                <h3>Filter by Connectivity</h3>
+            </div>
 
             <div class="sidebar-section" id="info-panel-section">
                 <h3>Patch Details</h3>
@@ -38,8 +42,9 @@
                     <p>Visible Patches: <span id="visible-patches-count">-</span></p>
                     <p>Total Area: <span id="visible-patches-area">- ha</span></p>
                     <p>Average ENN: <span id="visible-patches-enn">- m</span></p>
+                    <p>Avg. Composite Flow: <span id="visible-patches-flow">-</span></p>
                     <div id="tier-stats-breakdown">
-                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -47,6 +52,9 @@
                 <h3>Tools</h3>
                 <div id="search-geocoder-container"></div>
                 
+                <button id="color-mode-toggle" style="margin-top: 1em; width: 100%;">Colour by: Tier</button>
+                <button id="connector-toggle" style="margin-top: 0.5em; width: 100%;">Show Movement Pathways</button>
+
                <label for="basemap-toggle" style="margin-top: 1em; display: block;">Basemap:</label>
                 <select id="basemap-toggle">
                     <option value="custom">Custom Style</option>
@@ -78,7 +86,13 @@
 
        <main id="map-container">
     <div id="map"></div>
-    
+
+    <!-- Floating action buttons -->
+    <div id="map-fab-buttons">
+        <a href="index.html" id="home-btn" title="Back to home" aria-label="Back to home">🏠</a>
+        <button id="howto-btn" title="How to use this map" aria-label="How to use this map">❓</button>
+    </div>
+
     <div id="zoom-warning">
         [ SYSTEM NOTICE ]<br>
         ZOOM IN TO VIEW FOREST PATCHES
@@ -93,23 +107,40 @@
         </div>
     </div>
 </main>
+
+    <!-- How-to modal -->
+    <div id="howto-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-modal-btn" id="close-howto-btn" role="button" tabindex="0" aria-label="Close">×</span>
+            <h2>How to Use This Map</h2>
+
+            <h3>🗺️ Navigating the map</h3>
+            <p>Zoom in until forest patches appear (zoom level 11 or closer). Click any green patch to see its details in the sidebar. Use the search bar to find specific locations.</p>
+
+            <h3>🌳 What the patch colours mean</h3>
+            <p>Patches are coloured by their conservation tier — from light green (Tier 1, highest quality) to dark green (Tier 6, most degraded). Use the <strong>Filter by Category</strong> checkboxes to show or hide specific tiers.</p>
+
+            <h3>🔗 Movement pathways</h3>
+            <p>Click <strong>Show Movement Pathways</strong> to reveal lines connecting each forest patch to its nearest neighbour. <strong>Solid bright lines</strong> show connections within the typical dispersal range of a gibbon (800 m or less). <strong>Dashed faint lines</strong> show connections that are likely too far for a single individual to cross unaided. Click any line to learn more about that potential crossing.</p>
+
+            <h3>🎨 Connectivity colour mode</h3>
+            <p>Click <strong>Colour by: Tier</strong> to switch the patch colours to show their connectivity rating (High / Moderate / Low / Barrier) based on circuit theory modelling. Switch back at any time.</p>
+
+            <h3>📊 Reading the patch details</h3>
+            <p>Clicking a patch shows its conservation tier, connectivity rating, nearest neighbour distance, and pinch point status in plain language. Click <em>Show technical details</em> to see the full landscape metrics.</p>
+
+            <h3>🔬 What is a pinch point?</h3>
+            <p>A pinch point is a location where most animal movement in the landscape is funnelled through a narrow corridor. Patches with high pinch point coverage are critical — losing them would severely disrupt movement across the entire region.</p>
+
+            <p style="margin-top: 1.5em; font-size: 0.85em; opacity: 0.7;">Built by Benjamin Galea · Contact bengalea97@gmail.com</p>
+        </div>
+    </div>
     </div>
 
     <div id="about-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <span class="close-modal-btn" role="button" tabindex="0" aria-label="Close modal">×</span>
             <h2>Peninsular Malaysia Forest Patch Connectivity Project</h2>
-            <p>This interactive map shows over 14,000 forest patches extracted from the Klang Valley region in Malaysia. Each patch is classified into one of several tiers using a Composite Habitat Suitability Index (CHSI), which combines key ecological attributes including total area, core area, contiguity, perimeter-area ratio, and Euclidean nearest-neighbour distance. The index standardises these metrics based on the landscape’s own statistical distribution and applies weighted scoring to prioritise interior habitat stability and connectivity. Patches are then grouped into six tiers, ranging from large core habitats to highly isolated micro patches. Click on the individual patches to view their details. </p>
+            <p>This interactive map shows over 14,000 forest patches extracted from the Klang Valley region in Malaysia. Each patch is classified into one of several tiers using a Composite Habitat Suitability Index (CHSI), which combines key ecological attributes including total area, core area, contiguity, perimeter–area ratio, and Euclidean nearest-neighbour distance. The index standardises these metrics based on the landscape’s own statistical distribution and applies weighted scoring to prioritise interior habitat stability and connectivity. Patches are then grouped into six tiers, ranging from large core habitats to highly isolated micro patches. Click on the individual patches to view their details. </p>
                         <p>Built by Benjamin Galea</p>
-            <p>Contact bengalea97@gmail.com for any enquiries</p>
-        </div>
-    </div>
-
-    <script src="config.js"></script>
-    <script src="app.js"></script>
-</body>
-</html>
-
-
-
-
+            <p>Contact <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4d2f28232a2c21282c747a0d2a202c2421632e2220">[email&#160;protected]</a> for any enquiries</p>
