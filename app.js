@@ -1,237 +1,682 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Klang Valley Forest Patches</title>
+// --- VERY TOP OF app.js for file loading check ---
+console.log("--- app.js LATEST (Improved Modal, Stats on Idle, Info Icons) - Timestamp: " + new Date().toLocaleTimeString() + " ---");
 
-    <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
-    <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
-    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
-    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
-    <link rel="stylesheet" href="style.css">
+// Define descriptions for metrics. These constants (PATCH_AREA_ATTRIBUTE, etc.) are from config.js
+const METRIC_DESCRIPTIONS = {
+    [PATCH_AREA_ATTRIBUTE]: "Patch Area: The total land area of the forest patch in hectares (ha). This indicates the overall size of the habitat.",
+    [CORE_AREA_ATTRIBUTE]: "Core Area: The area within a forest patch that is buffered from edge effects (e.g., changes in light, wind, temperature), in hectares (ha). It represents the more stable interior habitat critical for sensitive species.",
+    [CONTIGUITY_INDEX_ATTRIBUTE]: "Contiguity Index: A measure of the spatial connectedness or compactness of cells within a patch. Values range from 0 to 1, where higher values indicate more contiguous, less fragmented patches, which is generally better for biodiversity.",
+    [PERIMETER_AREA_RATIO_ATTRIBUTE]: "Perimeter-Area Ratio: The ratio of the patch's perimeter to its area. A higher ratio often indicates a more elongated or irregular shape, leading to a greater proportion of edge habitat compared to core habitat.",
+    [ENN_ATTRIBUTE]: "Euclidean Nearest-Neighbor (ENN): The shortest straight-line distance to the nearest neighboring forest patch, in meters. Lower values indicate greater spatial connectivity."
+};
 
-    <style>
-        /* ── Critical layout ── */
-        html, body { margin:0; padding:0; height:100%; }
-        #app-container { display:flex !important; height:100vh !important; overflow:hidden !important; }
-        #sidebar {
-            width:320px !important; flex-shrink:0 !important; overflow-y:auto !important;
-            background:#f8f9fa; border-right:1px solid #dee2e6; padding:16px;
-            display:flex; flex-direction:column; z-index:10;
+let metricPopup = null; // To keep track of the metric info popup
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("DEBUG: DOMContentLoaded event fired. Initializing application.");
+
+    mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
+
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: MAP_STYLE_CUSTOM,
+        center: INITIAL_CENTER,
+        zoom: INITIAL_ZOOM,
+    });
+
+    const loadingIndicator = document.getElementById('loading-indicator');
+    loadingIndicator.style.display = 'block';
+
+    let selectedPatchMapboxId = null;
+    let currentMinArea = null;
+    let currentMaxArea = null;
+
+    map.on('load', () => {
+    // Standard initialization logic
+    if (map.getSource('mapbox-dem')) {
+        map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+    }
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+    initializeTierFilters();
+    initializeConnectorLayer();
+    initializeHoverPopups();
+    initializeClickInfoPanel();
+    initializeGeocoder();
+    initializeBasemapToggle();
+    initializeAreaFilterControls();
+
+    // --- ZOOM WARNING LOGIC ---
+    const warningBox = document.getElementById('zoom-warning');
+    const PATCH_VISIBILITY_THRESHOLD = 11; // Matches your forest patch minzoom
+
+    const checkZoomLevel = () => {
+        const currentZoom = map.getZoom();
+        if (currentZoom < PATCH_VISIBILITY_THRESHOLD) {
+            warningBox.style.display = 'block';
+        } else {
+            warningBox.style.display = 'none';
         }
-        #map-container { flex-grow:1 !important; position:relative !important; height:100% !important; }
-        #map { position:absolute !important; top:0; bottom:0; left:0; right:0; }
+    };
 
-        /* ── Sidebar sections ── */
-        #sidebar-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #dee2e6; padding-bottom:10px; }
-        #sidebar-header h2 { margin:0; font-size:1.1em; font-weight:700; color:#212529; }
-        .header-buttons button { background:none; border:1px solid #dee2e6; border-radius:4px; padding:4px 7px; cursor:pointer; font-size:1.1em; margin-left:4px; }
-        .sidebar-section { margin-bottom:18px; }
-        .sidebar-section h3 { font-size:0.95em; font-weight:700; color:#343a40; margin:0 0 10px 0; padding-bottom:6px; border-bottom:1px solid #e9ecef; }
-        .filter-legend-item { display:flex; align-items:center; margin-bottom:6px; cursor:pointer; font-size:0.88em; }
-        .legend-color-box { width:13px; height:13px; margin-right:7px; border:1px solid #ccc; border-radius:2px; flex-shrink:0; }
-        #patch-info-content { font-size:0.88em; border:1px solid #dee2e6; border-radius:4px; padding:10px; min-height:60px; background:white; }
-        #stats-content p { margin:3px 0; font-size:0.88em; }
-        #stats-content span { font-weight:600; color:#007bff; }
-        #tier-stats-breakdown { font-size:0.8em; border-top:1px dashed #e9ecef; padding-top:6px; margin-top:6px; }
-        #tools-section label { display:block; margin-bottom:3px; font-size:0.85em; font-weight:500; color:#495057; }
-        #tools-section select, #area-filter-controls input[type="number"] {
-            width:100%; padding:6px 8px; margin-bottom:10px; border:1px solid #ced4da;
-            border-radius:4px; box-sizing:border-box; font-size:0.88em;
+    map.on('zoom', checkZoomLevel);
+    checkZoomLevel(); // Run once on load
+});
+
+// Update the idle listener to hide the terminal loader
+map.on('idle', () => {
+    const loadingIndicator = document.getElementById('loading-indicator');
+    if (loadingIndicator) {
+        // Slight delay so the user can actually read the "boot sequence"
+        setTimeout(() => {
+            loadingIndicator.style.display = 'none';
+        }, 3500);
+    }
+    updateSummaryStatistics();
+});
+    map.on('error', (e) => {
+        console.error('Mapbox GL Error:', e);
+        if (loadingIndicator) {
+            loadingIndicator.innerHTML = '<div class="spinner"></div>Error loading map. <br>Check console.';
+            loadingIndicator.style.display = 'block';
         }
-        #area-filter-controls h4 { margin:12px 0 8px; font-size:0.9em; font-weight:700; }
-        .area-input-group { display:flex; align-items:center; margin-bottom:6px; }
-        .area-input-group label { width:35px; font-size:0.85em; }
-        .area-input-group input { flex-grow:1; margin-bottom:0 !important; }
-        .area-filter-buttons { display:flex; gap:6px; margin-top:8px; }
-        .area-filter-buttons button, #about-btn { flex-grow:1; padding:6px 8px; font-size:0.85em; font-weight:500; border:none; border-radius:4px; cursor:pointer; color:white; background:#6c757d; }
-        #about-btn { width:100%; background:#007bff; margin-top:auto; }
-        #sidebar-footer { margin-top:auto; padding-top:12px; border-top:1px solid #e9ecef; }
-        .filter-error-message { color:#721c24; background:#f8d7da; border:1px solid #f5c6cb; padding:6px 10px; border-radius:4px; font-size:0.85em; margin-top:6px; }
+    });
 
-        /* ── Map top bar ── */
-        #map-top-bar {
-            position:absolute; top:10px; left:50%; transform:translateX(-50%);
-            z-index:10; display:flex; align-items:center; gap:8px;
-            background:rgba(255,255,255,0.97); border-radius:6px;
-            padding:6px 10px; box-shadow:0 2px 8px rgba(0,0,0,0.25); white-space:nowrap;
+    function initializeTierFilters() {
+        console.log("DEBUG: initializeTierFilters() function EXECUTED (with color boxes).");
+        const filterContainer = document.querySelector('#filter-section');
+        if (!filterContainer) { console.error("Tier filter container (#filter-section) not found!"); return; }
+        filterContainer.innerHTML = '<h3>Filter by Category</h3>';
+
+        ALL_TIERS.forEach(tierValueFromConfig => {
+            const label = document.createElement('label');
+            label.className = 'filter-legend-item';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox'; checkbox.className = 'tier-toggle';
+            checkbox.value = tierValueFromConfig; 
+            checkbox.checked = true;
+            checkbox.addEventListener('change', () => {
+                console.log(`--- TIER CHECKBOX CHANGE for "${tierValueFromConfig}" ---`);
+                applyForestFilter();
+            });
+            const colorBox = document.createElement('span');
+            colorBox.className = 'legend-color-box'; colorBox.style.backgroundColor = TIER_COLORS[tierValueFromConfig] || '#ccc';
+            label.appendChild(colorBox); label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(` ${tierValueFromConfig}`));
+            filterContainer.appendChild(label);
+        });
+        console.log("Tier filters with color boxes initialized. Applying initial filter...");
+        applyForestFilter();
+    }
+
+    // ── Connector layer ──────────────────────────────────────────────────────
+    const CONN_COLORS = { High: '#00e5ff', Moderate: '#0097b2', Low: '#005f73' };
+    let corridorVisible  = false;
+    let connAnimFrame    = null;
+    let connAnimStep     = 0;
+    let connLastTs       = 0;
+    let connActiveFilters = new Set(['High', 'Moderate', 'Low']);
+    const dashSeq = [
+        [0,4,3],[0.5,4,2.5],[1,4,2],[1.5,4,1.5],[2,4,1],[2.5,4,0.5],[3,4,0],
+        [0,0.5,3,3.5],[0,1,3,3],[0,1.5,3,2.5],[0,2,3,2],[0,2.5,3,1.5],
+        [0,3,3,1],[0,3.5,3,0.5],[0,4,3,0]
+    ];
+
+    function applyConnectorFilter() {
+        if (!map.getLayer(CONNECTOR_LAYER_ID)) return;
+        const active = Array.from(connActiveFilters);
+        if (active.length === 0) {
+            map.setFilter(CONNECTOR_LAYER_ID, ['==', ['get', 'connectivity'], '__none__']);
+        } else if (active.length === 3) {
+            map.setFilter(CONNECTOR_LAYER_ID, null);
+        } else {
+            map.setFilter(CONNECTOR_LAYER_ID, ['match', ['get', 'connectivity'], active, true, false]);
         }
-        #howto-btn { background:none; border:1px solid #ccc; border-radius:4px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; color:#333; }
-        #howto-btn:hover { background:#f0f0f0; }
-        #corridor-controls { display:flex; align-items:center; gap:6px; }
-        #corridor-toggle-fab { background:#2a8234; color:white; border:none; border-radius:4px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer; }
-        #corridor-toggle-fab:hover  { background:#1e6b27; }
-        #corridor-toggle-fab.active { background:#00b8d9; }
-        #conn-level-toggles { display:flex; gap:4px; align-items:center; }
-        .conn-level-btn { background:white; border:2px solid currentColor; border-radius:4px; padding:3px 8px; font-size:11px; font-weight:700; cursor:pointer; opacity:0.45; }
-        .conn-level-btn.active { opacity:1; background:white; }
-        .conn-level-btn:hover { opacity:0.75; }
-        #home-btn { display:flex; align-items:center; justify-content:center; width:30px; height:30px; font-size:16px; text-decoration:none; border:1px solid #ccc; border-radius:4px; background:white; }
-        #home-btn:hover { background:#f0f0f0; }
+    }
 
-        /* ── Modals ── */
-        .modal {
-            display:none; position:fixed; z-index:1001; left:0; top:0; width:100%; height:100%;
-            background:rgba(0,0,0,0.6); align-items:center; justify-content:center;
+    function updateLevelBtn(btn, level) {
+        const active = connActiveFilters.has(level);
+        btn.textContent = (active ? '✓ ' : '') + level;
+        btn.classList.toggle('active', active);
+    }
+
+    function initializeConnectorLayer() {
+        const toggleBtn  = document.getElementById('corridor-toggle-fab');
+        const levelPanel = document.getElementById('conn-level-toggles');
+
+        if (!CONNECTOR_LAYER_ID || !map.getLayer(CONNECTOR_LAYER_ID)) {
+            console.warn('Connector layer not found. Expected:', CONNECTOR_LAYER_ID);
+            if (toggleBtn)  toggleBtn.style.display  = 'none';
+            if (levelPanel) levelPanel.style.display = 'none';
+            return;
         }
-        .modal-content {
-            background:white; padding:25px 30px; border-radius:6px; max-width:600px; width:90%;
-            max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 8px 25px rgba(0,0,0,0.3);
+
+        map.setLayoutProperty(CONNECTOR_LAYER_ID, 'visibility', 'none');
+        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-color',
+            ['match', ['get', 'connectivity'],
+                'High',     CONN_COLORS.High,
+                'Moderate', CONN_COLORS.Moderate,
+                'Low',      CONN_COLORS.Low,
+                '#aaaaaa']);
+        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-width', 3.5);
+        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-opacity', 1.0);
+
+        // Connectivity level toggle buttons
+        ['High', 'Moderate', 'Low'].forEach(level => {
+            const btn = document.getElementById('conn-filter-' + level.toLowerCase());
+            if (!btn) return;
+            btn.style.color       = CONN_COLORS[level];
+            btn.style.borderColor = CONN_COLORS[level];
+            connActiveFilters.add(level);
+            updateLevelBtn(btn, level);
+            btn.addEventListener('click', () => {
+                if (connActiveFilters.has(level)) connActiveFilters.delete(level);
+                else connActiveFilters.add(level);
+                updateLevelBtn(btn, level);
+                applyConnectorFilter();
+            });
+        });
+
+        // Corridor hover popup
+        const connPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'custom-hover-popup' });
+        map.on('mousemove', CONNECTOR_LAYER_ID, (e) => {
+            if (!e.features || !e.features.length) return;
+            map.getCanvas().style.cursor = 'pointer';
+            const f = e.features[0].properties;
+            connPopup.setLngLat(e.lngLat)
+                .setHTML('<strong>Potential movement corridor</strong><br>Gap: ' + f.gap_m + ' m | Connectivity: ' + f.connectivity)
+                .addTo(map);
+        });
+        map.on('mouseleave', CONNECTOR_LAYER_ID, () => { map.getCanvas().style.cursor = ''; connPopup.remove(); });
+        map.on('click', CONNECTOR_LAYER_ID, (e) => {
+            if (!e.features || !e.features.length) return;
+            const f = e.features[0].properties;
+            const el = document.getElementById('patch-info-content');
+            if (el) {
+                el.innerHTML = '<div style="padding:4px"><strong>Potential movement corridor</strong><br><br>' +
+                    '<strong>Gap to nearest patch:</strong> ' + f.gap_m + ' m<br>' +
+                    '<strong>Connectivity:</strong> ' + f.connectivity + '<br>' +
+                    '<strong>Source patch area:</strong> ' + f.area_ha + ' ha<br>' +
+                    '<strong>Mean composite flow:</strong> ' + f.mean_flow + '<br><br>' +
+                    '<em>' + (f.crossing_note || '') + '</em></div>';
+            }
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar && sidebar.classList.contains('collapsed')) document.getElementById('toggle-sidebar-btn').click();
+        });
+
+        // Main toggle button
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                corridorVisible = !corridorVisible;
+                map.setLayoutProperty(CONNECTOR_LAYER_ID, 'visibility', corridorVisible ? 'visible' : 'none');
+                if (levelPanel) levelPanel.style.display = corridorVisible ? 'flex' : 'none';
+                if (corridorVisible) {
+                    toggleBtn.textContent = 'Hide Corridors';
+                    toggleBtn.classList.add('active');
+                    connAnimStep = 0;
+                    function animate(ts) {
+                        if (ts - connLastTs > 55) {
+                            connAnimStep = (connAnimStep + 1) % dashSeq.length;
+                            if (map.getLayer(CONNECTOR_LAYER_ID)) {
+                                map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-dasharray', dashSeq[connAnimStep]);
+                            }
+                            connLastTs = ts;
+                        }
+                        connAnimFrame = requestAnimationFrame(animate);
+                    }
+                    connAnimFrame = requestAnimationFrame(animate);
+                } else {
+                    toggleBtn.textContent = 'Show Corridors';
+                    toggleBtn.classList.remove('active');
+                    if (connAnimFrame) { cancelAnimationFrame(connAnimFrame); connAnimFrame = null; }
+                }
+            });
         }
-        .modal-content h2 { margin-top:0; font-size:1.3em; }
-        .modal-content h3 { font-size:1.05em; margin-top:1.2em; }
-        .modal-content p  { line-height:1.6; font-size:0.95em; }
-        .close-modal-btn { position:absolute; top:12px; right:15px; font-size:24px; font-weight:bold; cursor:pointer; background:none; border:none; color:#666; }
-        .close-modal-btn:hover { color:#000; }
+    }
 
-        /* ── Zoom warning & loading ── */
-        #zoom-warning {
-            display:none; position:absolute; top:60px; left:50%; transform:translateX(-50%);
-            background:#306230; color:#9bbc0f; padding:12px 20px;
-            border:3px solid #8bac0f; font-family:'Press Start 2P',cursive; font-size:10px;
-            z-index:1000; text-align:center; pointer-events:none;
+    function initializeHoverPopups() {
+        console.log("DEBUG: initializeHoverPopups() function EXECUTED.");
+        const hoverPopup = new mapboxgl.Popup({
+            closeButton: false, closeOnClick: false, className: 'custom-hover-popup'
+        });
+        map.on('mousemove', FOREST_PATCH_LAYER_ID, (e) => {
+            if (e.features && e.features.length > 0) {
+                map.getCanvas().style.cursor = 'pointer';
+                const feature = e.features[0];
+                const patchIdVal = feature.properties[PATCH_ID_ATTRIBUTE];
+                const categoryVal = feature.properties[TIER_ATTRIBUTE];
+                const popupContent = `<strong>ID:</strong> ${patchIdVal !== undefined ? patchIdVal : 'N/A'}<br><strong>Category:</strong> ${categoryVal !== undefined ? categoryVal : 'N/A'}`;
+                hoverPopup.setLngLat(e.lngLat).setHTML(popupContent).addTo(map);
+            }
+        });
+        map.on('mouseleave', FOREST_PATCH_LAYER_ID, () => {
+            map.getCanvas().style.cursor = ''; hoverPopup.remove();
+        });
+    }
+
+    function initializeClickInfoPanel() {
+        console.log("DEBUG: initializeClickInfoPanel() function EXECUTED.");
+        const patchInfoContent = document.getElementById('patch-info-content');
+        if (!patchInfoContent) { console.error("Patch info content panel not found!"); return; }
+        map.on('click', FOREST_PATCH_LAYER_ID, (e) => {
+            if (e.features && e.features.length > 0) {
+                displayPatchInfo(e.features[0].properties);
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar && sidebar.classList.contains('collapsed')) {
+                    document.getElementById('toggle-sidebar-btn').click();
+                }
+            }
+        });
+    }
+
+    function initializeGeocoder() {
+        console.log("DEBUG GEOCODER: initializeGeocoder() function EXECUTED.");
+        const geocoderContainer = document.getElementById('search-geocoder-container');
+        if (!geocoderContainer) { console.error("DEBUG GEOCODER: Geocoder container NOT FOUND!"); return; }
+        if (typeof MapboxGeocoder === 'undefined') {
+            console.error("CRITICAL DEBUG GEOCODER: MapboxGeocoder class is UNDEFINED."); return;
         }
-        #loading-indicator {
-            position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-            background:rgba(0,0,0,0.8); color:white; padding:20px; border-radius:8px;
-            z-index:1000; text-align:center;
+        try {
+            const geocoder = new MapboxGeocoder({
+                accessToken: mapboxgl.accessToken, mapboxgl: mapboxgl, marker: { color: '#FF6347' },
+                placeholder: 'Search in the Klang Valley',
+                bbox: [101.0, 2.5, 102.0, 3.5], 
+                proximity: { longitude: INITIAL_CENTER[0], latitude: INITIAL_CENTER[1] },
+                countries: 'MY', types: 'country,region,postcode,district,place,locality,neighborhood,address,poi', limit: 7
+            });
+            geocoderContainer.innerHTML = '';
+            geocoderContainer.appendChild(geocoder.onAdd(map));
+            geocoder.on('error', (e) => { console.error("DEBUG GEOCODER: Error:", e.error ? e.error.message : e); });
+        } catch (error) { console.error("CRITICAL GEOCODER INIT ERROR:", error); }
+    }
+    
+    function initializeBasemapToggle() {
+        console.log("DEBUG: initializeBasemapToggle() function EXECUTED.");
+        const basemapToggle = document.getElementById('basemap-toggle');
+        const filterSection = document.getElementById('filter-section');
+        const areaFilterControls = document.getElementById('area-filter-controls');
+        const statsSection = document.getElementById('stats-section');
+
+        if (!basemapToggle) { console.error("Basemap toggle not found!"); return; }
+        basemapToggle.addEventListener('change', (e) => {
+            const newStyleUrl = e.target.value === 'satellite' ? MAP_STYLE_SATELLITE : MAP_STYLE_CUSTOM;
+            loadingIndicator.style.display = 'block';
+            const {lng, lat} = map.getCenter(); const zoom = map.getZoom();
+            const bearing = map.getBearing(); const pitch = map.getPitch();
+            map.setStyle(newStyleUrl);
+            map.once('style.load', () => {
+                loadingIndicator.style.display = 'none';
+                map.setCenter([lng, lat]); map.setZoom(zoom); map.setBearing(bearing); map.setPitch(pitch);
+                if (map.getSource('mapbox-dem')) map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+                
+                const patchInfoContent = document.getElementById('patch-info-content');
+                if (newStyleUrl === MAP_STYLE_CUSTOM) {
+                    if(filterSection) filterSection.style.display = 'block';
+                    if(areaFilterControls) areaFilterControls.style.display = 'block';
+                    if(statsSection) statsSection.style.display = 'block'; 
+                    if(patchInfoContent) patchInfoContent.innerHTML = 'Select a patch on the map to see details.';
+                    setTimeout(() => {
+                        if (map.getLayer(FOREST_PATCH_LAYER_ID)) { 
+                           applyForestFilter(); 
+                           initializeHoverPopups(); 
+                           initializeClickInfoPanel();
+                        } else { console.warn("Forest patch layer not found after style switch immediately."); }
+                    }, 250);
+                } else if (newStyleUrl === MAP_STYLE_SATELLITE) {
+                    if(filterSection) filterSection.style.display = 'none';
+                    if(areaFilterControls) areaFilterControls.style.display = 'none';
+                    if(statsSection) statsSection.style.display = 'none';
+                    if(patchInfoContent) patchInfoContent.innerHTML = 'Forest data not available on satellite view.';
+                }
+            });
+        });
+    }
+
+    function initializeAreaFilterControls() {
+        console.log("DEBUG: initializeAreaFilterControls() function EXECUTED (Number Inputs version).");
+        const minAreaInput = document.getElementById('min-area-input');
+        const maxAreaInput = document.getElementById('max-area-input');
+        const applyAreaBtn = document.getElementById('apply-area-filter-btn');
+        const resetAreaBtn = document.getElementById('reset-area-filter-btn');
+        const areaFilterError = document.getElementById('area-filter-error');
+        if (!minAreaInput || !maxAreaInput || !applyAreaBtn || !resetAreaBtn || !areaFilterError) {
+            console.error("Area filter control or error elements not found!"); return;
         }
-        .spinner { border:4px solid rgba(255,255,255,0.3); border-top:4px solid #fff; border-radius:50%; width:28px; height:28px; animation:spin 1s linear infinite; margin:0 auto 10px; }
-        @keyframes spin { to { transform:rotate(360deg); } }
-        .terminal-loader { text-align:left; font-family:'Press Start 2P',cursive; color:#9bbc0f; font-size:10px; }
-        .typing { overflow:hidden; white-space:nowrap; border-right:8px solid #9bbc0f; animation:typing 1.5s steps(30) forwards, blink 0.8s step-end infinite; margin-bottom:8px; }
-        @keyframes typing { from { width:0 } to { width:100% } }
-        @keyframes blink  { from,to { border-color:transparent } 50% { border-color:#9bbc0f } }
+        applyAreaBtn.addEventListener('click', () => {
+            areaFilterError.style.display = 'none'; areaFilterError.textContent = '';
+            const minValStr = minAreaInput.value; const maxValStr = maxAreaInput.value;
+            currentMinArea = (minValStr === '' || isNaN(parseFloat(minValStr)) || parseFloat(minValStr) < 0) ? null : parseFloat(minValStr);
+            currentMaxArea = (maxValStr === '' || isNaN(parseFloat(maxValStr)) || parseFloat(maxValStr) < 0) ? null : parseFloat(maxValStr);
+            minAreaInput.value = currentMinArea === null ? '' : currentMinArea;
+            maxAreaInput.value = currentMaxArea === null ? '' : currentMaxArea;
+            if (currentMinArea !== null && currentMaxArea !== null && currentMaxArea < currentMinArea) {
+                areaFilterError.textContent = "Max Area cannot be less than Min Area.";
+                areaFilterError.style.display = 'block'; return;
+            }
+            console.log(`DEBUG: Apply Area Filter. Min: ${currentMinArea}, Max: ${currentMaxArea}`);
+            applyForestFilter();
+        });
+        resetAreaBtn.addEventListener('click', () => {
+            minAreaInput.value = ''; maxAreaInput.value = '';
+            currentMinArea = null; currentMaxArea = null;
+            areaFilterError.style.display = 'none'; areaFilterError.textContent = '';
+            console.log("DEBUG: Reset Area Filter.");
+            applyForestFilter();
+        });
+        [minAreaInput, maxAreaInput].forEach(input => {
+            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') applyAreaBtn.click(); });
+            input.addEventListener('input', () => { areaFilterError.style.display = 'none'; areaFilterError.textContent = ''; });
+        });
+     }
 
-        /* ── Dark mode ── */
-        body.dark-mode #sidebar { background:#2c3034; border-color:#495057; }
-        body.dark-mode #sidebar-header h2, body.dark-mode .sidebar-section h3 { color:#e9ecef; }
-        body.dark-mode #patch-info-content { background:#343a40; border-color:#495057; color:#f8f9fa; }
-        body.dark-mode .modal-content { background:#2c3034; color:#f8f9fa; }
-        body.dark-mode #map-top-bar { background:rgba(40,40,40,0.97); }
-        body.dark-mode #howto-btn, body.dark-mode #home-btn { color:#f8f9fa; border-color:#555; background:#3a3a3a; }
-        body.dark-mode .conn-level-btn { background:#3a3a3a; }
-    </style>
-</head>
-<body>
-    <div id="app-container">
-        <aside id="sidebar">
-            <div id="sidebar-header">
-                <h2>Klang Valley Forest Patches</h2>
-                <div class="header-buttons">
-                    <button id="dark-mode-toggle" title="Toggle Dark/Light Mode" aria-label="Toggle dark mode">🌓</button>
-                    <button id="toggle-sidebar-btn" title="Toggle Sidebar" aria-label="Toggle sidebar" aria-expanded="true">&#8249;</button>
-                </div>
-            </div>
+    function applyForestFilter() {
+        console.log("DEBUG: applyForestFilter() EXECUTED.");
+        if (!map.isStyleLoaded() || !map.getLayer(FOREST_PATCH_LAYER_ID)) {
+            console.warn("DEBUG: applyForestFilter - Style or layer not ready. Retrying or exiting.");
+            if (!map.isStyleLoaded()) setTimeout(applyForestFilter, 300);
+            return;
+        }
+        
+        const checkedTiers = Array.from(document.querySelectorAll('.tier-toggle:checked')).map(cb => cb.value);
+        const allFilters = [];
+        
+        // 1. TIER FILTER (Using the robust 'match' expression)
+        if (checkedTiers.length === 0) {
+            allFilters.push(['==', ['get', TIER_ATTRIBUTE], 'NO_MATCH_POSSIBLE']);
+        } else if (checkedTiers.length < ALL_TIERS.length) {
+            allFilters.push(['match', ['get', TIER_ATTRIBUTE], checkedTiers, true, false]);
+        }
+        
+        // 2. AREA FILTER (Reading the exact numeric property without forced conversions)
+        if (currentMinArea !== null && !isNaN(currentMinArea)) {
+            allFilters.push(['>=', ['get', PATCH_AREA_ATTRIBUTE], currentMinArea]);
+        }
+        if (currentMaxArea !== null && !isNaN(currentMaxArea)) {
+            allFilters.push(['<=', ['get', PATCH_AREA_ATTRIBUTE], currentMaxArea]);
+        }
+        
+        // 3. COMBINE AND APPLY
+        let combinedFilterExpression = null;
+        if (allFilters.length > 0) {
+            combinedFilterExpression = ['all', ...allFilters];
+        }
+        
+        try {
+            // Apply the filter to the map
+            map.setFilter(FOREST_PATCH_LAYER_ID, combinedFilterExpression);
+            
+            // Immediately force the summary stats to update so they match the screen
+            if (typeof updateSummaryStatistics === 'function') {
+                setTimeout(updateSummaryStatistics, 100); 
+            }
+        } catch (error) { 
+            console.error(`DEBUG: Error applying combined filter:`, error); 
+        }
+    }
 
-            <div class="sidebar-section" id="filter-section">
-                <h3>Filter by Category</h3>
-            </div>
+    function updateSummaryStatistics() {
+        console.log("DEBUG: updateSummaryStatistics() EXECUTED (with tier breakdown and ENN).");
+        const countEl = document.getElementById('visible-patches-count');
+        const areaEl = document.getElementById('visible-patches-area');
+        const ennEl = document.getElementById('visible-patches-enn');
+        const breakdownEl = document.getElementById('tier-stats-breakdown');
+        
+        if (!countEl || !areaEl || !breakdownEl) { console.error("Stats elements not found!"); return; }
+        
+        if (!map.isStyleLoaded() || !map.getLayer(FOREST_PATCH_LAYER_ID)) {
+             countEl.textContent = '-'; 
+             areaEl.textContent = '- ha'; 
+             if (ennEl) ennEl.textContent = '- m';
+             breakdownEl.innerHTML = ''; 
+             return;
+        }
+        
+        const features = map.queryRenderedFeatures({ layers: [FOREST_PATCH_LAYER_ID] });
+        countEl.textContent = features.length.toLocaleString();
+        
+        let overallTotalArea = 0; 
+        let overallTotalEnn = 0;
+        let validEnnCount = 0;
+        const tierStats = {};
+        
+        const currentlyCheckedTiers = Array.from(document.querySelectorAll('.tier-toggle:checked')).map(cb => cb.value);
+        currentlyCheckedTiers.forEach(tier => { tierStats[tier] = { count: 0, area: 0 }; });
+        
+        features.forEach(feature => {
+            const area = feature.properties[PATCH_AREA_ATTRIBUTE];
+            const enn = feature.properties[ENN_ATTRIBUTE];
+            
+            if (area !== undefined && !isNaN(parseFloat(area))) overallTotalArea += parseFloat(area);
+            if (enn !== undefined && !isNaN(parseFloat(enn))) {
+                overallTotalEnn += parseFloat(enn);
+                validEnnCount++;
+            }
+            
+            const tier = feature.properties[TIER_ATTRIBUTE];
+            if (tier && tierStats.hasOwnProperty(tier)) {
+                tierStats[tier].count++;
+                if (area !== undefined && !isNaN(parseFloat(area))) tierStats[tier].area += parseFloat(area);
+            }
+        });
+        
+        areaEl.textContent = overallTotalArea.toFixed(2).toLocaleString() + ' ha';
+        
+        if (ennEl) {
+            if (validEnnCount > 0) {
+                const avgEnn = overallTotalEnn / validEnnCount;
+                ennEl.textContent = avgEnn.toFixed(2).toLocaleString() + ' m';
+            } else {
+                ennEl.textContent = '- m';
+            }
+        }
 
-            <div class="sidebar-section" id="info-panel-section">
-                <h3>Patch Details</h3>
-                <div id="patch-info-content">Select a patch on the map.</div>
-            </div>
+        let breakdownHtml = '<h5>Breakdown by Visible Category:</h5>';
+        if (features.length > 0 || currentlyCheckedTiers.length > 0 ) { 
+             currentlyCheckedTiers.forEach(tier => {
+                if (tierStats[tier]) { 
+                    breakdownHtml += `<p><strong>${formatPropertyName(tier)}:</strong> ${tierStats[tier].count.toLocaleString()} patches, ${tierStats[tier].area.toFixed(2).toLocaleString()} ha</p>`;
+                }
+            });
+             if (features.length === 0 && currentlyCheckedTiers.length > 0) {
+                breakdownHtml += '<p>No patches match current filter combination.</p>';
+            }
+        } else if (features.length === 0 && currentlyCheckedTiers.length === 0) {
+             breakdownHtml += '<p>No categories selected.</p>';
+        } else { 
+            breakdownHtml += '<p>No patches visible with current filters.</p>';
+        }
+        breakdownEl.innerHTML = breakdownHtml;
+        console.log(`DEBUG: Stats updated - Overall: ${features.length} patches, ${overallTotalArea.toFixed(2)} ha.`);
+    }
 
-            <div class="sidebar-section" id="stats-section">
-                <h3>Summary Statistics</h3>
-                <div id="stats-content">
-                    <p>Visible Patches: <span id="visible-patches-count">-</span></p>
-                    <p>Total Area: <span id="visible-patches-area">- ha</span></p>
-                    <p>Average ENN: <span id="visible-patches-enn">- m</span></p>
-                    <div id="tier-stats-breakdown"></div>
-                </div>
-            </div>
+    function displayPatchInfo(properties) {
+        const el = document.getElementById('patch-info-content');
+        if (!el) return;
+        el.innerHTML = '';
+        if (!properties) { el.innerHTML = 'No data for this patch.'; return; }
 
-            <div class="sidebar-section" id="tools-section">
-                <h3>Tools</h3>
-                <div id="search-geocoder-container"></div>
-                <label for="basemap-toggle" style="margin-top:0.8em">Basemap:</label>
-                <select id="basemap-toggle">
-                    <option value="custom">Custom Style</option>
-                    <option value="satellite">Satellite</option>
-                </select>
-                <div id="area-filter-controls">
-                    <h4>Filter by Patch Area (ha)</h4>
-                    <div class="area-input-group">
-                        <label for="min-area-input">Min:</label>
-                        <input type="number" id="min-area-input" placeholder="0" min="0">
-                    </div>
-                    <div class="area-input-group">
-                        <label for="max-area-input">Max:</label>
-                        <input type="number" id="max-area-input" placeholder="e.g., 5000" min="0">
-                    </div>
-                    <div id="area-filter-error" class="filter-error-message" style="display:none;"></div>
-                    <div class="area-filter-buttons">
-                        <button id="apply-area-filter-btn">Apply</button>
-                        <button id="reset-area-filter-btn">Reset</button>
-                    </div>
-                </div>
-            </div>
+        const tier         = properties[TIER_ATTRIBUTE];
+        const connectivity = properties[CONNECTIVITY_ATTRIBUTE];
+        const area         = properties[PATCH_AREA_ATTRIBUTE];
+        const core         = properties[CORE_AREA_ATTRIBUTE];
+        const enn          = properties[ENN_ATTRIBUTE];
+        const flow         = properties[MEAN_FLOW_ATTRIBUTE];
+        const id           = properties[PATCH_ID_ATTRIBUTE];
 
-            <div id="sidebar-footer">
-                <button id="about-btn">About This Project</button>
-            </div>
-        </aside>
+        const tierDesc = {
+            'Tier 1 (Core Habitat)': 'One of the most structurally important forest patches in this landscape. Large enough to support a resident group of arboreal animals, with substantial interior area protected from edge effects.',
+            'Tier 2 (Major Stepping Stones)': 'A high-quality patch that functions as a key hub or stepping stone in the movement network. Critical for regional habitat connectivity.',
+            'Tier 3 (Connected Fragments)': 'A moderately connected forest fragment that plays a bridging role between larger patches in the landscape.',
+            'Tier 4 (Vulnerable Edge Fragments)': 'A patch with significant edge exposure relative to its size. Functionally important but vulnerable to further habitat loss or degradation.',
+            'Tier 5 (Isolated Fragments)': 'A small, isolated forest fragment with limited connectivity to the surrounding landscape.',
+            'Tier 6 (Isolated Micro Patches)': 'A highly isolated micro-patch or remnant forest fragment. Generally too small and disconnected to support resident populations of arboreal animals, but may provide temporary shelter.'
+        };
+        const connDesc = {
+            'High':    'This patch sits within an active movement corridor. The surrounding landscape allows relatively free movement to neighbouring patches.',
+            'Moderate':'This patch has moderate connectivity. Movement to neighbouring patches is possible but depends on the routes available through the landscape.',
+            'Low':     'This patch has low connectivity. The surrounding landscape presents significant resistance to movement between patches.',
+            'Barrier': 'This patch is surrounded by an impermeable barrier zone such as dense urban development. Unaided movement to neighbouring patches is effectively impossible.',
+            'No Data': 'Connectivity data is not available for this patch.'
+        };
 
-        <main id="map-container">
-            <div id="map"></div>
+        const ennNum = typeof enn === 'number' ? enn : parseFloat(enn);
+        let ennMsg = 'Distance data not available.';
+        if (!isNaN(ennNum)) {
+            if      (ennNum <= 30)   ennMsg = 'This patch is directly adjacent to another forest area.';
+            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, within the typical dispersal range for arboreal animals.';
+            else if (ennNum <= 2000) ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, beyond the typical single-generation dispersal distance for most arboreal animals.';
+            else                     ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away. This patch is functionally isolated at the landscape scale.';
+        }
 
-            <div id="map-top-bar">
-                <button id="howto-btn">How to use this map</button>
-                <div id="corridor-controls">
-                    <button id="corridor-toggle-fab">Show Corridors</button>
-                    <div id="conn-level-toggles" style="display:none">
-                        <button id="conn-filter-high"     class="conn-level-btn" style="color:#00e5ff">High</button>
-                        <button id="conn-filter-moderate" class="conn-level-btn" style="color:#0097b2">Moderate</button>
-                        <button id="conn-filter-low"      class="conn-level-btn" style="color:#005f73">Low</button>
-                    </div>
-                </div>
-                <a href="index.html" id="home-btn" title="Back to home">🏠</a>
-            </div>
+        const tierColor = (typeof TIER_COLORS !== 'undefined' && TIER_COLORS[tier]) ? TIER_COLORS[tier] : '#555';
+        const connColor = (typeof CONNECTIVITY_COLORS !== 'undefined' && CONNECTIVITY_COLORS[connectivity]) ? CONNECTIVITY_COLORS[connectivity] : '#888';
+        const connText  = (connectivity === 'High' || connectivity === 'Moderate') ? '#1a1a1a' : '#fff';
 
-            <div id="zoom-warning">
-                [ SYSTEM NOTICE ]<br>ZOOM IN TO VIEW FOREST PATCHES
-            </div>
+        let html = '<div>';
+        html += '<div style="background:' + tierColor + ';color:#fff;padding:6px 10px;border-radius:3px;font-weight:bold;margin-bottom:8px;font-size:0.85em">' + (tier || 'Unknown') + '</div>';
+        html += '<p style="margin:4px 0 12px;line-height:1.5;font-size:0.9em">' + (tierDesc[tier] || '') + '</p>';
+        if (connectivity && connectivity !== 'No Data') {
+            html += '<strong style="font-size:0.9em">Connectivity:</strong> <span style="display:inline-block;padding:2px 8px;border-radius:3px;background:' + connColor + ';color:' + connText + ';font-weight:bold;font-size:0.85em">' + connectivity + '</span>';
+            html += '<p style="margin:4px 0 12px;line-height:1.5;font-size:0.9em">' + (connDesc[connectivity] || '') + '</p>';
+        }
+        html += '<strong style="font-size:0.9em">Nearest patch:</strong><p style="margin:4px 0 12px;line-height:1.5;font-size:0.9em">' + ennMsg + '</p>';
+        html += '<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:bold;font-size:0.9em">Show technical details</summary><ul style="margin:8px 0;padding-left:16px;font-size:0.85em">';
+        if (id !== undefined) html += '<li><strong>Patch ID:</strong> ' + id + '</li>';
+        if (typeof area === 'number') html += '<li><strong>Total area:</strong> ' + area.toFixed(2) + ' ha</li>';
+        if (typeof core === 'number') html += '<li><strong>Core area:</strong> ' + core.toFixed(2) + ' ha</li>';
+        if (typeof properties[CONTIGUITY_INDEX_ATTRIBUTE] === 'number') html += '<li><strong>Contiguity index:</strong> ' + properties[CONTIGUITY_INDEX_ATTRIBUTE].toFixed(3) + '</li>';
+        if (typeof properties[PERIMETER_AREA_RATIO_ATTRIBUTE] === 'number') html += '<li><strong>Perimeter-area ratio:</strong> ' + properties[PERIMETER_AREA_RATIO_ATTRIBUTE].toFixed(5) + '</li>';
+        if (!isNaN(ennNum)) html += '<li><strong>Distance to nearest patch:</strong> ' + Math.round(ennNum) + ' m</li>';
+        if (flow !== undefined && flow !== null) html += '<li><strong>Mean composite flow:</strong> ' + (typeof flow === 'number' ? flow.toFixed(2) : flow) + '</li>';
+        html += '</ul></details></div>';
+        el.innerHTML = html;
+    }
 
-            <div id="loading-indicator">
-                <div class="terminal-loader">
-                    <p class="typing">> INITIALIZING GEOSPATIAL ENGINE...</p>
-                    <p class="typing" style="animation-delay:1s;">> LOADING KLANG_VALLEY_FORESTS.DB...</p>
-                    <p class="typing" style="animation-delay:2s;">> CALCULATING CONNECTIVITY TIERS...</p>
-                    <div class="spinner"></div>
-                </div>
-            </div>
-        </main>
-    </div>
+    function showMetricInfoPopup(metricKey, iconElement) {
+        if (metricPopup) { metricPopup.remove(); metricPopup = null; }
+        const description = METRIC_DESCRIPTIONS[metricKey];
+        if (!description) return;
+        metricPopup = document.createElement('div');
+        metricPopup.id = 'metric-info-popup';
+        metricPopup.innerHTML = '<p>' + description + '</p><button class="close-metric-popup-btn">Close</button>';
+        document.body.appendChild(metricPopup);
+        const r = iconElement.getBoundingClientRect();
+        metricPopup.style.cssText = 'position:fixed;top:' + (r.bottom+5) + 'px;left:' + r.left + 'px;z-index:1060;background:white;border:1px solid #ccc;padding:10px;max-width:260px;border-radius:4px;font-size:0.85em';
+        metricPopup.querySelector('.close-metric-popup-btn').addEventListener('click', () => { metricPopup.remove(); metricPopup = null; });
+    }
 
-    <div id="about-modal" class="modal">
-        <div class="modal-content">
-            <button class="close-modal-btn" aria-label="Close">&#215;</button>
-            <h2>Peninsular Malaysia Forest Patch Connectivity Project</h2>
-            <p>This interactive map visualises forest patches in the Klang Valley region of Malaysia. Each patch is classified into one of six tiers using a Composite Habitat Suitability Index (CHSI), which combines landscape metrics including total area, core area, contiguity, perimeter-area ratio, and distance to the nearest neighbouring patch. Connectivity values are derived from circuit theory modelling using Omniscape. Click on any patch to view its details.</p>
-            <p>Built by Benjamin Galea. Contact bengalea97@gmail.com for any enquiries.</p>
-        </div>
-    </div>
+    document.addEventListener('click', (event) => {
+        if (metricPopup && !metricPopup.contains(event.target) && !event.target.classList.contains('metric-info-icon')) {
+            metricPopup.remove(); metricPopup = null;
+        }
+    });
 
-    <div id="howto-modal" class="modal">
-        <div class="modal-content">
-            <button class="close-modal-btn" id="close-howto-btn" aria-label="Close">&#215;</button>
-            <h2>How to Use This Map</h2>
-            <h3>Navigating the map</h3>
-            <p>Zoom in until forest patches appear. Click any patch to see its details in the sidebar. Use the search bar to find specific locations.</p>
-            <h3>What the patch colours mean</h3>
-            <p>Patches are coloured by conservation tier, from light green (Tier 1, highest structural quality) to dark green (Tier 6, highly isolated micro-patches). Use the Filter by Category checkboxes to show or hide specific tiers.</p>
-            <h3>Potential movement corridors</h3>
-            <p>Click Show Corridors to reveal cyan lines connecting forest patches to their nearest neighbours. The High, Moderate, and Low buttons toggle visibility by connectivity level — a checkmark shows which levels are currently displayed. Click any corridor line to see details in the sidebar.</p>
-            <h3>Reading patch details</h3>
-            <p>Clicking a patch shows its conservation tier, connectivity rating, and distance to the nearest adjacent patch. Expand Show technical details for the full set of landscape metrics.</p>
-            <p style="margin-top:1.5em;font-size:0.85em;opacity:0.7;">Built by Benjamin Galea. Contact bengalea97@gmail.com</p>
-        </div>
-    </div>
+    function formatPropertyName(name) {
+        if (name === TIER_ATTRIBUTE) return 'Category';
+        if (name === PATCH_AREA_ATTRIBUTE) return 'Patch Area';
+        if (name === CORE_AREA_ATTRIBUTE) return 'Core Area';
+        if (name === CONNECTIVITY_ATTRIBUTE) return 'Connectivity';
+        if (name === MEAN_FLOW_ATTRIBUTE) return 'Mean Composite Flow';
+        return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
 
-    <script src="config.js"></script>
-    <script src="app.js"></script>
-</body>
-</html>
+    console.log("DEBUG: Attempting to call initializeAboutModal...");
+    initializeAboutModal();
+    initializeHowToModal();
+    console.log("DEBUG: Attempting to call initializeDarkModeToggle...");
+    initializeDarkModeToggle();
+
+    function initializeAboutModal() {
+        console.log("DEBUG: initializeAboutModal() function EXECUTED.");
+        const aboutBtn = document.getElementById('about-btn');
+        const aboutModal = document.getElementById('about-modal');
+        if (!aboutModal) { console.error("About modal (#about-modal) NOT FOUND"); if(aboutBtn) aboutBtn.disabled = true; return; }
+        const closeModalBtn = aboutModal.querySelector('.close-modal-btn');
+        if (!aboutBtn) console.error("DEBUG: About button (#about-btn) NOT FOUND");
+        if (!closeModalBtn && aboutModal) console.error("DEBUG: Close modal button (.close-modal-btn) NOT FOUND inside #about-modal");
+        if (!aboutBtn || !closeModalBtn) { if(aboutBtn) aboutBtn.disabled = true; return; }
+        console.log("DEBUG: All About Modal elements found.");
+
+        function openModal() {
+            aboutModal.style.display = 'block';
+            requestAnimationFrame(() => { document.body.classList.add('modal-open'); });
+        }
+        function closeModal() {
+            document.body.classList.remove('modal-open');
+            aboutModal.addEventListener('transitionend', function handler() {
+                if (!document.body.classList.contains('modal-open')) aboutModal.style.display = 'none';
+                aboutModal.removeEventListener('transitionend', handler);
+            }, { once: true }); 
+             setTimeout(() => { 
+                if (!document.body.classList.contains('modal-open')) aboutModal.style.display = 'none';
+            }, 300); 
+        }
+        aboutBtn.addEventListener('click', openModal);
+        closeModalBtn.addEventListener('click', closeModal);
+        window.addEventListener('click', (event) => { if (event.target == aboutModal) closeModal(); });
+        window.addEventListener('keydown', (event) => { if (event.key === 'Escape' && document.body.classList.contains('modal-open')) closeModal(); });
+    }
+
+    function initializeHowToModal() {
+        const btn      = document.getElementById('howto-btn');
+        const modal    = document.getElementById('howto-modal');
+        const closeBtn = document.getElementById('close-howto-btn');
+        if (!btn || !modal || !closeBtn) {
+            console.warn('How-to modal elements not found');
+            return;
+        }
+        function openHowTo() {
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+        }
+        function closeHowTo() {
+            modal.style.display = 'none';
+        }
+        btn.addEventListener('click', openHowTo);
+        closeBtn.addEventListener('click', closeHowTo);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeHowTo(); });
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.style.display !== 'none') closeHowTo(); });
+    }
+
+    function initializeDarkModeToggle() {
+        console.log("DEBUG: initializeDarkModeToggle() function EXECUTED.");
+        const toggleButton = document.getElementById('dark-mode-toggle'); 
+        if (!toggleButton) { console.error("CRITICAL DEBUG: Dark mode toggle button ('dark-mode-toggle') NOT FOUND!"); return; }
+        console.log("DEBUG: Dark mode toggle button FOUND:", toggleButton);
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            document.body.classList.add('dark-mode');
+            toggleButton.textContent = '☀️'; toggleButton.setAttribute('aria-label', 'Switch to light mode');
+        } else {
+            toggleButton.textContent = '🌙'; toggleButton.setAttribute('aria-label', 'Switch to dark mode');
+        }
+        toggleButton.addEventListener('click', () => {
+            console.log("DEBUG: Dark mode toggle CLICKED!");
+            document.body.classList.toggle('dark-mode');
+            console.log("Body classes after toggle:", document.body.className);
+            if (document.body.classList.contains('dark-mode')) {
+                localStorage.setItem('darkMode', 'enabled');
+                toggleButton.textContent = '☀️'; toggleButton.setAttribute('aria-label', 'Switch to light mode');
+            } else {
+                localStorage.setItem('darkMode', 'disabled');
+                toggleButton.textContent = '🌙'; toggleButton.setAttribute('aria-label', 'Switch to dark mode');
+            }
+        });
+    }
+
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
+    const sidebar = document.getElementById('sidebar');
+    const appContainer = document.getElementById('app-container');
+    if (toggleSidebarBtn && sidebar && appContainer) {
+        toggleSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            appContainer.classList.toggle('sidebar-collapsed');
+            setTimeout(() => { map.resize(); }, 250);
+            toggleSidebarBtn.textContent = sidebar.classList.contains('collapsed') ? '›' : '‹';
+            toggleSidebarBtn.setAttribute('aria-label', sidebar.classList.contains('collapsed') ? 'Open sidebar' : 'Close sidebar');
+            toggleSidebarBtn.setAttribute('aria-expanded', String(!sidebar.classList.contains('collapsed')));
+        });
+    } else {
+        console.error("Sidebar toggle elements not found: #toggle-sidebar-btn, #sidebar, or #app-container.");
+    }
+}); // End DOMContentLoaded
