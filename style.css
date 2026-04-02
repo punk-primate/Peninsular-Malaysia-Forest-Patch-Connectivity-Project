@@ -435,3 +435,98 @@ body.modal-open .modal-content {
 #howto-btn:hover, #home-btn:hover {
     background: #f0f0f0;
 }
+
+/* ── Floating action buttons (home + how-to) ────────────────────────────── */
+#map-fab-buttons {
+    position: absolute;
+    top: 60px;
+    right: 10px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#home-btn,
+#howto-btn {
+    background: white;
+    border: none;
+    border-radius: 4px;
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: #333;
+    transition: background 0.15s;
+}
+
+#home-btn:hover,
+#howto-btn:hover {
+    background: #f0f0f0;
+}
+
+/* ── Patch info panel ───────────────────────────────────────────────────── */
+.info-tier-badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 3px;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 8px;
+    font-size: 0.85em;
+}
+
+.plain-info-panel p {
+    margin: 4px 0 12px;
+    line-height: 1.5;
+}
+
+.plain-info-panel details {
+    margin-top: 8px;
+}
+
+.plain-info-panel summary {
+    cursor: pointer;
+    font-weight: bold;
+    padding: 4px 0;
+}
+
+.plain-info-panel ul {
+    margin: 8px 0;
+    padding-left: 16px;
+}
+
+.plain-info-panel ul li {
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+/* ── Metric info icon ───────────────────────────────────────────────────── */
+.metric-info-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    border-radius: 50%;
+    background: #888;
+    color: #fff;
+    font-size: 10px;
+    font-style: italic;
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+/* ── Connector toggle active state ─────────────────────────────────────── */
+#connector-toggle.active {
+    background-color: #2a8234;
+    color: #fff;
+}
