@@ -12,6 +12,31 @@
     <link rel="stylesheet" href="style.css">
 
     <style>
+        /* ── Critical layout — guaranteed even if style.css fails ── */
+        html, body { margin: 0; padding: 0; height: 100%; }
+
+        #app-container {
+            display: flex !important;
+            height: 100vh !important;
+            overflow: hidden !important;
+        }
+        #sidebar {
+            width: 350px !important;
+            flex-shrink: 0 !important;
+            overflow-y: auto !important;
+            z-index: 10;
+        }
+        #map-container {
+            flex-grow: 1 !important;
+            position: relative !important;
+            height: 100% !important;
+        }
+        #map {
+            position: absolute !important;
+            top: 0; bottom: 0; left: 0; right: 0;
+        }
+
+        /* ── Map top bar ── */
         #map-top-bar {
             position: absolute;
             top: 10px;
@@ -36,6 +61,8 @@
             font-weight: 600;
             cursor: pointer;
             color: #333;
+            width: auto;
+            height: auto;
         }
         #howto-btn:hover { background: #f0f0f0; }
         #corridor-controls { display: flex; align-items: center; gap: 6px; }
@@ -63,9 +90,9 @@
             opacity: 0.4;
         }
         .conn-level-btn.active { opacity: 1; }
-        .conn-level-btn:hover   { opacity: 0.75; }
+        .conn-level-btn:hover  { opacity: 0.75; }
         #home-btn {
-            display: flex;
+            display: flex !important;
             align-items: center;
             justify-content: center;
             width: 30px;
@@ -74,6 +101,7 @@
             text-decoration: none;
             border: 1px solid #ccc;
             border-radius: 4px;
+            background: white;
         }
         #home-btn:hover { background: #f0f0f0; }
     </style>
