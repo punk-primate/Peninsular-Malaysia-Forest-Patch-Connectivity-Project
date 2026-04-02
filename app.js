@@ -812,6 +812,8 @@ map.on('idle', () => {
             if (e.key === 'Escape' && document.body.classList.contains('modal-open')) close();
         });
     }
+
+    function initializeDarkModeToggle() {
         console.log("DEBUG: initializeDarkModeToggle() function EXECUTED.");
         const toggleButton = document.getElementById('dark-mode-toggle'); 
         if (!toggleButton) { console.error("CRITICAL DEBUG: Dark mode toggle button ('dark-mode-toggle') NOT FOUND!"); return; }
