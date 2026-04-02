@@ -109,32 +109,122 @@ map.on('idle', () => {
         applyForestFilter();
     }
 
+    // ── Connector layer ──────────────────────────────────────────────────────
+    // Colours: cyan gradient — highly visible on both light and dark backgrounds
+    const CONN_COLORS = { High: '#00e5ff', Moderate: '#0097b2', Low: '#005f73' };
+
+    let corridorVisible = false;
+    let connAnimFrame   = null;
+    let connAnimStep    = 0;
+    let connLastTs      = 0;
+    let connActiveFilters = new Set(['High', 'Moderate', 'Low']);
+
+    const dashSeq = [
+        [0,4,3],[0.5,4,2.5],[1,4,2],[1.5,4,1.5],[2,4,1],[2.5,4,0.5],[3,4,0],
+        [0,0.5,3,3.5],[0,1,3,3],[0,1.5,3,2.5],[0,2,3,2],[0,2.5,3,1.5],
+        [0,3,3,1],[0,3.5,3,0.5],[0,4,3,0]
+    ];
+
+    function applyConnectorFilter() {
+        if (!map.getLayer(CONNECTOR_LAYER_ID)) return;
+        const active = Array.from(connActiveFilters);
+        if (active.length === 0) {
+            map.setFilter(CONNECTOR_LAYER_ID, ['==', ['get', 'connectivity'], '__none__']);
+        } else if (active.length === 3) {
+            map.setFilter(CONNECTOR_LAYER_ID, null);
+        } else {
+            map.setFilter(CONNECTOR_LAYER_ID, ['match', ['get', 'connectivity'], active, true, false]);
+        }
+    }
+
     function initializeConnectorLayer() {
-        const btn = document.getElementById('corridor-toggle-fab');
-        if (!CONNECTOR_LAYER_ID || !map.getLayer(CONNECTOR_LAYER_ID)) {
-            console.warn('Connector layer not found:', CONNECTOR_LAYER_ID);
-            if (btn) btn.style.display = 'none';
+        const toggleBtn = document.getElementById('corridor-toggle-fab');
+
+        if (!CONNECTOR_LAYER_ID) {
+            if (toggleBtn) toggleBtn.style.display = 'none';
             return;
         }
 
-        // Start hidden
+        // Probe whether the layer exists in the style
+        const layerExists = !!map.getLayer(CONNECTOR_LAYER_ID);
+        if (!layerExists) {
+            console.warn('Connector layer not found in style. Expected:', CONNECTOR_LAYER_ID);
+            if (toggleBtn) toggleBtn.style.display = 'none';
+            return;
+        }
+
+        // Hide on load
         map.setLayoutProperty(CONNECTOR_LAYER_ID, 'visibility', 'none');
 
-        // Bright data-driven colours — much higher contrast than before
-        const lineColor = ['match', ['get', 'connectivity'],
-            'High',     '#ffe033',
-            'Moderate', '#ff8c00',
-            'Low',      '#ff3333',
-            '#aaaaaa'
-        ];
-        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-color', lineColor);
-        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-width', 4);
+        // Style — cyan gradient by connectivity
+        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-color',
+            ['match', ['get', 'connectivity'],
+                'High',     CONN_COLORS.High,
+                'Moderate', CONN_COLORS.Moderate,
+                'Low',      CONN_COLORS.Low,
+                '#aaaaaa']);
+        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-width', 3.5);
         map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-opacity', 1.0);
 
-        // Hover popup
-        const connPopup = new mapboxgl.Popup({
-            closeButton: false, closeOnClick: false, className: 'custom-hover-popup'
+        // Connectivity level toggle buttons
+        ['High', 'Moderate', 'Low'].forEach(level => {
+            const btn = document.getElementById('conn-filter-' + level.toLowerCase());
+            if (!btn) return;
+            btn.style.borderColor = CONN_COLORS[level];
+            btn.style.color       = CONN_COLORS[level];
+            btn.classList.add('conn-level-btn', 'active');
+            btn.addEventListener('click', () => {
+                if (connActiveFilters.has(level)) {
+                    connActiveFilters.delete(level);
+                    btn.classList.remove('active');
+                } else {
+                    connActiveFilters.add(level);
+                    btn.classList.add('active');
+                }
+                applyConnectorFilter();
+            });
         });
+
+        // Corridor toggle button
+        if (toggleBtn) {
+            function startAnim() {
+                connAnimStep = 0;
+                function animate(ts) {
+                    if (ts - connLastTs > 55) {
+                        connAnimStep = (connAnimStep + 1) % dashSeq.length;
+                        if (map.getLayer(CONNECTOR_LAYER_ID)) {
+                            map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-dasharray', dashSeq[connAnimStep]);
+                        }
+                        connLastTs = ts;
+                    }
+                    connAnimFrame = requestAnimationFrame(animate);
+                }
+                connAnimFrame = requestAnimationFrame(animate);
+            }
+            function stopAnim() {
+                if (connAnimFrame) cancelAnimationFrame(connAnimFrame);
+                connAnimFrame = null;
+            }
+
+            toggleBtn.addEventListener('click', () => {
+                corridorVisible = !corridorVisible;
+                map.setLayoutProperty(CONNECTOR_LAYER_ID, 'visibility', corridorVisible ? 'visible' : 'none');
+                const levelBtns = document.getElementById('conn-level-toggles');
+                if (levelBtns) levelBtns.style.display = corridorVisible ? 'flex' : 'none';
+                if (corridorVisible) {
+                    startAnim();
+                    toggleBtn.textContent = 'Hide Corridors';
+                    toggleBtn.classList.add('active');
+                } else {
+                    stopAnim();
+                    toggleBtn.textContent = 'Show Corridors';
+                    toggleBtn.classList.remove('active');
+                }
+            });
+        }
+
+        // Corridor hover popup
+        const connPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'custom-hover-popup' });
         map.on('mousemove', CONNECTOR_LAYER_ID, (e) => {
             if (!e.features || !e.features.length) return;
             map.getCanvas().style.cursor = 'pointer';
@@ -149,12 +239,11 @@ map.on('idle', () => {
         });
         map.on('click', CONNECTOR_LAYER_ID, (e) => {
             if (!e.features || !e.features.length) return;
+            e.preventDefault();
             const f = e.features[0].properties;
             const el = document.getElementById('patch-info-content');
             if (el) {
-                el.innerHTML =
-                    '<div style="padding:4px">' +
-                    '<strong>Potential movement corridor</strong><br><br>' +
+                el.innerHTML = '<div style="padding:4px"><strong>Potential movement corridor</strong><br><br>' +
                     '<strong>Gap to nearest patch:</strong> ' + f.gap_m + ' m<br>' +
                     '<strong>Connectivity:</strong> ' + f.connectivity + '<br>' +
                     '<strong>Source patch area:</strong> ' + f.area_ha + ' ha<br>' +
@@ -162,47 +251,8 @@ map.on('idle', () => {
                     '<em>' + (f.crossing_note || '') + '</em></div>';
             }
             const sidebar = document.getElementById('sidebar');
-            if (sidebar && sidebar.classList.contains('collapsed')) {
-                document.getElementById('toggle-sidebar-btn').click();
-            }
+            if (sidebar && sidebar.classList.contains('collapsed')) document.getElementById('toggle-sidebar-btn').click();
         });
-
-        // Floating corridor toggle button on the map
-        if (btn) {
-            let visible = false;
-            let animFrame = null;
-            let animStep  = 0;
-            let lastTs    = 0;
-            const dashSeq = [
-                [0,4,3],[0.5,4,2.5],[1,4,2],[1.5,4,1.5],[2,4,1],[2.5,4,0.5],[3,4,0],
-                [0,0.5,3,3.5],[0,1,3,3],[0,1.5,3,2.5],[0,2,3,2],[0,2.5,3,1.5],
-                [0,3,3,1],[0,3.5,3,0.5],[0,4,3,0]
-            ];
-            function animate(ts) {
-                if (ts - lastTs > 55) {
-                    animStep = (animStep + 1) % dashSeq.length;
-                    if (map.getLayer(CONNECTOR_LAYER_ID)) {
-                        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-dasharray', dashSeq[animStep]);
-                    }
-                    lastTs = ts;
-                }
-                animFrame = requestAnimationFrame(animate);
-            }
-            btn.addEventListener('click', () => {
-                visible = !visible;
-                map.setLayoutProperty(CONNECTOR_LAYER_ID, 'visibility', visible ? 'visible' : 'none');
-                if (visible) {
-                    animFrame = requestAnimationFrame(animate);
-                    btn.textContent = 'Hide Corridors';
-                    btn.classList.add('active');
-                } else {
-                    if (animFrame) cancelAnimationFrame(animFrame);
-                    animFrame = null;
-                    btn.textContent = 'Show Corridors';
-                    btn.classList.remove('active');
-                }
-            });
-        }
     }
 
     function initializeHoverPopups() {
@@ -210,18 +260,31 @@ map.on('idle', () => {
         const hoverPopup = new mapboxgl.Popup({
             closeButton: false, closeOnClick: false, className: 'custom-hover-popup'
         });
-        map.on('mousemove', FOREST_PATCH_LAYER_ID, (e) => {
-            if (e.features && e.features.length > 0) {
-                map.getCanvas().style.cursor = 'pointer';
-                const feature = e.features[0];
-                const patchIdVal = feature.properties[PATCH_ID_ATTRIBUTE];
-                const categoryVal = feature.properties[TIER_ATTRIBUTE];
-                const popupContent = `<strong>ID:</strong> ${patchIdVal !== undefined ? patchIdVal : 'N/A'}<br><strong>Category:</strong> ${categoryVal !== undefined ? categoryVal : 'N/A'}`;
-                hoverPopup.setLngLat(e.lngLat).setHTML(popupContent).addTo(map);
+
+        map.on('mousemove', (e) => {
+            // Corridors take priority when visible
+            if (corridorVisible && CONNECTOR_LAYER_ID) {
+                const connFeats = map.queryRenderedFeatures(e.point, { layers: [CONNECTOR_LAYER_ID] });
+                if (connFeats.length > 0) {
+                    map.getCanvas().style.cursor = 'pointer';
+                    hoverPopup.remove();
+                    return;
+                }
             }
-        });
-        map.on('mouseleave', FOREST_PATCH_LAYER_ID, () => {
-            map.getCanvas().style.cursor = ''; hoverPopup.remove();
+            // Patch hover
+            const features = map.queryRenderedFeatures(e.point, { layers: [FOREST_PATCH_LAYER_ID] });
+            if (features.length > 0) {
+                map.getCanvas().style.cursor = 'pointer';
+                const p = features[0].properties;
+                const patchIdVal  = p[PATCH_ID_ATTRIBUTE];
+                const categoryVal = p[TIER_ATTRIBUTE];
+                hoverPopup.setLngLat(e.lngLat)
+                    .setHTML('<strong>ID:</strong> ' + (patchIdVal !== undefined ? patchIdVal : 'N/A') + '<br><strong>Category:</strong> ' + (categoryVal !== undefined ? categoryVal : 'N/A'))
+                    .addTo(map);
+            } else {
+                map.getCanvas().style.cursor = '';
+                hoverPopup.remove();
+            }
         });
     }
 
@@ -229,10 +292,17 @@ map.on('idle', () => {
         console.log("DEBUG: initializeClickInfoPanel() function EXECUTED.");
         const patchInfoContent = document.getElementById('patch-info-content');
         if (!patchInfoContent) { console.error("Patch info content panel not found!"); return; }
-        map.on('click', FOREST_PATCH_LAYER_ID, (e) => {
-            if (e.features && e.features.length > 0) {
-                const feature = e.features[0];
-                displayPatchInfo(feature.properties);
+
+        map.on('click', (e) => {
+            // Corridors take priority when visible
+            if (corridorVisible && CONNECTOR_LAYER_ID) {
+                const connFeats = map.queryRenderedFeatures(e.point, { layers: [CONNECTOR_LAYER_ID] });
+                if (connFeats.length > 0) return; // handled by corridor listener
+            }
+            // Patch click
+            const features = map.queryRenderedFeatures(e.point, { layers: [FOREST_PATCH_LAYER_ID] });
+            if (features.length > 0) {
+                displayPatchInfo(features[0].properties);
                 const sidebar = document.getElementById('sidebar');
                 if (sidebar && sidebar.classList.contains('collapsed')) {
                     document.getElementById('toggle-sidebar-btn').click();
@@ -462,9 +532,9 @@ map.on('idle', () => {
     }
 
     function displayPatchInfo(properties) {
-        const patchInfoContent = document.getElementById('patch-info-content');
-        patchInfoContent.innerHTML = '';
-        if (!properties) { patchInfoContent.innerHTML = 'No data for this patch.'; return; }
+        const el = document.getElementById('patch-info-content');
+        el.innerHTML = '';
+        if (!properties) { el.innerHTML = 'No data for this patch.'; return; }
 
         const tier         = properties[TIER_ATTRIBUTE];
         const connectivity = properties[CONNECTIVITY_ATTRIBUTE];
@@ -506,16 +576,12 @@ map.on('idle', () => {
         let html = '<div class="plain-info-panel">';
         html += '<div style="background:' + tierColor + ';color:#fff;padding:6px 10px;border-radius:3px;font-weight:bold;margin-bottom:8px;font-size:0.85em">' + (tier || 'Unknown') + '</div>';
         html += '<p style="margin:4px 0 12px;line-height:1.5">' + (tierDesc[tier] || '') + '</p>';
-
         if (connectivity && connectivity !== 'No Data') {
             html += '<strong>Connectivity:</strong> <span style="display:inline-block;padding:2px 8px;border-radius:3px;background:' + connColor + ';color:' + connText + ';font-weight:bold">' + connectivity + '</span>';
             html += '<p style="margin:4px 0 12px;line-height:1.5">' + (connDesc[connectivity] || '') + '</p>';
         }
-
         html += '<strong>Nearest patch:</strong><p style="margin:4px 0 12px;line-height:1.5">' + ennMsg + '</p>';
-
-        html += '<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:bold;padding:4px 0">Show technical details</summary>';
-        html += '<ul style="margin:8px 0;padding-left:16px;font-size:0.85em">';
+        html += '<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:bold">Show technical details</summary><ul style="margin:8px 0;padding-left:16px;font-size:0.85em">';
         if (id !== undefined) html += '<li><strong>Patch ID:</strong> ' + id + '</li>';
         if (typeof area === 'number') html += '<li><strong>Total area:</strong> ' + area.toFixed(2) + ' ha</li>';
         if (typeof core === 'number') html += '<li><strong>Core area:</strong> ' + core.toFixed(2) + ' ha</li>';
@@ -524,98 +590,39 @@ map.on('idle', () => {
         if (!isNaN(ennNum)) html += '<li><strong>Distance to nearest patch:</strong> ' + Math.round(ennNum) + ' m</li>';
         if (flow !== undefined && flow !== null) html += '<li><strong>Mean composite flow:</strong> ' + (typeof flow === 'number' ? flow.toFixed(2) : flow) + '</li>';
         html += '</ul></details></div>';
-
-        patchInfoContent.innerHTML = html;
+        el.innerHTML = html;
     }
 
     function showMetricInfoPopup(metricKey, iconElement) {
-        if (metricPopup) {
-            metricPopup.remove();
-            metricPopup = null;
-        }
-
+        if (metricPopup) { metricPopup.remove(); metricPopup = null; }
         const description = METRIC_DESCRIPTIONS[metricKey];
         if (!description) return;
-
         metricPopup = document.createElement('div');
         metricPopup.id = 'metric-info-popup';
-        metricPopup.innerHTML = `
-            <p>${description}</p>
-            <button class="close-metric-popup-btn" aria-label="Close metric description">Close</button>
-        `;
+        metricPopup.innerHTML = '<p>' + description + '</p><button class="close-metric-popup-btn">Close</button>';
         document.body.appendChild(metricPopup);
-
-        const iconRect = iconElement.getBoundingClientRect();
+        const r = iconElement.getBoundingClientRect();
         metricPopup.style.position = 'fixed';
-        
-        // Initial position: below the icon
-        let top = iconRect.bottom + 5;
-        let left = iconRect.left;
-
-        metricPopup.style.top = `${top}px`;
-        metricPopup.style.left = `${left}px`;
-        
-        // Adjust if popup goes off screen
-        const popupRect = metricPopup.getBoundingClientRect();
-
-        if (popupRect.right > window.innerWidth - 10) {
-            left = window.innerWidth - popupRect.width - 10;
-        }
-        if (popupRect.bottom > window.innerHeight - 10) {
-            top = iconRect.top - popupRect.height - 5; // Place above icon
-        }
-        if (left < 10) {
-            left = 10;
-        }
-        if (top < 10 && (iconRect.top - popupRect.height - 5 < 10) ) { // If placing above also goes offscreen
-            top = 10; // Stick to top
-        }
-
-
-        metricPopup.style.top = `${top}px`;
-        metricPopup.style.left = `${left}px`;
-
-        const closeBtn = metricPopup.querySelector('.close-metric-popup-btn');
-        closeBtn.focus(); // Set focus to the close button for accessibility
-        closeBtn.addEventListener('click', () => {
-            metricPopup.remove();
-            metricPopup = null;
-            iconElement.focus(); // Return focus to the icon
-        });
-
-        // Close with Escape key
-        metricPopup.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') {
-                closeBtn.click();
-            }
-        });
+        metricPopup.style.top  = (r.bottom + 5) + 'px';
+        metricPopup.style.left = r.left + 'px';
+        metricPopup.querySelector('.close-metric-popup-btn').addEventListener('click', () => { metricPopup.remove(); metricPopup = null; });
     }
 
-    // Global click listener to close metric popup if clicked outside
-    document.addEventListener('click', function(event) {
+    document.addEventListener('click', (event) => {
         if (metricPopup) {
-            const isClickInsidePopup = metricPopup.contains(event.target);
-            // Check if the click target or its parent is an info icon
-            const isClickOnAnIcon = event.target.classList.contains('metric-info-icon') || (event.target.parentElement && event.target.parentElement.classList.contains('metric-info-icon'));
-
-            if (!isClickInsidePopup && !isClickOnAnIcon) {
-                metricPopup.remove();
-                metricPopup = null;
+            if (!metricPopup.contains(event.target) && !event.target.classList.contains('metric-info-icon')) {
+                metricPopup.remove(); metricPopup = null;
             }
         }
     });
 
-
     function formatPropertyName(name) {
-        let formattedName = name;
         if (name === TIER_ATTRIBUTE) return 'Category';
         if (name === PATCH_AREA_ATTRIBUTE) return 'Patch Area';
         if (name === CORE_AREA_ATTRIBUTE) return 'Core Area';
         if (name === CONNECTIVITY_ATTRIBUTE) return 'Connectivity';
         if (name === MEAN_FLOW_ATTRIBUTE) return 'Mean Composite Flow';
-        formattedName = formattedName.replace(/_/g, ' ').replace(/ #$/, '');
-        formattedName = formattedName.replace(/\b\w/g, l => l.toUpperCase());
-        return formattedName;
+        return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
 
     console.log("DEBUG: Attempting to call initializeAboutModal...");
@@ -656,16 +663,16 @@ map.on('idle', () => {
     }
 
     function initializeHowToModal() {
-        const howtoBtn   = document.getElementById('howto-btn');
-        const howtoModal = document.getElementById('howto-modal');
-        const closeBtn   = document.getElementById('close-howto-btn');
-        if (!howtoBtn || !howtoModal || !closeBtn) return;
-        function openHowTo()  { howtoModal.style.display = 'block'; requestAnimationFrame(() => document.body.classList.add('modal-open')); }
-        function closeHowTo() { document.body.classList.remove('modal-open'); setTimeout(() => { howtoModal.style.display = 'none'; }, 300); }
-        howtoBtn.addEventListener('click', openHowTo);
-        closeBtn.addEventListener('click', closeHowTo);
-        window.addEventListener('click', (e) => { if (e.target === howtoModal) closeHowTo(); });
-        window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('modal-open')) closeHowTo(); });
+        const btn     = document.getElementById('howto-btn');
+        const modal   = document.getElementById('howto-modal');
+        const closeBtn = document.getElementById('close-howto-btn');
+        if (!btn || !modal || !closeBtn) return;
+        function open()  { modal.style.display = 'block'; requestAnimationFrame(() => document.body.classList.add('modal-open')); }
+        function close() { document.body.classList.remove('modal-open'); setTimeout(() => { modal.style.display = 'none'; }, 300); }
+        btn.addEventListener('click', open);
+        closeBtn.addEventListener('click', close);
+        window.addEventListener('click', (e) => { if (e.target === modal) close(); });
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('modal-open')) close(); });
     }
 
     function initializeDarkModeToggle() {
