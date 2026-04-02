@@ -46,9 +46,6 @@
                 <h3>Tools</h3>
                 <div id="search-geocoder-container"></div>
 
-                <button id="color-mode-toggle" style="margin-top: 1em; width: 100%;">View by: Conservation Tier</button>
-                <button id="connector-toggle" style="margin-top: 0.5em; width: 100%;">Show Corridors</button>
-
                 <label for="basemap-toggle" style="margin-top: 1em; display: block;">Basemap:</label>
                 <select id="basemap-toggle">
                     <option value="custom">Custom Style</option>
@@ -81,9 +78,15 @@
         <main id="map-container">
             <div id="map"></div>
 
+            <!-- Top-left map overlay buttons -->
+            <div id="map-top-controls">
+                <button id="corridor-toggle-fab">Show Corridors</button>
+            </div>
+
+            <!-- Top-right floating buttons -->
             <div id="map-fab-buttons">
-                <a href="index.html" id="home-btn" title="Back to home" aria-label="Back to home">&#8962;</a>
-                <button id="howto-btn" title="How to use this map" aria-label="How to use this map">?</button>
+                <a href="index.html" id="home-btn" title="Back to home" aria-label="Back to home">🏠</a>
+                <button id="howto-btn" title="How to use this map" aria-label="How to use this map">How to use</button>
             </div>
 
             <div id="zoom-warning">
@@ -107,8 +110,7 @@
             <span class="close-modal-btn" role="button" tabindex="0" aria-label="Close modal">x</span>
             <h2>Peninsular Malaysia Forest Patch Connectivity Project</h2>
             <p>This interactive map visualises forest patches in the Klang Valley region of Malaysia. Each patch is classified into one of six tiers using a Composite Habitat Suitability Index (CHSI), which combines landscape metrics including total area, core area, contiguity, perimeter-area ratio, and distance to the nearest neighbouring patch. Connectivity values are derived from circuit theory modelling using Omniscape, which simulates how current flows across the landscape under different resistance scenarios. Patches are grouped into six tiers ranging from large core habitats to highly isolated micro-patches. Click on any patch to view its details.</p>
-            <p>Built by Benjamin Galea</p>
-            <p>Contact bengalea97@gmail.com for any enquiries</p>
+            <p>Built by Benjamin Galea. Contact bengalea97@gmail.com for any enquiries.</p>
         </div>
     </div>
 
@@ -116,22 +118,14 @@
         <div class="modal-content">
             <span class="close-modal-btn" id="close-howto-btn" role="button" tabindex="0" aria-label="Close">x</span>
             <h2>How to Use This Map</h2>
-
             <h3>Navigating the map</h3>
             <p>Zoom in until forest patches appear on the map. Click any patch to see its details in the sidebar. Use the search bar to find specific locations within the Klang Valley.</p>
-
             <h3>What the patch colours mean</h3>
-            <p>By default, patches are coloured by their conservation tier, from light green (Tier 1, highest structural quality) to dark green (Tier 6, highly isolated micro-patches). Use the Filter by Category checkboxes in the sidebar to show or hide specific tiers.</p>
-
+            <p>Patches are coloured by their conservation tier, from light green (Tier 1, highest structural quality) to dark green (Tier 6, highly isolated micro-patches). Use the Filter by Category checkboxes in the sidebar to show or hide specific tiers.</p>
             <h3>Potential movement corridors</h3>
-            <p>Click Show Corridors to reveal lines connecting ecologically meaningful forest patches to their nearest neighbours. Lines are coloured by connectivity: yellow for high, orange for moderate, and red for low. Only patches with plausible movement potential are shown. Click any corridor line to see details in the sidebar.</p>
-
-            <h3>Switching the colour mode</h3>
-            <p>Click View by: Conservation Tier to switch the map to show the connectivity rating of each patch derived from circuit theory modelling. This highlights which patches sit within active movement corridors and which are surrounded by barrier zones. Click again to return to the tier view.</p>
-
+            <p>Click Show Corridors at the top of the map to reveal lines connecting forest patches to their nearest neighbours. Lines are coloured by connectivity: yellow for high, orange for moderate, and red for low. Click any corridor line to see details in the sidebar.</p>
             <h3>Reading patch details</h3>
             <p>Clicking a patch shows its conservation tier, connectivity rating, and distance to the nearest adjacent patch. Expand Show technical details to see the full set of landscape metrics used in the CHSI analysis.</p>
-
             <p style="margin-top: 1.5em; font-size: 0.85em; opacity: 0.7;">Built by Benjamin Galea. Contact bengalea97@gmail.com</p>
         </div>
     </div>
