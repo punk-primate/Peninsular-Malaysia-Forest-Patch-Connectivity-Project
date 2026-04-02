@@ -1,19 +1,18 @@
 // --- VERY TOP OF app.js for file loading check ---
-console.log("--- app.js LATEST (Connectivity Integration) - Timestamp: " + new Date().toLocaleTimeString() + " ---");
+console.log("--- app.js LATEST (Improved Modal, Stats on Idle, Info Icons) - Timestamp: " + new Date().toLocaleTimeString() + " ---");
 
 // Define descriptions for metrics. These constants (PATCH_AREA_ATTRIBUTE, etc.) are from config.js
 const METRIC_DESCRIPTIONS = {
-    [PATCH_AREA_ATTRIBUTE]: "Patch Area: The total land area of the forest patch in hectares (ha). This indicates the overall size of the habitat.",
-    [CORE_AREA_ATTRIBUTE]: "Core Area: The area within a forest patch that is buffered from edge effects (e.g., changes in light, wind, temperature), in hectares (ha). It represents the more stable interior habitat critical for sensitive species.",
-    [CONTIGUITY_INDEX_ATTRIBUTE]: "Contiguity Index: A measure of the spatial connectedness or compactness of cells within a patch. Values range from 0 to 1, where higher values indicate more contiguous, less fragmented patches, which is generally better for biodiversity.",
-    [PERIMETER_AREA_RATIO_ATTRIBUTE]: "Perimeter-Area Ratio: The ratio of the patch's perimeter to its area. A higher ratio often indicates a more elongated or irregular shape, leading to a greater proportion of edge habitat compared to core habitat.",
-    [ENN_ATTRIBUTE]: "Euclidean Nearest-Neighbor (ENN): The shortest straight-line distance to the nearest neighboring forest patch, in meters. Lower values indicate greater spatial connectivity.",
-    [CONNECTIVITY_ATTRIBUTE]: "Connectivity: A categorical rating derived from omnidirectional circuit theory modelling (Omniscape). High = patch sits within a high current flow corridor; Moderate = intermediate flow; Low = low flow; Barrier = patch lies within the near-zero flow urban or agricultural barrier zone.",
-    [MEAN_FLOW_ATTRIBUTE]: "Mean Composite Flow: The average normalised current flow value within this patch across all three resistance scenarios and three spatial scales, summed as a composite index (0–300 scale). Higher values indicate the patch carries more movement current and is more central to the connectivity network.",
-    [PINCH_PCT_ATTRIBUTE]: "Pinch Point Coverage (%): The percentage of this patch's area classified as a structural pinch point — i.e., in the top 10% of composite current flow across the landscape. Patches with high pinch point coverage are critical connectivity bottlenecks where habitat loss would have the greatest impact on regional movement for Hylobates lar."
+    [PATCH_AREA_ATTRIBUTE]: "Total area of the forest patch in hectares. Larger patches can support more species and are more resilient to edge effects.",
+    [CORE_AREA_ATTRIBUTE]: "The interior area of the patch that is sufficiently buffered from the edge. Edge zones experience altered conditions such as increased light and wind. Core area represents the stable interior habitat that sensitive arboreal animals depend on.",
+    [CONTIGUITY_INDEX_ATTRIBUTE]: "A measure of how compact and internally connected the patch is. Values range from 0 to 1, where 1 indicates a perfectly contiguous patch. More contiguous patches allow easier movement within the patch.",
+    [PERIMETER_AREA_RATIO_ATTRIBUTE]: "The ratio of the patch perimeter to its area. A higher ratio means the patch has a more irregular or elongated shape, with a greater proportion of edge habitat relative to interior.",
+    [ENN_ATTRIBUTE]: "The straight-line distance to the nearest adjacent forest patch, in metres. Lower values indicate the patch is closer to other forest areas and more likely to be reached by dispersing animals.",
+    [CONNECTIVITY_ATTRIBUTE]: "A connectivity rating derived from circuit theory modelling across the landscape. High indicates the patch sits within an active movement corridor. Moderate indicates partial connectivity. Low indicates the surrounding landscape presents significant resistance. Barrier indicates the patch is surrounded by an impermeable urban or agricultural matrix.",
+    [MEAN_FLOW_ATTRIBUTE]: "The mean composite current flow value within this patch, on a 0 to 300 scale. Higher values indicate the patch carries more movement current and is more central to the regional connectivity network."
 };
 
-let metricPopup = null;
+let metricPopup = null; // To keep track of the metric info popup
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DEBUG: DOMContentLoaded event fired. Initializing application.");
@@ -42,7 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
     initializeTierFilters();
-    initializeConnectivityFilters();
     initializeColorModeToggle();
     initializeConnectorLayer();
     initializeHoverPopups();
@@ -114,37 +112,14 @@ map.on('idle', () => {
         applyForestFilter();
     }
 
-    function initializeConnectivityFilters() {
-        const filterContainer = document.querySelector('#connectivity-filter-section');
-        if (!filterContainer) return;
-        filterContainer.innerHTML = '<h3>Filter by Connectivity</h3>';
-        ALL_CONNECTIVITY_LABELS.forEach(label => {
-            const itemLabel = document.createElement('label');
-            itemLabel.className = 'filter-legend-item';
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'connectivity-toggle';
-            checkbox.value = label;
-            checkbox.checked = true;
-            checkbox.addEventListener('change', applyForestFilter);
-            const colorBox = document.createElement('span');
-            colorBox.className = 'legend-color-box';
-            colorBox.style.backgroundColor = CONNECTIVITY_COLORS[label] || '#ccc';
-            itemLabel.appendChild(colorBox);
-            itemLabel.appendChild(checkbox);
-            itemLabel.appendChild(document.createTextNode(` ${label}`));
-            filterContainer.appendChild(itemLabel);
-        });
-    }
-
     function initializeColorModeToggle() {
         const btn = document.getElementById('color-mode-toggle');
         if (!btn) return;
         btn.addEventListener('click', () => {
             CURRENT_COLOR_MODE = CURRENT_COLOR_MODE === 'tier' ? 'connectivity' : 'tier';
             btn.textContent = CURRENT_COLOR_MODE === 'tier'
-                ? 'Colour by: Tier'
-                : 'Colour by: Connectivity';
+                ? 'View by: Conservation Tier'
+                : 'View by: Connectivity';
             applyColorMode();
         });
     }
@@ -152,63 +127,48 @@ map.on('idle', () => {
     function applyColorMode() {
         if (!map.isStyleLoaded() || !map.getLayer(FOREST_PATCH_LAYER_ID)) return;
         if (CURRENT_COLOR_MODE === 'connectivity') {
-            const colorExpression = ['match', ['get', CONNECTIVITY_ATTRIBUTE],
-                ...Object.entries(CONNECTIVITY_COLORS).flatMap(([k, v]) => [k, v]),
-                '#888888'
-            ];
-            map.setPaintProperty(FOREST_PATCH_LAYER_ID, 'fill-color', colorExpression);
+            map.setPaintProperty(FOREST_PATCH_LAYER_ID, 'fill-color',
+                ['match', ['get', CONNECTIVITY_ATTRIBUTE],
+                    'High', '#f7ce46', 'Moderate', '#e07c1f',
+                    'Low', '#a03030', 'Barrier', '#2c1a4a', '#888888']);
         } else {
-            const colorExpression = ['match', ['get', TIER_ATTRIBUTE],
-                ...Object.entries(TIER_COLORS).flatMap(([k, v]) => [k, v]),
-                '#cccccc'
-            ];
-            map.setPaintProperty(FOREST_PATCH_LAYER_ID, 'fill-color', colorExpression);
+            map.setPaintProperty(FOREST_PATCH_LAYER_ID, 'fill-color',
+                ['match', ['get', TIER_ATTRIBUTE],
+                    'Tier 1 (Core Habitat)', '#b1eaac',
+                    'Tier 2 (Major Stepping Stones)', '#8ad284',
+                    'Tier 3 (Connected Fragments)', '#5aaf64',
+                    'Tier 4 (Vulnerable Edge Fragments)', '#2a8234',
+                    'Tier 5 (Isolated Fragments)', '#1e6b27',
+                    'Tier 6 (Isolated Micro Patches)', '#0a4c12',
+                    '#cccccc']);
         }
     }
 
     function initializeConnectorLayer() {
-        // The connector layer already exists in the Mapbox style.
-        // We only need to override its paint properties and attach event listeners.
-        // CONNECTOR_LAYER_ID must match the layer name exactly as it appears in Studio.
-        if (!CONNECTOR_LAYER_ID) return;
-
-        if (!map.getLayer(CONNECTOR_LAYER_ID)) {
+        if (!CONNECTOR_LAYER_ID || !map.getLayer(CONNECTOR_LAYER_ID)) {
             console.warn('Connector layer not found in style:', CONNECTOR_LAYER_ID);
+            const btn = document.getElementById('connector-toggle');
+            if (btn) btn.style.display = 'none';
             return;
         }
-
-        // Start hidden — user turns on with the toggle button
         map.setLayoutProperty(CONNECTOR_LAYER_ID, 'visibility', 'none');
 
-        // Override Studio styling with data-driven paint properties
+        // Style by connectivity
         map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-color',
             ['match', ['get', 'connectivity'],
-                'High',     '#f7ce46',
-                'Moderate', '#e07c1f',
-                'Low',      '#a03030',
-                '#555555'
-            ]
-        );
+                'High', '#f7ce46', 'Moderate', '#e07c1f', 'Low', '#a03030', '#888888']);
+        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-width', 3);
+        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-opacity', 0.9);
 
-        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-width',
-            ['case', ['==', ['get', 'within_dispersal'], true], 2.5, 1.0]
-        );
-
-        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-opacity',
-            ['case', ['==', ['get', 'within_dispersal'], true], 0.85, 0.35]
-        );
-
-        // Hover popup
         const connPopup = new mapboxgl.Popup({
             closeButton: false, closeOnClick: false, className: 'custom-hover-popup'
         });
-
         map.on('mousemove', CONNECTOR_LAYER_ID, (e) => {
             if (e.features && e.features.length > 0) {
                 map.getCanvas().style.cursor = 'pointer';
                 const f = e.features[0].properties;
                 connPopup.setLngLat(e.lngLat)
-                    .setHTML(`<strong>Potential movement pathway</strong><br>Gap: ${f.gap_m} m`)
+                    .setHTML('<strong>Potential movement corridor</strong><br>Gap to nearest patch: ' + f.gap_m + ' m<br>Connectivity: ' + f.connectivity)
                     .addTo(map);
             }
         });
@@ -216,11 +176,21 @@ map.on('idle', () => {
             map.getCanvas().style.cursor = '';
             connPopup.remove();
         });
-
-        // Click — plain English info panel
         map.on('click', CONNECTOR_LAYER_ID, (e) => {
             if (e.features && e.features.length > 0) {
-                displayConnectorInfo(e.features[0].properties);
+                const f = e.features[0].properties;
+                const el = document.getElementById('patch-info-content');
+                if (el) {
+                    el.innerHTML =
+                        '<div style="padding:4px">' +
+                        '<strong>Potential movement corridor</strong><br><br>' +
+                        '<strong>Gap to nearest patch:</strong> ' + f.gap_m + ' m<br>' +
+                        '<strong>Connectivity:</strong> ' + f.connectivity + '<br>' +
+                        '<strong>Source patch area:</strong> ' + f.area_ha + ' ha<br>' +
+                        '<strong>Mean composite flow:</strong> ' + f.mean_flow + '<br><br>' +
+                        '<em>' + (f.crossing_note || '') + '</em>' +
+                        '</div>';
+                }
                 const sidebar = document.getElementById('sidebar');
                 if (sidebar && sidebar.classList.contains('collapsed')) {
                     document.getElementById('toggle-sidebar-btn').click();
@@ -228,53 +198,16 @@ map.on('idle', () => {
             }
         });
 
-        // Toggle button
         const btn = document.getElementById('connector-toggle');
         if (btn) {
+            let visible = false;
             btn.addEventListener('click', () => {
-                const visible = map.getLayoutProperty(CONNECTOR_LAYER_ID, 'visibility');
-                const nowHidden = visible === 'none';
-                map.setLayoutProperty(CONNECTOR_LAYER_ID, 'visibility',
-                    nowHidden ? 'visible' : 'none');
-                btn.textContent = nowHidden
-                    ? 'Hide Movement Pathways'
-                    : 'Show Movement Pathways';
-                btn.classList.toggle('active', nowHidden);
+                visible = !visible;
+                map.setLayoutProperty(CONNECTOR_LAYER_ID, 'visibility', visible ? 'visible' : 'none');
+                btn.textContent = visible ? 'Hide Corridors' : 'Show Corridors';
+                btn.classList.toggle('active', visible);
             });
         }
-    }
-
-    function displayConnectorInfo(props) {
-        const patchInfoContent = document.getElementById('patch-info-content');
-        if (!patchInfoContent) return;
-
-        const withinDispersal = props.within_dispersal === true || props.within_dispersal === 'true';
-        const gapIcon = withinDispersal ? '✅' : '⚠️';
-        const gapClass = withinDispersal ? 'conn-good' : 'conn-warn';
-
-        patchInfoContent.innerHTML = `
-            <div class="conn-info-panel">
-                <div class="conn-header">🔗 Potential Movement Pathway</div>
-                <div class="conn-gap ${gapClass}">
-                    ${gapIcon} <strong>Gap distance: ${props.gap_m} m</strong>
-                </div>
-                <div class="conn-note">${props.crossing_note || ''}</div>
-                <hr class="conn-divider">
-                <div class="conn-stat"><span>Connectivity:</span>
-                    <span class="conn-badge" style="background:${CONNECTIVITY_COLORS[props.connectivity] || '#888'};
-                    color:${props.connectivity === 'High' || props.connectivity === 'Moderate' ? '#1a1a1a' : '#fff'}">
-                        ${props.connectivity}
-                    </span>
-                </div>
-                <div class="conn-stat"><span>Source patch area:</span> <span>${props.area_ha} ha</span></div>
-                <div class="conn-stat"><span>Mean composite flow:</span> <span>${props.mean_flow}</span></div>
-                <div class="conn-stat"><span>Pinch point coverage:</span> <span>${props.pinch_pct}%</span></div>
-                <div class="conn-legend">
-                    <div><span class="conn-line solid"></span> Within gibbon dispersal range (≤ 800 m)</div>
-                    <div><span class="conn-line dashed"></span> Beyond typical dispersal range</div>
-                </div>
-            </div>
-        `;
     }
 
     function initializeHoverPopups() {
@@ -305,16 +238,9 @@ map.on('idle', () => {
             if (e.features && e.features.length > 0) {
                 const feature = e.features[0];
                 displayPatchInfo(feature.properties);
-                if (selectedPatchMapboxId !== null) {
-                    map.setFeatureState({ source: feature.source, sourceLayer: feature.sourceLayer, id: selectedPatchMapboxId }, { selected: false });
-                }
-                selectedPatchMapboxId = feature.id;
-                if (selectedPatchMapboxId !== null && selectedPatchMapboxId !== undefined) {
-                     map.setFeatureState({ source: feature.source, sourceLayer: feature.sourceLayer, id: selectedPatchMapboxId }, { selected: true });
-                } else { console.warn("DEBUG: Clicked feature has no usable 'id' for selection state."); }
                 const sidebar = document.getElementById('sidebar');
                 if (sidebar && sidebar.classList.contains('collapsed')) {
-                     document.getElementById('toggle-sidebar-btn').click();
+                    document.getElementById('toggle-sidebar-btn').click();
                 }
             }
         });
@@ -429,21 +355,13 @@ map.on('idle', () => {
         }
         
         const checkedTiers = Array.from(document.querySelectorAll('.tier-toggle:checked')).map(cb => cb.value);
-        const checkedConnectivity = Array.from(document.querySelectorAll('.connectivity-toggle:checked')).map(cb => cb.value);
         const allFilters = [];
-
-        // 1. TIER FILTER
+        
+        // 1. TIER FILTER (Using the robust 'match' expression)
         if (checkedTiers.length === 0) {
             allFilters.push(['==', ['get', TIER_ATTRIBUTE], 'NO_MATCH_POSSIBLE']);
         } else if (checkedTiers.length < ALL_TIERS.length) {
             allFilters.push(['match', ['get', TIER_ATTRIBUTE], checkedTiers, true, false]);
-        }
-
-        // 2. CONNECTIVITY FILTER
-        if (checkedConnectivity.length === 0) {
-            allFilters.push(['==', ['get', CONNECTIVITY_ATTRIBUTE], 'NO_MATCH_POSSIBLE']);
-        } else if (checkedConnectivity.length < ALL_CONNECTIVITY_LABELS.length) {
-            allFilters.push(['match', ['get', CONNECTIVITY_ATTRIBUTE], checkedConnectivity, true, false]);
         }
         
         // 2. AREA FILTER (Reading the exact numeric property without forced conversions)
@@ -478,7 +396,6 @@ map.on('idle', () => {
         const countEl = document.getElementById('visible-patches-count');
         const areaEl = document.getElementById('visible-patches-area');
         const ennEl = document.getElementById('visible-patches-enn');
-        const flowEl = document.getElementById('visible-patches-flow');
         const breakdownEl = document.getElementById('tier-stats-breakdown');
         
         if (!countEl || !areaEl || !breakdownEl) { console.error("Stats elements not found!"); return; }
@@ -494,11 +411,9 @@ map.on('idle', () => {
         const features = map.queryRenderedFeatures({ layers: [FOREST_PATCH_LAYER_ID] });
         countEl.textContent = features.length.toLocaleString();
         
-        let overallTotalArea = 0;
+        let overallTotalArea = 0; 
         let overallTotalEnn = 0;
-        let overallTotalFlow = 0;
         let validEnnCount = 0;
-        let validFlowCount = 0;
         const tierStats = {};
         
         const currentlyCheckedTiers = Array.from(document.querySelectorAll('.tier-toggle:checked')).map(cb => cb.value);
@@ -513,11 +428,6 @@ map.on('idle', () => {
                 overallTotalEnn += parseFloat(enn);
                 validEnnCount++;
             }
-            const flow = feature.properties[MEAN_FLOW_ATTRIBUTE];
-            if (flow !== undefined && !isNaN(parseFloat(flow))) {
-                overallTotalFlow += parseFloat(flow);
-                validFlowCount++;
-            }
             
             const tier = feature.properties[TIER_ATTRIBUTE];
             if (tier && tierStats.hasOwnProperty(tier)) {
@@ -529,14 +439,12 @@ map.on('idle', () => {
         areaEl.textContent = overallTotalArea.toFixed(2).toLocaleString() + ' ha';
         
         if (ennEl) {
-            ennEl.textContent = validEnnCount > 0
-                ? (overallTotalEnn / validEnnCount).toFixed(2) + ' m'
-                : '- m';
-        }
-        if (flowEl) {
-            flowEl.textContent = validFlowCount > 0
-                ? (overallTotalFlow / validFlowCount).toFixed(2)
-                : '-';
+            if (validEnnCount > 0) {
+                const avgEnn = overallTotalEnn / validEnnCount;
+                ennEl.textContent = avgEnn.toFixed(2).toLocaleString() + ' m';
+            } else {
+                ennEl.textContent = '- m';
+            }
         }
 
         let breakdownHtml = '<h5>Breakdown by Visible Category:</h5>';
@@ -559,90 +467,87 @@ map.on('idle', () => {
     }
 
     function displayPatchInfo(properties) {
+        console.log("DEBUG: displayPatchInfo() function EXECUTED.", properties);
         const patchInfoContent = document.getElementById('patch-info-content');
         patchInfoContent.innerHTML = '';
         if (!properties) { patchInfoContent.innerHTML = 'No data for this patch.'; return; }
 
-        const tier = properties[TIER_ATTRIBUTE] || 'Unknown';
-        const connectivity = properties[CONNECTIVITY_ATTRIBUTE] || 'No Data';
+        const tier = properties[TIER_ATTRIBUTE];
+        const connectivity = properties[CONNECTIVITY_ATTRIBUTE];
         const area = properties[PATCH_AREA_ATTRIBUTE];
         const core = properties[CORE_AREA_ATTRIBUTE];
         const enn  = properties[ENN_ATTRIBUTE];
         const flow = properties[MEAN_FLOW_ATTRIBUTE];
-        const pinch = properties[PINCH_PCT_ATTRIBUTE];
+        const id   = properties[PATCH_ID_ATTRIBUTE];
 
-        const tierDescriptions = {
-            'Tier 1 (Core Habitat)': 'One of the most ecologically valuable patches in this landscape. Large enough to support a resident gibbon group with substantial protected interior habitat.',
-            'Tier 2 (Major Stepping Stones)': 'A high-quality patch that acts as a key hub or stepping stone in the movement network. Critical for regional connectivity.',
-            'Tier 3 (Connected Fragments)': 'A well-connected fragment that plays an important role in bridging the gap between larger patches.',
-            'Tier 4 (Vulnerable Edge Fragments)': 'A moderate patch with significant edge exposure. Functionally important but vulnerable to further degradation.',
-            'Tier 5 (Isolated Fragments)': 'A small, isolated patch with limited connectivity. May support a small number of individuals but is poorly connected to the wider network.',
-            'Tier 6 (Isolated Micro Patches)': 'A highly isolated micro-patch. Likely too small and disconnected to support resident gibbons, but may provide temporary refuge.'
+        const tierDesc = {
+            'Tier 1 (Core Habitat)':
+                'This is one of the most structurally important forest patches in the landscape. It is large enough to support a resident group of arboreal animals and has substantial interior area protected from edge effects.',
+            'Tier 2 (Major Stepping Stones)':
+                'A high-quality patch that functions as a key hub or stepping stone within the movement network. Critical for regional habitat connectivity.',
+            'Tier 3 (Connected Fragments)':
+                'A moderately connected forest fragment that plays a bridging role between larger patches in the landscape.',
+            'Tier 4 (Vulnerable Edge Fragments)':
+                'A patch with significant edge exposure relative to its size. Functionally important but vulnerable to further habitat loss or degradation.',
+            'Tier 5 (Isolated Fragments)':
+                'A small, isolated forest fragment with limited connectivity to the surrounding landscape. May support a small number of individuals but is poorly linked to the wider network.',
+            'Tier 6 (Isolated Micro Patches)':
+                'A highly isolated micro-patch or remnant forest fragment. These patches are generally too small and disconnected to support resident populations of arboreal animals, but may provide temporary shelter.'
         };
 
-        const connDescriptions = {
-            'High':    'This patch sits within an active movement corridor. Gibbons can potentially move to neighbouring patches from here.',
-            'Moderate':'This patch has moderate connectivity. Movement to other patches is possible but not guaranteed.',
-            'Low':     'This patch has low connectivity. The surrounding landscape presents significant resistance to movement.',
-            'Barrier': 'This patch is surrounded by an impermeable barrier zone. Unaided movement to neighbouring patches is effectively impossible.',
+        const connDesc = {
+            'High':    'This patch sits within an active movement corridor. The surrounding landscape allows relatively free movement to neighbouring patches.',
+            'Moderate':'This patch has moderate connectivity. Movement to neighbouring patches is possible but depends on the specific routes available through the landscape.',
+            'Low':     'This patch has low connectivity. The surrounding landscape presents significant resistance to movement between patches.',
+            'Barrier': 'This patch is surrounded by an impermeable barrier zone such as dense urban development. Unaided movement to neighbouring patches is effectively impossible.',
             'No Data': 'Connectivity data is not available for this patch.'
         };
 
-        const pinchMsg = pinch > 50
-            ? `⚠️ <strong>${pinch}% of this patch is a critical bottleneck.</strong> Losing or degrading this area would severely disrupt movement across the region.`
-            : pinch > 10
-            ? `This patch contains some pinch point area (${pinch}%). It plays a partial role in regional movement corridors.`
-            : `This patch does not form a major pinch point in the connectivity network.`;
+        const ennNum = typeof enn === 'number' ? enn : parseFloat(enn);
+        let ennMsg;
+        if (!isNaN(ennNum)) {
+            if (ennNum <= 30) {
+                ennMsg = 'This patch is directly adjacent to another forest area.';
+            } else if (ennNum <= 800) {
+                ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, within the typical dispersal range for arboreal animals.';
+            } else if (ennNum <= 2000) {
+                ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, beyond the typical single-generation dispersal distance for most arboreal animals.';
+            } else {
+                ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away. This patch is functionally isolated at the landscape scale.';
+            }
+        } else { ennMsg = 'Distance data not available.'; }
 
-        const dispersalMsg = enn <= 800
-            ? `✅ The nearest patch is <strong>${Math.round(enn)} m</strong> away — within the typical dispersal range of a gibbon.`
-            : enn <= 2000
-            ? `⚠️ The nearest patch is <strong>${Math.round(enn)} m</strong> away — beyond typical single-individual dispersal distance.`
-            : `🚫 The nearest patch is <strong>${Math.round(enn)} m</strong> away — too far for unaided gibbon movement.`;
+        let html = '<div class="plain-info-panel">';
 
-        patchInfoContent.innerHTML = `
-            <div class="plain-info-panel">
+        // Tier
+        html += '<div class="info-tier-badge" style="background:' + (TIER_COLORS[tier] || '#555') + ';color:#fff;padding:6px 10px;border-radius:3px;font-weight:bold;margin-bottom:8px">' + (tier || 'Unknown') + '</div>';
+        html += '<p style="margin:6px 0 12px">' + (tierDesc[tier] || '') + '</p>';
 
-                <div class="info-tier-badge" style="background:${TIER_COLORS[tier] || '#555'}">
-                    ${tier}
-                </div>
-                <p class="info-tier-desc">${tierDescriptions[tier] || ''}</p>
+        // Connectivity
+        if (connectivity && connectivity !== 'No Data') {
+            html += '<strong>Connectivity:</strong> <span style="display:inline-block;padding:2px 8px;border-radius:3px;background:' +
+                (CONNECTIVITY_COLORS[connectivity] || '#888') + ';color:' +
+                (connectivity === 'High' || connectivity === 'Moderate' ? '#1a1a1a' : '#fff') + '">' +
+                connectivity + '</span>';
+            html += '<p style="margin:4px 0 12px">' + (connDesc[connectivity] || '') + '</p>';
+        }
 
-                <div class="info-section-label">🔗 Connectivity</div>
-                <div class="conn-badge-large" style="
-                    background:${CONNECTIVITY_COLORS[connectivity] || '#888'};
-                    color:${connectivity === 'High' || connectivity === 'Moderate' ? '#1a1a1a' : '#fff'}">
-                    ${connectivity}
-                </div>
-                <p class="info-conn-desc">${connDescriptions[connectivity] || ''}</p>
+        // Nearest patch
+        html += '<strong>Nearest patch:</strong><p style="margin:4px 0 12px">' + ennMsg + '</p>';
 
-                <div class="info-section-label">📍 Nearest Patch</div>
-                <p>${dispersalMsg}</p>
+        // Technical details (collapsed)
+        html += '<details style="margin-top:8px"><summary style="cursor:pointer">Show technical details</summary><ul style="margin:8px 0;padding-left:16px">';
+        html += '<li><strong>Patch ID:</strong> ' + (id || 'N/A') + '</li>';
+        if (typeof area === 'number') html += '<li><strong>Total area:</strong> ' + area.toFixed(2) + ' ha</li>';
+        if (typeof core === 'number') html += '<li><strong>Core area:</strong> ' + core.toFixed(2) + ' ha <span class="metric-info-icon" data-metric-key="' + CORE_AREA_ATTRIBUTE + '" role="button" tabindex="0">i</span></li>';
+        if (typeof properties[CONTIGUITY_INDEX_ATTRIBUTE] === 'number') html += '<li><strong>Contiguity index:</strong> ' + properties[CONTIGUITY_INDEX_ATTRIBUTE].toFixed(3) + ' <span class="metric-info-icon" data-metric-key="' + CONTIGUITY_INDEX_ATTRIBUTE + '" role="button" tabindex="0">i</span></li>';
+        if (typeof properties[PERIMETER_AREA_RATIO_ATTRIBUTE] === 'number') html += '<li><strong>Perimeter-area ratio:</strong> ' + properties[PERIMETER_AREA_RATIO_ATTRIBUTE].toFixed(5) + ' <span class="metric-info-icon" data-metric-key="' + PERIMETER_AREA_RATIO_ATTRIBUTE + '" role="button" tabindex="0">i</span></li>';
+        if (!isNaN(ennNum)) html += '<li><strong>Distance to nearest patch:</strong> ' + Math.round(ennNum) + ' m <span class="metric-info-icon" data-metric-key="' + ENN_ATTRIBUTE + '" role="button" tabindex="0">i</span></li>';
+        if (flow !== undefined && flow !== null) html += '<li><strong>Mean composite flow:</strong> ' + (typeof flow === 'number' ? flow.toFixed(2) : flow) + ' <span class="metric-info-icon" data-metric-key="' + MEAN_FLOW_ATTRIBUTE + '" role="button" tabindex="0">i</span></li>';
+        html += '</ul></details></div>';
 
-                <div class="info-section-label">⚡ Pinch Point Status</div>
-                <p>${pinchMsg}</p>
+        patchInfoContent.innerHTML = html;
 
-                <details class="tech-details">
-                    <summary>Show technical details</summary>
-                    <ul class="tech-list">
-                        <li><strong>Patch ID:</strong> ${properties[PATCH_ID_ATTRIBUTE]}</li>
-                        <li><strong>Total area:</strong> ${typeof area === 'number' ? area.toFixed(2) + ' ha' : area}</li>
-                        <li><strong>Core area:</strong> ${typeof core === 'number' ? core.toFixed(2) + ' ha' : core}
-                            <span class="metric-info-icon" data-metric-key="${CORE_AREA_ATTRIBUTE}" role="button" tabindex="0">ℹ️</span></li>
-                        <li><strong>Contiguity index:</strong> ${typeof properties[CONTIGUITY_INDEX_ATTRIBUTE] === 'number' ? properties[CONTIGUITY_INDEX_ATTRIBUTE].toFixed(3) : properties[CONTIGUITY_INDEX_ATTRIBUTE]}
-                            <span class="metric-info-icon" data-metric-key="${CONTIGUITY_INDEX_ATTRIBUTE}" role="button" tabindex="0">ℹ️</span></li>
-                        <li><strong>Perimeter-area ratio:</strong> ${typeof properties[PERIMETER_AREA_RATIO_ATTRIBUTE] === 'number' ? properties[PERIMETER_AREA_RATIO_ATTRIBUTE].toFixed(5) : properties[PERIMETER_AREA_RATIO_ATTRIBUTE]}
-                            <span class="metric-info-icon" data-metric-key="${PERIMETER_AREA_RATIO_ATTRIBUTE}" role="button" tabindex="0">ℹ️</span></li>
-                        <li><strong>ENN distance:</strong> ${typeof enn === 'number' ? Math.round(enn) + ' m' : enn}
-                            <span class="metric-info-icon" data-metric-key="${ENN_ATTRIBUTE}" role="button" tabindex="0">ℹ️</span></li>
-                        <li><strong>Mean composite flow:</strong> ${flow} (0–300 scale)</li>
-                        <li><strong>Pinch point coverage:</strong> ${pinch}%</li>
-                    </ul>
-                </details>
-            </div>
-        `;
-
-        // Re-attach info icon listeners after innerHTML replacement
         patchInfoContent.querySelectorAll('.metric-info-icon').forEach(icon => {
             icon.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -730,19 +635,20 @@ map.on('idle', () => {
 
 
     function formatPropertyName(name) {
-        if (name === TIER_ATTRIBUTE)              return 'Category';
-        if (name === PATCH_AREA_ATTRIBUTE)        return 'Patch Area';
-        if (name === CORE_AREA_ATTRIBUTE)         return 'Core Area';
-        if (name === CONNECTIVITY_ATTRIBUTE)      return 'Connectivity';
-        if (name === MEAN_FLOW_ATTRIBUTE)         return 'Mean Composite Flow';
-        if (name === PINCH_PCT_ATTRIBUTE)         return 'Pinch Point Coverage';
-        let formattedName = name.replace(/_/g, ' ').replace(/ #$/, '');
+        let formattedName = name;
+        if (name === TIER_ATTRIBUTE) return 'Category';
+        if (name === PATCH_AREA_ATTRIBUTE) return 'Patch Area';
+        if (name === CORE_AREA_ATTRIBUTE) return 'Core Area';
+        if (name === CONNECTIVITY_ATTRIBUTE) return 'Connectivity';
+        if (name === MEAN_FLOW_ATTRIBUTE) return 'Mean Composite Flow';
+        formattedName = formattedName.replace(/_/g, ' ').replace(/ #$/, '');
         formattedName = formattedName.replace(/\b\w/g, l => l.toUpperCase());
         return formattedName;
     }
     
     console.log("DEBUG: Attempting to call initializeAboutModal...");
     initializeAboutModal();
+    initializeHowToModal();
     console.log("DEBUG: Attempting to call initializeDarkModeToggle...");
     initializeDarkModeToggle();
 
@@ -775,6 +681,19 @@ map.on('idle', () => {
         closeModalBtn.addEventListener('click', closeModal);
         window.addEventListener('click', (event) => { if (event.target == aboutModal) closeModal(); });
         window.addEventListener('keydown', (event) => { if (event.key === 'Escape' && document.body.classList.contains('modal-open')) closeModal(); });
+    }
+
+    function initializeHowToModal() {
+        const howtoBtn   = document.getElementById('howto-btn');
+        const howtoModal = document.getElementById('howto-modal');
+        const closeBtn   = document.getElementById('close-howto-btn');
+        if (!howtoBtn || !howtoModal || !closeBtn) return;
+        function open()  { howtoModal.style.display = 'block'; requestAnimationFrame(() => document.body.classList.add('modal-open')); }
+        function close() { document.body.classList.remove('modal-open'); setTimeout(() => { howtoModal.style.display = 'none'; }, 300); }
+        howtoBtn.addEventListener('click', open);
+        closeBtn.addEventListener('click', close);
+        window.addEventListener('click', (e) => { if (e.target === howtoModal) close(); });
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('modal-open')) close(); });
     }
 
     function initializeDarkModeToggle() {
