@@ -39,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
     initializeTierFilters();
-    initializeColorModeToggle();
     initializeConnectorLayer();
     initializeHoverPopups();
     initializeClickInfoPanel();
@@ -110,42 +109,10 @@ map.on('idle', () => {
         applyForestFilter();
     }
 
-    function initializeColorModeToggle() {
-        const btn = document.getElementById('color-mode-toggle');
-        if (!btn) return;
-        btn.addEventListener('click', () => {
-            CURRENT_COLOR_MODE = CURRENT_COLOR_MODE === 'tier' ? 'connectivity' : 'tier';
-            btn.textContent = CURRENT_COLOR_MODE === 'tier'
-                ? 'View by: Conservation Tier'
-                : 'View by: Connectivity';
-            applyColorMode();
-        });
-    }
-
-    function applyColorMode() {
-        if (!map.isStyleLoaded() || !map.getLayer(FOREST_PATCH_LAYER_ID)) return;
-        if (CURRENT_COLOR_MODE === 'connectivity') {
-            map.setPaintProperty(FOREST_PATCH_LAYER_ID, 'fill-color',
-                ['match', ['get', CONNECTIVITY_ATTRIBUTE],
-                    'High', '#f7ce46', 'Moderate', '#e07c1f',
-                    'Low', '#a03030', 'Barrier', '#2c1a4a', '#888888']);
-        } else {
-            map.setPaintProperty(FOREST_PATCH_LAYER_ID, 'fill-color',
-                ['match', ['get', TIER_ATTRIBUTE],
-                    'Tier 1 (Core Habitat)',            '#b1eaac',
-                    'Tier 2 (Major Stepping Stones)',   '#8ad284',
-                    'Tier 3 (Connected Fragments)',     '#5aaf64',
-                    'Tier 4 (Vulnerable Edge Fragments)','#2a8234',
-                    'Tier 5 (Isolated Fragments)',      '#1e6b27',
-                    'Tier 6 (Isolated Micro Patches)',  '#0a4c12',
-                    '#cccccc']);
-        }
-    }
-
     function initializeConnectorLayer() {
+        const btn = document.getElementById('corridor-toggle-fab');
         if (!CONNECTOR_LAYER_ID || !map.getLayer(CONNECTOR_LAYER_ID)) {
-            console.warn('Connector layer not found in style:', CONNECTOR_LAYER_ID);
-            const btn = document.getElementById('connector-toggle');
+            console.warn('Connector layer not found:', CONNECTOR_LAYER_ID);
             if (btn) btn.style.display = 'none';
             return;
         }
@@ -153,116 +120,78 @@ map.on('idle', () => {
         // Start hidden
         map.setLayoutProperty(CONNECTOR_LAYER_ID, 'visibility', 'none');
 
-        // Colour the main layer by connectivity
+        // Bright data-driven colours — much higher contrast than before
         const lineColor = ['match', ['get', 'connectivity'],
-            'High',     '#f7ce46',
-            'Moderate', '#e07c1f',
-            'Low',      '#c04040',
-            '#888888'
+            'High',     '#ffe033',
+            'Moderate', '#ff8c00',
+            'Low',      '#ff3333',
+            '#aaaaaa'
         ];
-
-        // Main connector line
         map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-color', lineColor);
-        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-width', 3);
-        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-opacity', 0.95);
-
-        // Add a glow layer beneath the connector for the plasma effect
-        const existingStyle = map.getStyle().layers.find(l => l.id === CONNECTOR_LAYER_ID);
-        if (existingStyle && !map.getLayer('connector-glow')) {
-            map.addLayer({
-                id:     'connector-glow',
-                type:   'line',
-                source: existingStyle.source,
-                'source-layer': existingStyle['source-layer'],
-                minzoom: 11,
-                layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
-                paint: {
-                    'line-color': lineColor,
-                    'line-width': 10,
-                    'line-opacity': 0.15
-                }
-            }, CONNECTOR_LAYER_ID); // insert below main layer
-        }
+        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-width', 4);
+        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-opacity', 1.0);
 
         // Hover popup
         const connPopup = new mapboxgl.Popup({
             closeButton: false, closeOnClick: false, className: 'custom-hover-popup'
         });
         map.on('mousemove', CONNECTOR_LAYER_ID, (e) => {
-            if (e.features && e.features.length > 0) {
-                map.getCanvas().style.cursor = 'pointer';
-                const f = e.features[0].properties;
-                connPopup.setLngLat(e.lngLat)
-                    .setHTML('<strong>Potential movement corridor</strong><br>Gap: ' + f.gap_m + ' m &nbsp;|&nbsp; Connectivity: ' + f.connectivity)
-                    .addTo(map);
-            }
+            if (!e.features || !e.features.length) return;
+            map.getCanvas().style.cursor = 'pointer';
+            const f = e.features[0].properties;
+            connPopup.setLngLat(e.lngLat)
+                .setHTML('<strong>Potential movement corridor</strong><br>Gap: ' + f.gap_m + ' m | Connectivity: ' + f.connectivity)
+                .addTo(map);
         });
         map.on('mouseleave', CONNECTOR_LAYER_ID, () => {
             map.getCanvas().style.cursor = '';
             connPopup.remove();
         });
-
-        // Click — show corridor info in sidebar
         map.on('click', CONNECTOR_LAYER_ID, (e) => {
-            if (e.features && e.features.length > 0) {
-                const f = e.features[0].properties;
-                const el = document.getElementById('patch-info-content');
-                if (el) {
-                    el.innerHTML =
-                        '<div style="padding:4px">' +
-                        '<strong>Potential movement corridor</strong><br><br>' +
-                        '<strong>Gap to nearest patch:</strong> ' + f.gap_m + ' m<br>' +
-                        '<strong>Connectivity:</strong> ' + f.connectivity + '<br>' +
-                        '<strong>Source patch area:</strong> ' + f.area_ha + ' ha<br>' +
-                        '<strong>Mean composite flow:</strong> ' + f.mean_flow + '<br><br>' +
-                        '<em>' + (f.crossing_note || '') + '</em>' +
-                        '</div>';
-                }
-                const sidebar = document.getElementById('sidebar');
-                if (sidebar && sidebar.classList.contains('collapsed')) {
-                    document.getElementById('toggle-sidebar-btn').click();
-                }
+            if (!e.features || !e.features.length) return;
+            const f = e.features[0].properties;
+            const el = document.getElementById('patch-info-content');
+            if (el) {
+                el.innerHTML =
+                    '<div style="padding:4px">' +
+                    '<strong>Potential movement corridor</strong><br><br>' +
+                    '<strong>Gap to nearest patch:</strong> ' + f.gap_m + ' m<br>' +
+                    '<strong>Connectivity:</strong> ' + f.connectivity + '<br>' +
+                    '<strong>Source patch area:</strong> ' + f.area_ha + ' ha<br>' +
+                    '<strong>Mean composite flow:</strong> ' + f.mean_flow + '<br><br>' +
+                    '<em>' + (f.crossing_note || '') + '</em></div>';
+            }
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar && sidebar.classList.contains('collapsed')) {
+                document.getElementById('toggle-sidebar-btn').click();
             }
         });
 
-        // Toggle button with animated plasma effect
-        const btn = document.getElementById('connector-toggle');
+        // Floating corridor toggle button on the map
         if (btn) {
             let visible = false;
             let animFrame = null;
             let animStep  = 0;
             let lastTs    = 0;
-
-            // Dash array sequences that create a flowing "marching" effect
             const dashSeq = [
-                [0, 4, 3], [0.5, 4, 2.5], [1, 4, 2], [1.5, 4, 1.5],
-                [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0],
-                [0, 0.5, 3, 3.5], [0, 1, 3, 3], [0, 1.5, 3, 2.5],
-                [0, 2, 3, 2], [0, 2.5, 3, 1.5], [0, 3, 3, 1],
-                [0, 3.5, 3, 0.5], [0, 4, 3, 0]
+                [0,4,3],[0.5,4,2.5],[1,4,2],[1.5,4,1.5],[2,4,1],[2.5,4,0.5],[3,4,0],
+                [0,0.5,3,3.5],[0,1,3,3],[0,1.5,3,2.5],[0,2,3,2],[0,2.5,3,1.5],
+                [0,3,3,1],[0,3.5,3,0.5],[0,4,3,0]
             ];
-
-            function animate(timestamp) {
-                if (timestamp - lastTs > 55) {
+            function animate(ts) {
+                if (ts - lastTs > 55) {
                     animStep = (animStep + 1) % dashSeq.length;
                     if (map.getLayer(CONNECTOR_LAYER_ID)) {
                         map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-dasharray', dashSeq[animStep]);
                     }
-                    lastTs = timestamp;
+                    lastTs = ts;
                 }
                 animFrame = requestAnimationFrame(animate);
             }
-
             btn.addEventListener('click', () => {
                 visible = !visible;
-
                 map.setLayoutProperty(CONNECTOR_LAYER_ID, 'visibility', visible ? 'visible' : 'none');
-                if (map.getLayer('connector-glow')) {
-                    map.setLayoutProperty('connector-glow', 'visibility', visible ? 'visible' : 'none');
-                }
-
                 if (visible) {
-                    animStep = 0;
                     animFrame = requestAnimationFrame(animate);
                     btn.textContent = 'Hide Corridors';
                     btn.classList.add('active');
@@ -533,7 +462,6 @@ map.on('idle', () => {
     }
 
     function displayPatchInfo(properties) {
-        console.log("DEBUG: displayPatchInfo() EXECUTED.", properties);
         const patchInfoContent = document.getElementById('patch-info-content');
         patchInfoContent.innerHTML = '';
         if (!properties) { patchInfoContent.innerHTML = 'No data for this patch.'; return; }
@@ -551,10 +479,9 @@ map.on('idle', () => {
             'Tier 2 (Major Stepping Stones)': 'A high-quality patch that functions as a key hub or stepping stone in the movement network. Critical for regional habitat connectivity.',
             'Tier 3 (Connected Fragments)': 'A moderately connected forest fragment that plays a bridging role between larger patches in the landscape.',
             'Tier 4 (Vulnerable Edge Fragments)': 'A patch with significant edge exposure relative to its size. Functionally important but vulnerable to further habitat loss or degradation.',
-            'Tier 5 (Isolated Fragments)': 'A small, isolated forest fragment with limited connectivity to the surrounding landscape. May support a small number of individuals but is poorly linked to the wider network.',
+            'Tier 5 (Isolated Fragments)': 'A small, isolated forest fragment with limited connectivity to the surrounding landscape.',
             'Tier 6 (Isolated Micro Patches)': 'A highly isolated micro-patch or remnant forest fragment. Generally too small and disconnected to support resident populations of arboreal animals, but may provide temporary shelter.'
         };
-
         const connDesc = {
             'High':    'This patch sits within an active movement corridor. The surrounding landscape allows relatively free movement to neighbouring patches.',
             'Moderate':'This patch has moderate connectivity. Movement to neighbouring patches is possible but depends on the routes available through the landscape.',
@@ -574,14 +501,14 @@ map.on('idle', () => {
 
         const tierColor = TIER_COLORS[tier] || '#555';
         const connColor = CONNECTIVITY_COLORS[connectivity] || '#888';
-        const connTextColor = (connectivity === 'High' || connectivity === 'Moderate') ? '#1a1a1a' : '#fff';
+        const connText  = (connectivity === 'High' || connectivity === 'Moderate') ? '#1a1a1a' : '#fff';
 
         let html = '<div class="plain-info-panel">';
         html += '<div style="background:' + tierColor + ';color:#fff;padding:6px 10px;border-radius:3px;font-weight:bold;margin-bottom:8px;font-size:0.85em">' + (tier || 'Unknown') + '</div>';
         html += '<p style="margin:4px 0 12px;line-height:1.5">' + (tierDesc[tier] || '') + '</p>';
 
         if (connectivity && connectivity !== 'No Data') {
-            html += '<strong>Connectivity:</strong> <span style="display:inline-block;padding:2px 8px;border-radius:3px;background:' + connColor + ';color:' + connTextColor + ';font-weight:bold">' + connectivity + '</span>';
+            html += '<strong>Connectivity:</strong> <span style="display:inline-block;padding:2px 8px;border-radius:3px;background:' + connColor + ';color:' + connText + ';font-weight:bold">' + connectivity + '</span>';
             html += '<p style="margin:4px 0 12px;line-height:1.5">' + (connDesc[connectivity] || '') + '</p>';
         }
 
@@ -589,7 +516,7 @@ map.on('idle', () => {
 
         html += '<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:bold;padding:4px 0">Show technical details</summary>';
         html += '<ul style="margin:8px 0;padding-left:16px;font-size:0.85em">';
-        html += '<li><strong>Patch ID:</strong> ' + (id !== undefined ? id : 'N/A') + '</li>';
+        if (id !== undefined) html += '<li><strong>Patch ID:</strong> ' + id + '</li>';
         if (typeof area === 'number') html += '<li><strong>Total area:</strong> ' + area.toFixed(2) + ' ha</li>';
         if (typeof core === 'number') html += '<li><strong>Core area:</strong> ' + core.toFixed(2) + ' ha</li>';
         if (typeof properties[CONTIGUITY_INDEX_ATTRIBUTE] === 'number') html += '<li><strong>Contiguity index:</strong> ' + properties[CONTIGUITY_INDEX_ATTRIBUTE].toFixed(3) + '</li>';
@@ -690,7 +617,7 @@ map.on('idle', () => {
         formattedName = formattedName.replace(/\b\w/g, l => l.toUpperCase());
         return formattedName;
     }
-    
+
     console.log("DEBUG: Attempting to call initializeAboutModal...");
     initializeAboutModal();
     initializeHowToModal();
