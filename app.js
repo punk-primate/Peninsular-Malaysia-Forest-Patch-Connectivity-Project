@@ -557,7 +557,7 @@ map.on('idle', () => {
         const id   = properties[PATCH_ID_ATTRIBUTE];
 
         const tierDesc = {
-            'Tier 1 (Core Habitat)': 'A structurally important forest patches in this landscape. Large enough to support a high level of biodiversity, with substantial interior area protected from edge effects.',
+            'Tier 1 (Core Habitat)': 'A structurally important forest patch in this landscape. Large enough to support a high level of biodiversity, with substantial interior area protected from edge effects.',
             'Tier 2 (Major Stepping Stones)': 'A high-quality patch that functions as a key hub or stepping stone in the movement network. Critical for regional habitat connectivity.',
             'Tier 3 (Connected Fragments)': 'A moderately connected forest fragment that plays a bridging role between larger patches in the landscape.',
             'Tier 4 (Vulnerable Edge Fragments)': 'A patch with significant edge exposure relative to its size. Functionally important but vulnerable to further habitat loss or degradation.',
