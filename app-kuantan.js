@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeTierFilters();
     initializeConnectorLayer();
+    resolvePatchLayerId();
     initializeHoverPopups();
     initializeClickInfoPanel();
     initializeGeocoder();
@@ -114,20 +115,38 @@ map.on('idle', () => {
     // Search the style for any line layer whose ID contains 'connector' or 'Connector'.
     function resolveConnectorLayerId() {
         if (!CONNECTOR_LAYER_ID) return null;
-        // Try the configured name first
         if (map.getLayer(CONNECTOR_LAYER_ID)) return CONNECTOR_LAYER_ID;
-        // Search for any line layer with 'connector' in the name
         const layers = map.getStyle().layers || [];
-        const found = layers.find(l =>
-            l.type === 'line' &&
-            l.id.toLowerCase().includes('connector')
-        );
-        if (found) {
-            console.log('Connector layer resolved to:', found.id);
-            return found.id;
-        }
+        const found = layers.find(l => l.type === 'line' && l.id.toLowerCase().includes('connector'));
+        if (found) { console.log('Connector layer resolved to:', found.id); return found.id; }
         console.warn('No connector layer found. Searched for:', CONNECTOR_LAYER_ID);
         return null;
+    }
+
+    // Also resolve the patch layer name — it may differ from config after tileset replacement
+    let resolvedPatchId = FOREST_PATCH_LAYER_ID;
+    function resolvePatchLayerId() {
+        if (map.getLayer(resolvedPatchId)) {
+            resolvedPatchId = FOREST_PATCH_LAYER_ID;
+            return;
+        }
+        const layers = map.getStyle().layers || [];
+        // Search for a fill layer whose name contains common keywords
+        const found = layers.find(l =>
+            l.type === 'fill' && (
+                l.id.toLowerCase().includes('forest') ||
+                l.id.toLowerCase().includes('patch') ||
+                l.id.toLowerCase().includes('klang') ||
+                l.id.toLowerCase().includes('kuantan')
+            )
+        );
+        if (found) {
+            resolvedPatchId = found.id;
+            console.log('Patch layer resolved to:', found.id, '(config said:', FOREST_PATCH_LAYER_ID + ')');
+        } else {
+            console.error('Could not resolve patch layer. Config:', FOREST_PATCH_LAYER_ID);
+            console.log('Available layers:', layers.map(l => l.id + '(' + l.type + ')').join(', '));
+        }
     }
 
     // ── Corridor colours — warm amber, visible on dark basemap ───────────────
@@ -267,18 +286,18 @@ map.on('idle', () => {
         const hoverPopup = new mapboxgl.Popup({
             closeButton: false, closeOnClick: false, className: 'custom-hover-popup'
         });
-        map.on('mousemove', FOREST_PATCH_LAYER_ID, (e) => {
+        map.on('mousemove', resolvedPatchId, (e) => {
             if (e.features && e.features.length > 0) {
                 map.getCanvas().style.cursor = 'pointer';
-                const feature = e.features[0];
-                const patchIdVal = feature.properties[PATCH_ID_ATTRIBUTE];
-                const categoryVal = feature.properties[TIER_ATTRIBUTE];
-                const popupContent = `<strong>ID:</strong> ${patchIdVal !== undefined ? patchIdVal : 'N/A'}<br><strong>Category:</strong> ${categoryVal !== undefined ? categoryVal : 'N/A'}`;
-                hoverPopup.setLngLat(e.lngLat).setHTML(popupContent).addTo(map);
+                const p = e.features[0].properties;
+                hoverPopup.setLngLat(e.lngLat)
+                    .setHTML('<strong>' + (p[TIER_ATTRIBUTE] || 'Forest Patch') + '</strong><br>Click for details')
+                    .addTo(map);
             }
         });
-        map.on('mouseleave', FOREST_PATCH_LAYER_ID, () => {
-            map.getCanvas().style.cursor = ''; hoverPopup.remove();
+        map.on('mouseleave', resolvedPatchId, () => {
+            map.getCanvas().style.cursor = '';
+            hoverPopup.remove();
         });
     }
 
@@ -286,17 +305,11 @@ map.on('idle', () => {
         console.log("DEBUG: initializeClickInfoPanel() function EXECUTED.");
         const patchInfoContent = document.getElementById('patch-info-content');
         if (!patchInfoContent) return;
-
-        map.on('click', (e) => {
-            // Skip if click was on connector layer
-            if (corridorVisible && resolvedConnectorId) {
-                const connHit = map.queryRenderedFeatures(e.point, { layers: [resolvedConnectorId] });
-                if (connHit.length > 0) return;
-            }
-            // Try patch layer
-            const patches = map.queryRenderedFeatures(e.point, { layers: [FOREST_PATCH_LAYER_ID] });
-            if (patches.length > 0) {
-                displayPatchInfo(patches[0].properties);
+        // Use layer-specific click — works in Mapbox GL JS v3 with imported styles.
+        // queryRenderedFeatures with layers[] does NOT work for imported style layers in v3.
+        map.on('click', resolvedPatchId, (e) => {
+            if (e.features && e.features.length > 0) {
+                displayPatchInfo(e.features[0].properties);
                 const sidebar = document.getElementById('sidebar');
                 if (sidebar && sidebar.classList.contains('collapsed')) {
                     document.getElementById('toggle-sidebar-btn').click();
@@ -352,7 +365,7 @@ map.on('idle', () => {
                     if(statsSection) statsSection.style.display = 'block'; 
                     if(patchInfoContent) patchInfoContent.innerHTML = 'Select a patch on the map to see details.';
                     setTimeout(() => {
-                        if (map.getLayer(FOREST_PATCH_LAYER_ID)) { 
+                        if (map.getLayer(resolvedPatchId)) { 
                            applyForestFilter(); 
                            initializeHoverPopups(); 
                            initializeClickInfoPanel();
@@ -407,7 +420,7 @@ map.on('idle', () => {
 
     function applyForestFilter() {
         console.log("DEBUG: applyForestFilter() EXECUTED.");
-        if (!map.isStyleLoaded() || !map.getLayer(FOREST_PATCH_LAYER_ID)) {
+        if (!map.isStyleLoaded() || !map.getLayer(resolvedPatchId)) {
             console.warn("DEBUG: applyForestFilter - Style or layer not ready. Retrying or exiting.");
             if (!map.isStyleLoaded()) setTimeout(applyForestFilter, 300);
             return;
@@ -439,7 +452,7 @@ map.on('idle', () => {
         
         try {
             // Apply the filter to the map
-            map.setFilter(FOREST_PATCH_LAYER_ID, combinedFilterExpression);
+            map.setFilter(resolvedPatchId, combinedFilterExpression);
             
             // Immediately force the summary stats to update so they match the screen
             if (typeof updateSummaryStatistics === 'function') {
@@ -459,7 +472,7 @@ map.on('idle', () => {
         
         if (!countEl || !areaEl || !breakdownEl) { console.error("Stats elements not found!"); return; }
         
-        if (!map.isStyleLoaded() || !map.getLayer(FOREST_PATCH_LAYER_ID)) {
+        if (!map.isStyleLoaded() || !map.getLayer(resolvedPatchId)) {
              countEl.textContent = '-'; 
              areaEl.textContent = '- ha'; 
              if (ennEl) ennEl.textContent = '- m';
@@ -467,7 +480,12 @@ map.on('idle', () => {
              return;
         }
         
-        const features = map.queryRenderedFeatures({ layers: [FOREST_PATCH_LAYER_ID] });
+        let features = [];
+        try {
+            features = map.queryRenderedFeatures({ layers: [resolvedPatchId] });
+        } catch(err) {
+            // queryRenderedFeatures may fail in Mapbox GL v3 with imported styles
+        }
         countEl.textContent = features.length.toLocaleString();
         
         let overallTotalArea = 0; 
