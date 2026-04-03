@@ -28,7 +28,27 @@
             z-index:10; box-sizing:border-box;
             box-shadow: 2px 0 8px rgba(0,0,0,0.06);
         }
-        #sidebar.collapsed { width:28px !important; min-width:28px !important; padding:6px 0 !important; overflow:hidden !important; }
+        /* ── Sidebar collapsed state — keep toggle button accessible ── */
+        #sidebar.collapsed {
+            width:32px !important; min-width:32px !important;
+            padding:6px 0 !important; overflow:hidden !important;
+            align-items:center !important;
+        }
+        #sidebar.collapsed > .sidebar-section,
+        #sidebar.collapsed > #sidebar-footer { display:none !important; }
+        #sidebar.collapsed > #sidebar-header > h2 { display:none !important; }
+        #sidebar.collapsed > #sidebar-header > .header-buttons > #dark-mode-toggle { display:none !important; }
+        #sidebar.collapsed > #sidebar-header {
+            padding:0 !important; border-bottom:none !important;
+            width:100%; display:flex; justify-content:center;
+            align-items:flex-start; padding-top:8px !important;
+        }
+        #sidebar.collapsed > #sidebar-header > .header-buttons {
+            display:flex !important; flex-direction:column; align-items:center; margin-left:0;
+        }
+        #sidebar.collapsed #toggle-sidebar-btn {
+            display:inline-flex !important; padding:8px 6px; font-size:1.2em;
+        }
         #map-container { flex-grow:1 !important; position:relative !important; height:100% !important; min-width:0; }
         #map { position:absolute !important; top:0; bottom:0; left:0; right:0; }
 
@@ -180,10 +200,10 @@
         }
         .conn-level-btn.active { opacity:1; }
         .conn-level-btn:hover  { opacity:0.75; }
-        /* Individual background colours — muted enough for dark text */
-        #conn-filter-high     { background:#f5e642; }  /* muted yellow */
-        #conn-filter-moderate { background:#f5a623; }  /* muted orange */
-        #conn-filter-low      { background:#e05c3a; color:#fff; }  /* muted red — white text */
+        /* Individual background colours — muted enough for dark text on all three */
+        #conn-filter-high     { background:#e8d820; color:#1a1a1a; }
+        #conn-filter-moderate { background:#f0a020; color:#1a1a1a; }
+        #conn-filter-low      { background:#d94f2e; color:#1a1a1a; }
 
         #home-btn {
             display:flex; align-items:center; justify-content:center;
@@ -253,7 +273,7 @@
             #map-container, #app-container.sidebar-collapsed #map-container {
                 margin-left:0 !important; width:100%;
             }
-            #sidebar.collapsed { width:45px !important; }
+            #sidebar.collapsed { width:38px !important; }
 
             /* Hide full text on mobile, show ? icon */
             #howto-btn .howto-text { display:none; }
