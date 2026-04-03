@@ -109,13 +109,36 @@ map.on('idle', () => {
         applyForestFilter();
     }
 
-    // ── Connector layer ──────────────────────────────────────────────────────
-    const CONN_COLORS = { High: '#00e5ff', Moderate: '#0097b2', Low: '#005f73' };
-    let corridorVisible  = false;
-    let connAnimFrame    = null;
-    let connAnimStep     = 0;
-    let connLastTs       = 0;
-    let connActiveFilters = new Set(['High', 'Moderate', 'Low']);
+    // ── Resolve actual connector layer ID ────────────────────────────────────
+    // Studio sometimes renames layers after tileset replacement.
+    // Search the style for any line layer whose ID contains 'connector' or 'Connector'.
+    function resolveConnectorLayerId() {
+        if (!CONNECTOR_LAYER_ID) return null;
+        // Try the configured name first
+        if (map.getLayer(CONNECTOR_LAYER_ID)) return CONNECTOR_LAYER_ID;
+        // Search for any line layer with 'connector' in the name
+        const layers = map.getStyle().layers || [];
+        const found = layers.find(l =>
+            l.type === 'line' &&
+            l.id.toLowerCase().includes('connector')
+        );
+        if (found) {
+            console.log('Connector layer resolved to:', found.id);
+            return found.id;
+        }
+        console.warn('No connector layer found. Searched for:', CONNECTOR_LAYER_ID);
+        return null;
+    }
+
+    // ── Corridor colours — warm amber, visible on dark basemap ───────────────
+    const CONN_COLORS = { High: '#ffd60a', Moderate: '#ff9500', Low: '#ff453a' };
+    let resolvedConnectorId = null;
+    let corridorVisible     = false;
+    let connAnimFrame       = null;
+    let connAnimStep        = 0;
+    let connLastTs          = 0;
+    let connActiveFilters   = new Set(['High', 'Moderate', 'Low']);
+
     const dashSeq = [
         [0,4,3],[0.5,4,2.5],[1,4,2],[1.5,4,1.5],[2,4,1],[2.5,4,0.5],[3,4,0],
         [0,0.5,3,3.5],[0,1,3,3],[0,1.5,3,2.5],[0,2,3,2],[0,2.5,3,1.5],
@@ -123,45 +146,48 @@ map.on('idle', () => {
     ];
 
     function applyConnectorFilter() {
-        if (!map.getLayer(CONNECTOR_LAYER_ID)) return;
+        if (!resolvedConnectorId || !map.getLayer(resolvedConnectorId)) return;
         const active = Array.from(connActiveFilters);
         if (active.length === 0) {
-            map.setFilter(CONNECTOR_LAYER_ID, ['==', ['get', 'connectivity'], '__none__']);
+            map.setFilter(resolvedConnectorId, ['==', ['get', 'connectivity'], '__none__']);
         } else if (active.length === 3) {
-            map.setFilter(CONNECTOR_LAYER_ID, null);
+            map.setFilter(resolvedConnectorId, null);
         } else {
-            map.setFilter(CONNECTOR_LAYER_ID, ['match', ['get', 'connectivity'], active, true, false]);
+            map.setFilter(resolvedConnectorId, ['match', ['get', 'connectivity'], active, true, false]);
         }
     }
 
     function updateLevelBtn(btn, level) {
-        const active = connActiveFilters.has(level);
-        btn.textContent = (active ? '✓ ' : '') + level;
-        btn.classList.toggle('active', active);
+        const on = connActiveFilters.has(level);
+        btn.textContent = (on ? '\u2713 ' : '') + level;
+        btn.classList.toggle('active', on);
     }
 
     function initializeConnectorLayer() {
+        resolvedConnectorId = resolveConnectorLayerId();
         const toggleBtn  = document.getElementById('corridor-toggle-fab');
         const levelPanel = document.getElementById('conn-level-toggles');
 
-        if (!CONNECTOR_LAYER_ID || !map.getLayer(CONNECTOR_LAYER_ID)) {
-            console.warn('Connector layer not found. Expected:', CONNECTOR_LAYER_ID);
+        if (!resolvedConnectorId) {
             if (toggleBtn)  toggleBtn.style.display  = 'none';
             if (levelPanel) levelPanel.style.display = 'none';
             return;
         }
 
-        map.setLayoutProperty(CONNECTOR_LAYER_ID, 'visibility', 'none');
-        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-color',
+        // Hide on load — always, regardless of Studio default
+        map.setLayoutProperty(resolvedConnectorId, 'visibility', 'none');
+
+        // Style
+        map.setPaintProperty(resolvedConnectorId, 'line-color',
             ['match', ['get', 'connectivity'],
                 'High',     CONN_COLORS.High,
                 'Moderate', CONN_COLORS.Moderate,
                 'Low',      CONN_COLORS.Low,
                 '#aaaaaa']);
-        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-width', 3.5);
-        map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-opacity', 1.0);
+        map.setPaintProperty(resolvedConnectorId, 'line-width', 2.5);
+        map.setPaintProperty(resolvedConnectorId, 'line-opacity', 0.9);
 
-        // Connectivity level toggle buttons
+        // Level toggle buttons
         ['High', 'Moderate', 'Low'].forEach(level => {
             const btn = document.getElementById('conn-filter-' + level.toLowerCase());
             if (!btn) return;
@@ -177,9 +203,9 @@ map.on('idle', () => {
             });
         });
 
-        // Corridor hover popup
+        // Hover popup
         const connPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'custom-hover-popup' });
-        map.on('mousemove', CONNECTOR_LAYER_ID, (e) => {
+        map.on('mousemove', resolvedConnectorId, (e) => {
             if (!e.features || !e.features.length) return;
             map.getCanvas().style.cursor = 'pointer';
             const f = e.features[0].properties;
@@ -187,8 +213,10 @@ map.on('idle', () => {
                 .setHTML('<strong>Potential movement corridor</strong><br>Gap: ' + f.gap_m + ' m | Connectivity: ' + f.connectivity)
                 .addTo(map);
         });
-        map.on('mouseleave', CONNECTOR_LAYER_ID, () => { map.getCanvas().style.cursor = ''; connPopup.remove(); });
-        map.on('click', CONNECTOR_LAYER_ID, (e) => {
+        map.on('mouseleave', resolvedConnectorId, () => { map.getCanvas().style.cursor = ''; connPopup.remove(); });
+
+        // Click
+        map.on('click', resolvedConnectorId, (e) => {
             if (!e.features || !e.features.length) return;
             const f = e.features[0].properties;
             const el = document.getElementById('patch-info-content');
@@ -204,21 +232,21 @@ map.on('idle', () => {
             if (sidebar && sidebar.classList.contains('collapsed')) document.getElementById('toggle-sidebar-btn').click();
         });
 
-        // Main toggle button
+        // Main toggle
         if (toggleBtn) {
             toggleBtn.addEventListener('click', () => {
                 corridorVisible = !corridorVisible;
-                map.setLayoutProperty(CONNECTOR_LAYER_ID, 'visibility', corridorVisible ? 'visible' : 'none');
+                map.setLayoutProperty(resolvedConnectorId, 'visibility', corridorVisible ? 'visible' : 'none');
                 if (levelPanel) levelPanel.style.display = corridorVisible ? 'flex' : 'none';
                 if (corridorVisible) {
                     toggleBtn.textContent = 'Hide Corridors';
                     toggleBtn.classList.add('active');
                     connAnimStep = 0;
                     function animate(ts) {
-                        if (ts - connLastTs > 55) {
+                        if (ts - connLastTs > 60) {
                             connAnimStep = (connAnimStep + 1) % dashSeq.length;
-                            if (map.getLayer(CONNECTOR_LAYER_ID)) {
-                                map.setPaintProperty(CONNECTOR_LAYER_ID, 'line-dasharray', dashSeq[connAnimStep]);
+                            if (map.getLayer(resolvedConnectorId)) {
+                                map.setPaintProperty(resolvedConnectorId, 'line-dasharray', dashSeq[connAnimStep]);
                             }
                             connLastTs = ts;
                         }
@@ -257,10 +285,18 @@ map.on('idle', () => {
     function initializeClickInfoPanel() {
         console.log("DEBUG: initializeClickInfoPanel() function EXECUTED.");
         const patchInfoContent = document.getElementById('patch-info-content');
-        if (!patchInfoContent) { console.error("Patch info content panel not found!"); return; }
-        map.on('click', FOREST_PATCH_LAYER_ID, (e) => {
-            if (e.features && e.features.length > 0) {
-                displayPatchInfo(e.features[0].properties);
+        if (!patchInfoContent) return;
+
+        map.on('click', (e) => {
+            // Skip if click was on connector layer
+            if (corridorVisible && resolvedConnectorId) {
+                const connHit = map.queryRenderedFeatures(e.point, { layers: [resolvedConnectorId] });
+                if (connHit.length > 0) return;
+            }
+            // Try patch layer
+            const patches = map.queryRenderedFeatures(e.point, { layers: [FOREST_PATCH_LAYER_ID] });
+            if (patches.length > 0) {
+                displayPatchInfo(patches[0].properties);
                 const sidebar = document.getElementById('sidebar');
                 if (sidebar && sidebar.classList.contains('collapsed')) {
                     document.getElementById('toggle-sidebar-btn').click();
@@ -492,16 +528,15 @@ map.on('idle', () => {
     function displayPatchInfo(properties) {
         const el = document.getElementById('patch-info-content');
         if (!el) return;
-        el.innerHTML = '';
         if (!properties) { el.innerHTML = 'No data for this patch.'; return; }
 
-        const tier         = properties[TIER_ATTRIBUTE];
-        const connectivity = properties[CONNECTIVITY_ATTRIBUTE];
-        const area         = properties[PATCH_AREA_ATTRIBUTE];
-        const core         = properties[CORE_AREA_ATTRIBUTE];
-        const enn          = properties[ENN_ATTRIBUTE];
-        const flow         = properties[MEAN_FLOW_ATTRIBUTE];
-        const id           = properties[PATCH_ID_ATTRIBUTE];
+        const tier = properties[TIER_ATTRIBUTE];
+        const conn = properties[CONNECTIVITY_ATTRIBUTE];
+        const area = properties[PATCH_AREA_ATTRIBUTE];
+        const core = properties[CORE_AREA_ATTRIBUTE];
+        const enn  = properties[ENN_ATTRIBUTE];
+        const flow = properties[MEAN_FLOW_ATTRIBUTE];
+        const id   = properties[PATCH_ID_ATTRIBUTE];
 
         const tierDesc = {
             'Tier 1 (Core Habitat)': 'One of the most structurally important forest patches in this landscape. Large enough to support a resident group of arboreal animals, with substantial interior area protected from edge effects.',
@@ -522,51 +557,52 @@ map.on('idle', () => {
         const ennNum = typeof enn === 'number' ? enn : parseFloat(enn);
         let ennMsg = 'Distance data not available.';
         if (!isNaN(ennNum)) {
-            if      (ennNum <= 30)   ennMsg = 'This patch is directly adjacent to another forest area.';
-            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, within the typical dispersal range for arboreal animals.';
-            else if (ennNum <= 2000) ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, beyond the typical single-generation dispersal distance for most arboreal animals.';
-            else                     ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away. This patch is functionally isolated at the landscape scale.';
+            if      (ennNum <= 30)   ennMsg = 'Directly adjacent to another forest area.';
+            else if (ennNum <= 800)  ennMsg = 'Nearest patch: ' + Math.round(ennNum) + ' m — within typical dispersal range for arboreal animals.';
+            else if (ennNum <= 2000) ennMsg = 'Nearest patch: ' + Math.round(ennNum) + ' m — beyond typical single-generation dispersal distance.';
+            else                     ennMsg = 'Nearest patch: ' + Math.round(ennNum) + ' m — functionally isolated at the landscape scale.';
         }
 
-        const tierColor = (typeof TIER_COLORS !== 'undefined' && TIER_COLORS[tier]) ? TIER_COLORS[tier] : '#555';
-        const connColor = (typeof CONNECTIVITY_COLORS !== 'undefined' && CONNECTIVITY_COLORS[connectivity]) ? CONNECTIVITY_COLORS[connectivity] : '#888';
-        const connText  = (connectivity === 'High' || connectivity === 'Moderate') ? '#1a1a1a' : '#fff';
+        const tc = (TIER_COLORS && TIER_COLORS[tier]) ? TIER_COLORS[tier] : '#555';
+        const cc = (CONNECTIVITY_COLORS && CONNECTIVITY_COLORS[conn]) ? CONNECTIVITY_COLORS[conn] : '#888';
+        const ct = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#fff';
 
-        let html = '<div>';
-        html += '<div style="background:' + tierColor + ';color:#fff;padding:6px 10px;border-radius:3px;font-weight:bold;margin-bottom:8px;font-size:0.85em">' + (tier || 'Unknown') + '</div>';
-        html += '<p style="margin:4px 0 12px;line-height:1.5;font-size:0.9em">' + (tierDesc[tier] || '') + '</p>';
-        if (connectivity && connectivity !== 'No Data') {
-            html += '<strong style="font-size:0.9em">Connectivity:</strong> <span style="display:inline-block;padding:2px 8px;border-radius:3px;background:' + connColor + ';color:' + connText + ';font-weight:bold;font-size:0.85em">' + connectivity + '</span>';
-            html += '<p style="margin:4px 0 12px;line-height:1.5;font-size:0.9em">' + (connDesc[connectivity] || '') + '</p>';
+        let h = '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">';
+        h += '<div style="background:' + tc + ';color:#fff;padding:5px 9px;border-radius:3px;font-weight:700;margin-bottom:8px;font-size:0.82em">' + (tier || 'Unknown') + '</div>';
+        h += '<p style="margin:0 0 10px;font-size:0.87em;line-height:1.5;color:inherit">' + (tierDesc[tier] || '') + '</p>';
+        if (conn && conn !== 'No Data') {
+            h += '<div style="margin-bottom:4px;font-size:0.87em"><strong>Connectivity:</strong> <span style="background:' + cc + ';color:' + ct + ';padding:1px 7px;border-radius:3px;font-weight:700">' + conn + '</span></div>';
+            h += '<p style="margin:0 0 10px;font-size:0.87em;line-height:1.5;color:inherit">' + (connDesc[conn] || '') + '</p>';
         }
-        html += '<strong style="font-size:0.9em">Nearest patch:</strong><p style="margin:4px 0 12px;line-height:1.5;font-size:0.9em">' + ennMsg + '</p>';
-        html += '<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:bold;font-size:0.9em">Show technical details</summary><ul style="margin:8px 0;padding-left:16px;font-size:0.85em">';
-        if (id !== undefined) html += '<li><strong>Patch ID:</strong> ' + id + '</li>';
-        if (typeof area === 'number') html += '<li><strong>Total area:</strong> ' + area.toFixed(2) + ' ha</li>';
-        if (typeof core === 'number') html += '<li><strong>Core area:</strong> ' + core.toFixed(2) + ' ha</li>';
-        if (typeof properties[CONTIGUITY_INDEX_ATTRIBUTE] === 'number') html += '<li><strong>Contiguity index:</strong> ' + properties[CONTIGUITY_INDEX_ATTRIBUTE].toFixed(3) + '</li>';
-        if (typeof properties[PERIMETER_AREA_RATIO_ATTRIBUTE] === 'number') html += '<li><strong>Perimeter-area ratio:</strong> ' + properties[PERIMETER_AREA_RATIO_ATTRIBUTE].toFixed(5) + '</li>';
-        if (!isNaN(ennNum)) html += '<li><strong>Distance to nearest patch:</strong> ' + Math.round(ennNum) + ' m</li>';
-        if (flow !== undefined && flow !== null) html += '<li><strong>Mean composite flow:</strong> ' + (typeof flow === 'number' ? flow.toFixed(2) : flow) + '</li>';
-        html += '</ul></details></div>';
-        el.innerHTML = html;
+        h += '<div style="font-size:0.87em;margin-bottom:10px"><strong>Nearest patch:</strong> ' + ennMsg + '</div>';
+        h += '<details><summary style="cursor:pointer;font-weight:700;font-size:0.87em;color:inherit">Show technical details</summary>';
+        h += '<ul style="margin:6px 0;padding-left:14px;font-size:0.84em;line-height:1.6;color:inherit">';
+        if (id !== undefined)                                       h += '<li><strong>Patch ID:</strong> ' + id + '</li>';
+        if (typeof area === 'number')                               h += '<li><strong>Total area:</strong> ' + area.toFixed(2) + ' ha</li>';
+        if (typeof core === 'number')                               h += '<li><strong>Core area:</strong> ' + core.toFixed(2) + ' ha</li>';
+        if (typeof properties[CONTIGUITY_INDEX_ATTRIBUTE] === 'number') h += '<li><strong>Contiguity index:</strong> ' + properties[CONTIGUITY_INDEX_ATTRIBUTE].toFixed(3) + '</li>';
+        if (typeof properties[PERIMETER_AREA_RATIO_ATTRIBUTE] === 'number') h += '<li><strong>Perimeter-area ratio:</strong> ' + properties[PERIMETER_AREA_RATIO_ATTRIBUTE].toFixed(5) + '</li>';
+        if (!isNaN(ennNum))                                        h += '<li><strong>ENN distance:</strong> ' + Math.round(ennNum) + ' m</li>';
+        if (flow !== undefined && flow !== null)                    h += '<li><strong>Mean composite flow:</strong> ' + (typeof flow === 'number' ? flow.toFixed(2) : flow) + '</li>';
+        h += '</ul></details></div>';
+        el.innerHTML = h;
     }
 
     function showMetricInfoPopup(metricKey, iconElement) {
         if (metricPopup) { metricPopup.remove(); metricPopup = null; }
-        const description = METRIC_DESCRIPTIONS[metricKey];
-        if (!description) return;
+        const desc = METRIC_DESCRIPTIONS[metricKey];
+        if (!desc) return;
         metricPopup = document.createElement('div');
         metricPopup.id = 'metric-info-popup';
-        metricPopup.innerHTML = '<p>' + description + '</p><button class="close-metric-popup-btn">Close</button>';
+        metricPopup.innerHTML = '<p style="margin:0 0 8px;font-size:0.85em">' + desc + '</p><button class="close-metric-popup-btn" style="padding:4px 10px;cursor:pointer">Close</button>';
         document.body.appendChild(metricPopup);
         const r = iconElement.getBoundingClientRect();
-        metricPopup.style.cssText = 'position:fixed;top:' + (r.bottom+5) + 'px;left:' + r.left + 'px;z-index:1060;background:white;border:1px solid #ccc;padding:10px;max-width:260px;border-radius:4px;font-size:0.85em';
+        metricPopup.style.cssText = 'position:fixed;top:' + (r.bottom+5) + 'px;left:' + r.left + 'px;z-index:1060;background:white;border:1px solid #ccc;padding:12px;max-width:260px;border-radius:4px;font-family:-apple-system,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.2)';
         metricPopup.querySelector('.close-metric-popup-btn').addEventListener('click', () => { metricPopup.remove(); metricPopup = null; });
     }
 
-    document.addEventListener('click', (event) => {
-        if (metricPopup && !metricPopup.contains(event.target) && !event.target.classList.contains('metric-info-icon')) {
+    document.addEventListener('click', (e) => {
+        if (metricPopup && !metricPopup.contains(e.target) && !e.target.classList.contains('metric-info-icon')) {
             metricPopup.remove(); metricPopup = null;
         }
     });
@@ -621,22 +657,14 @@ map.on('idle', () => {
         const btn      = document.getElementById('howto-btn');
         const modal    = document.getElementById('howto-modal');
         const closeBtn = document.getElementById('close-howto-btn');
-        if (!btn || !modal || !closeBtn) {
-            console.warn('How-to modal elements not found');
-            return;
-        }
-        function openHowTo() {
-            modal.style.display = 'flex';
-            modal.style.alignItems = 'center';
-            modal.style.justifyContent = 'center';
-        }
-        function closeHowTo() {
-            modal.style.display = 'none';
-        }
-        btn.addEventListener('click', openHowTo);
+        if (!btn || !modal || !closeBtn) return;
+        btn.addEventListener('click', () => {
+            modal.style.cssText = 'display:flex !important;position:fixed;z-index:1001;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.6);align-items:center;justify-content:center';
+        });
+        function closeHowTo() { modal.style.display = 'none'; }
         closeBtn.addEventListener('click', closeHowTo);
         modal.addEventListener('click', (e) => { if (e.target === modal) closeHowTo(); });
-        window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.style.display !== 'none') closeHowTo(); });
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeHowTo(); });
     }
 
     function initializeDarkModeToggle() {
