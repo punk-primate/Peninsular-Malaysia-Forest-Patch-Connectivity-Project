@@ -12,106 +12,182 @@
     <link rel="stylesheet" href="style.css">
 
     <style>
+        /* ── Font reset — override any retro font from style.css ── */
+        #sidebar, #sidebar *, .modal-content, .modal-content * {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+        }
+
         /* ── Critical layout ── */
         html, body { margin:0; padding:0; height:100%; }
         #app-container { display:flex !important; height:100vh !important; overflow:hidden !important; }
         #sidebar {
-            width:320px !important; flex-shrink:0 !important; overflow-y:auto !important;
-            background:#f8f9fa; border-right:1px solid #dee2e6; padding:16px;
-            display:flex; flex-direction:column; z-index:10;
+            width:320px !important; min-width:320px !important; flex-shrink:0 !important;
+            overflow-y:auto !important; background:#ffffff; border-right:1px solid #dee2e6;
+            padding:16px !important; display:flex !important; flex-direction:column !important;
+            z-index:10; box-sizing:border-box;
         }
-        #map-container { flex-grow:1 !important; position:relative !important; height:100% !important; }
+        #sidebar.collapsed { width:28px !important; min-width:28px !important; padding:6px 0 !important; overflow:hidden !important; }
+        #map-container { flex-grow:1 !important; position:relative !important; height:100% !important; min-width:0; }
         #map { position:absolute !important; top:0; bottom:0; left:0; right:0; }
 
-        /* ── Sidebar sections ── */
-        #sidebar-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #dee2e6; padding-bottom:10px; }
-        #sidebar-header h2 { margin:0; font-size:1.1em; font-weight:700; color:#212529; }
-        .header-buttons button { background:none; border:1px solid #dee2e6; border-radius:4px; padding:4px 7px; cursor:pointer; font-size:1.1em; margin-left:4px; }
-        .sidebar-section { margin-bottom:18px; }
-        .sidebar-section h3 { font-size:0.95em; font-weight:700; color:#343a40; margin:0 0 10px 0; padding-bottom:6px; border-bottom:1px solid #e9ecef; }
-        .filter-legend-item { display:flex; align-items:center; margin-bottom:6px; cursor:pointer; font-size:0.88em; }
-        .legend-color-box { width:13px; height:13px; margin-right:7px; border:1px solid #ccc; border-radius:2px; flex-shrink:0; }
-        #patch-info-content { font-size:0.88em; border:1px solid #dee2e6; border-radius:4px; padding:10px; min-height:60px; background:white; }
-        #stats-content p { margin:3px 0; font-size:0.88em; }
-        #stats-content span { font-weight:600; color:#007bff; }
-        #tier-stats-breakdown { font-size:0.8em; border-top:1px dashed #e9ecef; padding-top:6px; margin-top:6px; }
-        #tools-section label { display:block; margin-bottom:3px; font-size:0.85em; font-weight:500; color:#495057; }
-        #tools-section select, #area-filter-controls input[type="number"] {
-            width:100%; padding:6px 8px; margin-bottom:10px; border:1px solid #ced4da;
-            border-radius:4px; box-sizing:border-box; font-size:0.88em;
+        /* ── Sidebar elements ── */
+        #sidebar-header {
+            display:flex; justify-content:space-between; align-items:flex-start;
+            margin-bottom:14px; border-bottom:1px solid #dee2e6; padding-bottom:10px;
         }
-        #area-filter-controls h4 { margin:12px 0 8px; font-size:0.9em; font-weight:700; }
-        .area-input-group { display:flex; align-items:center; margin-bottom:6px; }
-        .area-input-group label { width:35px; font-size:0.85em; }
+        #sidebar-header h2 { margin:0; font-size:1.05em; font-weight:700; color:#212529; line-height:1.3; }
+        .header-buttons { display:flex; gap:5px; flex-shrink:0; margin-left:8px; }
+        .header-buttons button {
+            background:none; border:1px solid #dee2e6; border-radius:4px;
+            padding:5px 7px; cursor:pointer; font-size:1em; color:#495057;
+        }
+        .header-buttons button:hover { background:#f0f0f0; }
+
+        .sidebar-section { margin-bottom:16px; }
+        .sidebar-section h3 {
+            font-size:0.88em; font-weight:700; color:#343a40; text-transform:uppercase;
+            letter-spacing:0.05em; margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid #e9ecef;
+        }
+        .filter-legend-item { display:flex; align-items:center; padding:3px 2px; cursor:pointer; font-size:0.88em; color:#212529; }
+        .filter-legend-item:hover { background:#f8f9fa; border-radius:3px; }
+        .legend-color-box { width:12px; height:12px; margin-right:8px; border:1px solid rgba(0,0,0,0.15); border-radius:2px; flex-shrink:0; }
+        .filter-legend-item input[type="checkbox"] { margin:0 6px 0 0; }
+
+        #patch-info-content {
+            font-size:0.87em; color:#212529; border:1px solid #dee2e6; border-radius:4px;
+            padding:10px; min-height:60px; background:#f8f9fa; line-height:1.5;
+        }
+        #stats-content p { margin:3px 0; font-size:0.87em; color:#212529; }
+        #stats-content span { font-weight:700; color:#0056b3; }
+        #tier-stats-breakdown { font-size:0.8em; border-top:1px dashed #e9ecef; padding-top:6px; margin-top:6px; color:#495057; }
+        #tier-stats-breakdown h5 { margin:0 0 6px; font-size:0.9em; color:#343a40; }
+
+        #tools-section label { display:block; margin-bottom:3px; font-size:0.85em; font-weight:600; color:#495057; }
+        #tools-section select, #area-filter-controls input[type="number"] {
+            width:100%; padding:6px 8px; margin-bottom:8px; border:1px solid #ced4da;
+            border-radius:4px; box-sizing:border-box; font-size:0.87em; color:#212529;
+            background:white;
+        }
+        #area-filter-controls { margin-top:10px; padding-top:10px; border-top:1px solid #e9ecef; }
+        #area-filter-controls h4 { margin:0 0 8px; font-size:0.88em; font-weight:700; color:#343a40; }
+        .area-input-group { display:flex; align-items:center; margin-bottom:5px; gap:6px; }
+        .area-input-group label { width:30px; font-size:0.85em; flex-shrink:0; }
         .area-input-group input { flex-grow:1; margin-bottom:0 !important; }
         .area-filter-buttons { display:flex; gap:6px; margin-top:8px; }
-        .area-filter-buttons button, #about-btn { flex-grow:1; padding:6px 8px; font-size:0.85em; font-weight:500; border:none; border-radius:4px; cursor:pointer; color:white; background:#6c757d; }
-        #about-btn { width:100%; background:#007bff; margin-top:auto; }
+        .area-filter-buttons button {
+            flex-grow:1; padding:6px 8px; font-size:0.85em; font-weight:600;
+            border:none; border-radius:4px; cursor:pointer; color:white; background:#6c757d;
+        }
+        .area-filter-buttons button:hover { background:#545b62; }
+        .filter-error-message { color:#721c24; background:#f8d7da; border:1px solid #f5c6cb; padding:6px 10px; border-radius:4px; font-size:0.83em; margin-top:5px; }
+
         #sidebar-footer { margin-top:auto; padding-top:12px; border-top:1px solid #e9ecef; }
-        .filter-error-message { color:#721c24; background:#f8d7da; border:1px solid #f5c6cb; padding:6px 10px; border-radius:4px; font-size:0.85em; margin-top:6px; }
+        #about-btn {
+            width:100%; padding:8px; font-size:0.87em; font-weight:600;
+            border:none; border-radius:4px; cursor:pointer; color:white; background:#0056b3;
+        }
+        #about-btn:hover { background:#004494; }
+
+        /* ── Dark mode sidebar ── */
+        body.dark-mode #sidebar { background:#1e2328; border-color:#343a40; }
+        body.dark-mode #sidebar-header h2 { color:#f0f0f0; }
+        body.dark-mode .sidebar-section h3 { color:#ccc; border-color:#343a40; }
+        body.dark-mode .filter-legend-item { color:#e0e0e0; }
+        body.dark-mode .filter-legend-item:hover { background:#2c3034; }
+        body.dark-mode #patch-info-content { background:#2c3034; border-color:#495057; color:#e0e0e0; }
+        body.dark-mode #stats-content p { color:#e0e0e0; }
+        body.dark-mode #tier-stats-breakdown { color:#adb5bd; }
+        body.dark-mode #tools-section label { color:#adb5bd; }
+        body.dark-mode #tools-section select,
+        body.dark-mode #area-filter-controls input { background:#2c3034; border-color:#495057; color:#e0e0e0; }
+        body.dark-mode .header-buttons button { border-color:#495057; color:#adb5bd; }
+        body.dark-mode .header-buttons button:hover { background:#343a40; }
 
         /* ── Map top bar ── */
         #map-top-bar {
             position:absolute; top:10px; left:50%; transform:translateX(-50%);
             z-index:10; display:flex; align-items:center; gap:8px;
             background:rgba(255,255,255,0.97); border-radius:6px;
-            padding:6px 10px; box-shadow:0 2px 8px rgba(0,0,0,0.25); white-space:nowrap;
+            padding:6px 12px; box-shadow:0 2px 10px rgba(0,0,0,0.2);
+            white-space:nowrap;
+            font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
         }
-        #howto-btn { background:none; border:1px solid #ccc; border-radius:4px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; color:#333; }
+        body.dark-mode #map-top-bar { background:rgba(30,35,40,0.97); }
+
+        #howto-btn {
+            background:none; border:1px solid #ccc; border-radius:4px;
+            padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; color:#333;
+        }
+        body.dark-mode #howto-btn { color:#e0e0e0; border-color:#555; }
         #howto-btn:hover { background:#f0f0f0; }
+        body.dark-mode #howto-btn:hover { background:#343a40; }
+
         #corridor-controls { display:flex; align-items:center; gap:6px; }
-        #corridor-toggle-fab { background:#2a8234; color:white; border:none; border-radius:4px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+        #corridor-toggle-fab {
+            background:#2a8234; color:white; border:none; border-radius:4px;
+            padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer;
+            font-family:inherit;
+        }
         #corridor-toggle-fab:hover  { background:#1e6b27; }
-        #corridor-toggle-fab.active { background:#00b8d9; }
+        #corridor-toggle-fab.active { background:#c05c00; }
+
         #conn-level-toggles { display:flex; gap:4px; align-items:center; }
-        .conn-level-btn { background:white; border:2px solid currentColor; border-radius:4px; padding:3px 8px; font-size:11px; font-weight:700; cursor:pointer; opacity:0.45; }
-        .conn-level-btn.active { opacity:1; background:white; }
-        .conn-level-btn:hover { opacity:0.75; }
-        #home-btn { display:flex; align-items:center; justify-content:center; width:30px; height:30px; font-size:16px; text-decoration:none; border:1px solid #ccc; border-radius:4px; background:white; }
+        .conn-level-btn {
+            background:white; border:2px solid currentColor; border-radius:4px;
+            padding:3px 8px; font-size:11px; font-weight:700; cursor:pointer;
+            opacity:0.4; font-family:inherit;
+        }
+        body.dark-mode .conn-level-btn { background:#2c3034; }
+        .conn-level-btn.active { opacity:1; }
+        .conn-level-btn:hover  { opacity:0.75; }
+
+        #home-btn {
+            display:flex; align-items:center; justify-content:center;
+            width:30px; height:30px; font-size:16px; text-decoration:none;
+            border:1px solid #ccc; border-radius:4px; background:white;
+        }
+        body.dark-mode #home-btn { background:#2c3034; border-color:#555; }
         #home-btn:hover { background:#f0f0f0; }
 
         /* ── Modals ── */
         .modal {
-            display:none; position:fixed; z-index:1001; left:0; top:0; width:100%; height:100%;
-            background:rgba(0,0,0,0.6); align-items:center; justify-content:center;
+            display:none; position:fixed; z-index:1001; left:0; top:0;
+            width:100%; height:100%; background:rgba(0,0,0,0.6);
+            align-items:center; justify-content:center;
+            font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
         }
         .modal-content {
-            background:white; padding:25px 30px; border-radius:6px; max-width:600px; width:90%;
-            max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 8px 25px rgba(0,0,0,0.3);
+            background:white; padding:25px 30px; border-radius:6px;
+            max-width:600px; width:90%; max-height:80vh; overflow-y:auto;
+            position:relative; box-shadow:0 8px 25px rgba(0,0,0,0.3); color:#212529;
         }
-        .modal-content h2 { margin-top:0; font-size:1.3em; }
-        .modal-content h3 { font-size:1.05em; margin-top:1.2em; }
-        .modal-content p  { line-height:1.6; font-size:0.95em; }
-        .close-modal-btn { position:absolute; top:12px; right:15px; font-size:24px; font-weight:bold; cursor:pointer; background:none; border:none; color:#666; }
+        .modal-content h2 { margin:0 0 14px; font-size:1.25em; }
+        .modal-content h3 { font-size:0.95em; margin:14px 0 5px; }
+        .modal-content p  { font-size:0.92em; line-height:1.6; margin:0 0 8px; }
+        .close-modal-btn {
+            position:absolute; top:10px; right:14px; font-size:22px; font-weight:bold;
+            cursor:pointer; background:none; border:none; color:#666; padding:0;
+        }
         .close-modal-btn:hover { color:#000; }
 
-        /* ── Zoom warning & loading ── */
+        /* ── Zoom warning / loading ── */
         #zoom-warning {
             display:none; position:absolute; top:60px; left:50%; transform:translateX(-50%);
             background:#306230; color:#9bbc0f; padding:12px 20px;
-            border:3px solid #8bac0f; font-family:'Press Start 2P',cursive; font-size:10px;
-            z-index:1000; text-align:center; pointer-events:none;
+            border:3px solid #8bac0f; z-index:1000; text-align:center;
+            pointer-events:none; font-size:11px; border-radius:2px;
         }
         #loading-indicator {
             position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-            background:rgba(0,0,0,0.8); color:white; padding:20px; border-radius:8px;
-            z-index:1000; text-align:center;
+            background:rgba(0,0,0,0.82); color:white; padding:22px 28px;
+            border-radius:8px; z-index:1000; text-align:center;
         }
         .spinner { border:4px solid rgba(255,255,255,0.3); border-top:4px solid #fff; border-radius:50%; width:28px; height:28px; animation:spin 1s linear infinite; margin:0 auto 10px; }
         @keyframes spin { to { transform:rotate(360deg); } }
-        .terminal-loader { text-align:left; font-family:'Press Start 2P',cursive; color:#9bbc0f; font-size:10px; }
+        .terminal-loader { text-align:left; color:#9bbc0f; font-size:10px; }
         .typing { overflow:hidden; white-space:nowrap; border-right:8px solid #9bbc0f; animation:typing 1.5s steps(30) forwards, blink 0.8s step-end infinite; margin-bottom:8px; }
         @keyframes typing { from { width:0 } to { width:100% } }
         @keyframes blink  { from,to { border-color:transparent } 50% { border-color:#9bbc0f } }
-
-        /* ── Dark mode ── */
-        body.dark-mode #sidebar { background:#2c3034; border-color:#495057; }
-        body.dark-mode #sidebar-header h2, body.dark-mode .sidebar-section h3 { color:#e9ecef; }
-        body.dark-mode #patch-info-content { background:#343a40; border-color:#495057; color:#f8f9fa; }
-        body.dark-mode .modal-content { background:#2c3034; color:#f8f9fa; }
-        body.dark-mode #map-top-bar { background:rgba(40,40,40,0.97); }
-        body.dark-mode #howto-btn, body.dark-mode #home-btn { color:#f8f9fa; border-color:#555; background:#3a3a3a; }
-        body.dark-mode .conn-level-btn { background:#3a3a3a; }
     </style>
 </head>
 <body>
@@ -147,7 +223,7 @@
             <div class="sidebar-section" id="tools-section">
                 <h3>Tools</h3>
                 <div id="search-geocoder-container"></div>
-                <label for="basemap-toggle" style="margin-top:0.8em">Basemap:</label>
+                <label for="basemap-toggle" style="margin-top:10px">Basemap:</label>
                 <select id="basemap-toggle">
                     <option value="custom">Custom Style</option>
                     <option value="satellite">Satellite</option>
@@ -183,9 +259,9 @@
                 <div id="corridor-controls">
                     <button id="corridor-toggle-fab">Show Corridors</button>
                     <div id="conn-level-toggles" style="display:none">
-                        <button id="conn-filter-high"     class="conn-level-btn" style="color:#00e5ff">High</button>
-                        <button id="conn-filter-moderate" class="conn-level-btn" style="color:#0097b2">Moderate</button>
-                        <button id="conn-filter-low"      class="conn-level-btn" style="color:#005f73">Low</button>
+                        <button id="conn-filter-high"     class="conn-level-btn" style="color:#ffd60a">High</button>
+                        <button id="conn-filter-moderate" class="conn-level-btn" style="color:#ff9500">Moderate</button>
+                        <button id="conn-filter-low"      class="conn-level-btn" style="color:#ff453a">Low</button>
                     </div>
                 </div>
                 <a href="index.html" id="home-btn" title="Back to home">🏠</a>
@@ -224,10 +300,10 @@
             <h3>What the patch colours mean</h3>
             <p>Patches are coloured by conservation tier, from light green (Tier 1, highest structural quality) to dark green (Tier 6, highly isolated micro-patches). Use the Filter by Category checkboxes to show or hide specific tiers.</p>
             <h3>Potential movement corridors</h3>
-            <p>Click Show Corridors to reveal cyan lines connecting forest patches to their nearest neighbours. The High, Moderate, and Low buttons toggle visibility by connectivity level — a checkmark shows which levels are currently displayed. Click any corridor line to see details in the sidebar.</p>
+            <p>Click Show Corridors to reveal lines connecting forest patches to their nearest neighbours. The High, Moderate, and Low buttons toggle visibility by connectivity level — a checkmark shows which levels are currently displayed. Click any corridor line to see details in the sidebar.</p>
             <h3>Reading patch details</h3>
             <p>Clicking a patch shows its conservation tier, connectivity rating, and distance to the nearest adjacent patch. Expand Show technical details for the full set of landscape metrics.</p>
-            <p style="margin-top:1.5em;font-size:0.85em;opacity:0.7;">Built by Benjamin Galea. Contact bengalea97@gmail.com</p>
+            <p style="margin-top:1.2em;font-size:0.85em;color:#666;">Built by Benjamin Galea. Contact bengalea97@gmail.com</p>
         </div>
     </div>
 
