@@ -71,7 +71,7 @@ map.on('idle', () => {
         // Slight delay so the user can actually read the "boot sequence"
         setTimeout(() => {
             loadingIndicator.style.display = 'none';
-        }, 3500);
+        }, 1200);
     }
     updateSummaryStatistics();
 });
@@ -87,26 +87,30 @@ map.on('idle', () => {
         console.log("DEBUG: initializeTierFilters() function EXECUTED (with color boxes).");
         const filterContainer = document.querySelector('#filter-section');
         if (!filterContainer) { console.error("Tier filter container (#filter-section) not found!"); return; }
-        filterContainer.innerHTML = '<h3>Filter by Category</h3>';
+        filterContainer.innerHTML = '<h3>Filter by category</h3>';
 
         ALL_TIERS.forEach(tierValueFromConfig => {
             const label = document.createElement('label');
             label.className = 'filter-legend-item';
+
+            const colorBox = document.createElement('span');
+            colorBox.className = 'legend-color-box';
+            colorBox.style.backgroundColor = TIER_COLORS[tierValueFromConfig] || '#ccc';
+
             const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox'; checkbox.className = 'tier-toggle';
-            checkbox.value = tierValueFromConfig; 
+            checkbox.type = 'checkbox';
+            checkbox.className = 'tier-toggle';
+            checkbox.value = tierValueFromConfig;
             checkbox.checked = true;
             checkbox.addEventListener('change', () => {
-                console.log(`--- TIER CHECKBOX CHANGE for "${tierValueFromConfig}" ---`);
                 applyForestFilter();
             });
-            const colorBox = document.createElement('span');
-            colorBox.className = 'legend-color-box'; colorBox.style.backgroundColor = TIER_COLORS[tierValueFromConfig] || '#ccc';
-            label.appendChild(colorBox); label.appendChild(checkbox);
-            label.appendChild(document.createTextNode(` ${tierValueFromConfig}`));
+
+            label.appendChild(colorBox);
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(' ' + tierValueFromConfig));
             filterContainer.appendChild(label);
         });
-        console.log("Tier filters with color boxes initialized. Applying initial filter...");
         applyForestFilter();
     }
 
@@ -290,8 +294,16 @@ map.on('idle', () => {
             if (e.features && e.features.length > 0) {
                 map.getCanvas().style.cursor = 'pointer';
                 const p = e.features[0].properties;
+                const tierName = p[TIER_ATTRIBUTE] || 'Forest patch';
+                const conn     = p[CONNECTIVITY_ATTRIBUTE];
+                const connColor = (typeof CONNECTIVITY_COLORS !== 'undefined' && CONNECTIVITY_COLORS[conn])
+                    ? CONNECTIVITY_COLORS[conn] : null;
+                const connText = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#fff';
+                const connBadge = connColor
+                    ? `<br><span style="display:inline-block;margin-top:3px;padding:1px 7px;border-radius:3px;background:${connColor};color:${connText};font-size:0.85em;font-weight:bold">${conn}</span>`
+                    : '';
                 hoverPopup.setLngLat(e.lngLat)
-                    .setHTML('<strong>' + (p[TIER_ATTRIBUTE] || 'Forest Patch') + '</strong><br>Click for details')
+                    .setHTML('<strong>' + tierName + '</strong>' + connBadge + '<br><span style="font-size:0.82em;opacity:0.75">Click for details</span>')
                     .addTo(map);
             }
         });
@@ -557,7 +569,7 @@ map.on('idle', () => {
         const id   = properties[PATCH_ID_ATTRIBUTE];
 
         const tierDesc = {
-            'Tier 1 (Core Habitat)': 'A structurally important forest patch in this landscape. Large enough to support a high level of biodiversity, with substantial interior area protected from edge effects.',
+            'Tier 1 (Core Habitat)': 'One of the most structurally important forest patches in this landscape. Large enough to support a resident group of arboreal animals, with substantial interior area protected from edge effects.',
             'Tier 2 (Major Stepping Stones)': 'A high-quality patch that functions as a key hub or stepping stone in the movement network. Critical for regional habitat connectivity.',
             'Tier 3 (Connected Fragments)': 'A moderately connected forest fragment that plays a bridging role between larger patches in the landscape.',
             'Tier 4 (Vulnerable Edge Fragments)': 'A patch with significant edge exposure relative to its size. Functionally important but vulnerable to further habitat loss or degradation.',
@@ -625,6 +637,13 @@ map.on('idle', () => {
         h += '<div id="metric-inline-popup" style="display:none;margin-top:8px;background:#f0f4ff;border:1px solid #c0cfe8;border-radius:4px;padding:8px 10px;font-size:0.83em;line-height:1.5;color:inherit"></div>';
         h += '</details></div>';
         el.innerHTML = h;
+
+        // Smooth fade-in
+        el.style.opacity = '0';
+        requestAnimationFrame(() => {
+            el.style.transition = 'opacity 0.2s ease';
+            el.style.opacity = '1';
+        });
 
         el.querySelectorAll('.metric-info-btn').forEach(function(btn) {
             btn.addEventListener('click', function(e) {
