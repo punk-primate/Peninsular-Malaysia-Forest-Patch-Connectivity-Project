@@ -150,7 +150,7 @@ map.on('idle', () => {
     }
 
     // ── Corridor colours — warm amber, visible on dark basemap ───────────────
-    const CONN_COLORS = { High: '#ffd60a', Moderate: '#ff9500', Low: '#ff453a' };
+    const CONN_COLORS = { High: '#ffff00', Moderate: '#ff9900', Low: '#ff3300' };
     let resolvedConnectorId = null;
     let corridorVisible     = false;
     let connAnimFrame       = null;
@@ -258,7 +258,7 @@ map.on('idle', () => {
                 map.setLayoutProperty(resolvedConnectorId, 'visibility', corridorVisible ? 'visible' : 'none');
                 if (levelPanel) levelPanel.style.display = corridorVisible ? 'flex' : 'none';
                 if (corridorVisible) {
-                    toggleBtn.textContent = 'Hide Corridors';
+                    toggleBtn.textContent = 'Hide corridors';
                     toggleBtn.classList.add('active');
                     connAnimStep = 0;
                     function animate(ts) {
@@ -273,7 +273,7 @@ map.on('idle', () => {
                     }
                     connAnimFrame = requestAnimationFrame(animate);
                 } else {
-                    toggleBtn.textContent = 'Show Corridors';
+                    toggleBtn.textContent = 'Show corridors';
                     toggleBtn.classList.remove('active');
                     if (connAnimFrame) { cancelAnimationFrame(connAnimFrame); connAnimFrame = null; }
                 }
@@ -571,19 +571,31 @@ map.on('idle', () => {
             'Barrier': 'This patch is surrounded by an impermeable barrier zone such as dense urban development. Unaided movement to neighbouring patches is effectively impossible.',
             'No Data': 'Connectivity data is not available for this patch.'
         };
+        const metricInfo = {
+            area:   'The total area of the forest patch in hectares. Larger patches can support more species and are more resilient to edge disturbance.',
+            core:   'The area of the patch that is sufficiently far from the edge to be buffered from external disturbance such as wind, light changes, and human activity. Core area is the most ecologically stable part of the patch.',
+            contig: 'A measure of how compact and internally connected the patch is, ranging from 0 to 1. Higher values indicate a more solid, contiguous patch shape, which makes it easier for animals to move within the patch.',
+            para:   'The ratio of the patch perimeter to its area. A higher ratio means the patch has a more irregular or elongated shape, with a greater proportion of edge habitat relative to interior.',
+            enn:    'The straight-line distance to the nearest adjacent forest patch, in metres. Lower values indicate the patch is closer to other forest and more likely to be reached by dispersing animals.',
+            flow:   'The mean composite current flow value across all resistance scenarios and spatial scales, on a 0 to 300 scale. Higher values indicate the patch carries more movement current and is more central to the regional connectivity network.'
+        };
 
         const ennNum = typeof enn === 'number' ? enn : parseFloat(enn);
         let ennMsg = 'Distance data not available.';
         if (!isNaN(ennNum)) {
             if      (ennNum <= 30)   ennMsg = 'Directly adjacent to another forest area.';
-            else if (ennNum <= 800)  ennMsg = 'Nearest patch: ' + Math.round(ennNum) + ' m — within typical dispersal range for arboreal animals.';
-            else if (ennNum <= 2000) ennMsg = 'Nearest patch: ' + Math.round(ennNum) + ' m — beyond typical single-generation dispersal distance.';
-            else                     ennMsg = 'Nearest patch: ' + Math.round(ennNum) + ' m — functionally isolated at the landscape scale.';
+            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, within typical dispersal range for arboreal animals.';
+            else if (ennNum <= 2000) ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, beyond typical single-generation dispersal distance for most arboreal animals.';
+            else                     ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away. This patch is functionally isolated at the landscape scale.';
         }
 
         const tc = (TIER_COLORS && TIER_COLORS[tier]) ? TIER_COLORS[tier] : '#555';
         const cc = (CONNECTIVITY_COLORS && CONNECTIVITY_COLORS[conn]) ? CONNECTIVITY_COLORS[conn] : '#888';
         const ct = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#fff';
+
+        function infoBtn(key) {
+            return '<button class="metric-info-btn" data-info="' + key + '" title="What does this mean?" style="background:none;border:1px solid #aaa;border-radius:50%;width:16px;height:16px;font-size:10px;cursor:pointer;margin-left:4px;padding:0;line-height:14px;color:#666;vertical-align:middle">i</button>';
+        }
 
         let h = '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">';
         h += '<div style="background:' + tc + ';color:#fff;padding:5px 9px;border-radius:3px;font-weight:700;margin-bottom:8px;font-size:0.82em">' + (tier || 'Unknown') + '</div>';
@@ -594,16 +606,40 @@ map.on('idle', () => {
         }
         h += '<div style="font-size:0.87em;margin-bottom:10px"><strong>Nearest patch:</strong> ' + ennMsg + '</div>';
         h += '<details><summary style="cursor:pointer;font-weight:700;font-size:0.87em;color:inherit">Show technical details</summary>';
-        h += '<ul style="margin:6px 0;padding-left:14px;font-size:0.84em;line-height:1.6;color:inherit">';
-        if (id !== undefined)                                       h += '<li><strong>Patch ID:</strong> ' + id + '</li>';
-        if (typeof area === 'number')                               h += '<li><strong>Total area:</strong> ' + area.toFixed(2) + ' ha</li>';
-        if (typeof core === 'number')                               h += '<li><strong>Core area:</strong> ' + core.toFixed(2) + ' ha</li>';
-        if (typeof properties[CONTIGUITY_INDEX_ATTRIBUTE] === 'number') h += '<li><strong>Contiguity index:</strong> ' + properties[CONTIGUITY_INDEX_ATTRIBUTE].toFixed(3) + '</li>';
-        if (typeof properties[PERIMETER_AREA_RATIO_ATTRIBUTE] === 'number') h += '<li><strong>Perimeter-area ratio:</strong> ' + properties[PERIMETER_AREA_RATIO_ATTRIBUTE].toFixed(5) + '</li>';
-        if (!isNaN(ennNum))                                        h += '<li><strong>ENN distance:</strong> ' + Math.round(ennNum) + ' m</li>';
-        if (flow !== undefined && flow !== null)                    h += '<li><strong>Mean composite flow:</strong> ' + (typeof flow === 'number' ? flow.toFixed(2) : flow) + '</li>';
-        h += '</ul></details></div>';
+        h += '<ul style="margin:6px 0;padding-left:0;font-size:0.84em;line-height:1.8;color:inherit;list-style:none">';
+        if (id !== undefined)
+            h += '<li><strong>Patch ID:</strong> ' + id + '</li>';
+        if (typeof area === 'number')
+            h += '<li><strong>Total area:</strong> ' + area.toFixed(2) + ' ha' + infoBtn('area') + '</li>';
+        if (typeof core === 'number')
+            h += '<li><strong>Core area:</strong> ' + core.toFixed(2) + ' ha' + infoBtn('core') + '</li>';
+        if (typeof properties[CONTIGUITY_INDEX_ATTRIBUTE] === 'number')
+            h += '<li><strong>Contiguity index:</strong> ' + properties[CONTIGUITY_INDEX_ATTRIBUTE].toFixed(3) + infoBtn('contig') + '</li>';
+        if (typeof properties[PERIMETER_AREA_RATIO_ATTRIBUTE] === 'number')
+            h += '<li><strong>Perimeter-area ratio:</strong> ' + properties[PERIMETER_AREA_RATIO_ATTRIBUTE].toFixed(5) + infoBtn('para') + '</li>';
+        if (!isNaN(ennNum))
+            h += '<li><strong>ENN distance:</strong> ' + Math.round(ennNum) + ' m' + infoBtn('enn') + '</li>';
+        if (flow !== undefined && flow !== null)
+            h += '<li><strong>Mean composite flow:</strong> ' + (typeof flow === 'number' ? flow.toFixed(2) : flow) + infoBtn('flow') + '</li>';
+        h += '</ul>';
+        h += '<div id="metric-inline-popup" style="display:none;margin-top:8px;background:#f0f4ff;border:1px solid #c0cfe8;border-radius:4px;padding:8px 10px;font-size:0.83em;line-height:1.5;color:inherit"></div>';
+        h += '</details></div>';
         el.innerHTML = h;
+
+        el.querySelectorAll('.metric-info-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var popup = el.querySelector('#metric-inline-popup');
+                var key   = btn.getAttribute('data-info');
+                if (popup.style.display === 'block' && popup.dataset.key === key) {
+                    popup.style.display = 'none';
+                } else {
+                    popup.textContent   = metricInfo[key] || '';
+                    popup.dataset.key   = key;
+                    popup.style.display = 'block';
+                }
+            });
+        });
     }
 
     function showMetricInfoPopup(metricKey, iconElement) {
