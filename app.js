@@ -211,7 +211,7 @@ map.on('idle', () => {
                     source: connDef.source,
                     minzoom: 10,
                     layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
-                    paint:  { 'line-color': '#ffffff', 'line-width': 10, 'line-opacity': 0.7 }
+                    paint:  { 'line-color': '#ffffff', 'line-width': 10, 'line-opacity': 1.0 }
                 };
                 if (connDef['source-layer']) outlineSpec['source-layer'] = connDef['source-layer'];
                 map.addLayer(outlineSpec, resolvedConnectorId);
@@ -618,7 +618,7 @@ map.on('idle', () => {
         let ennMsg = 'Distance data not available.';
         if (!isNaN(ennNum)) {
             if      (ennNum <= 30)   ennMsg = 'Directly adjacent to another forest area.';
-            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, within typical dispersal range for arboreal animals.';
+            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, within appropriate movement range for arboreal animals.';
             else if (ennNum <= 2000) ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, beyond typical single-generation dispersal distance for most arboreal animals.';
             else                     ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away. This patch is functionally isolated at the landscape scale.';
         }
