@@ -154,7 +154,7 @@ map.on('idle', () => {
     }
 
     // ── Corridor colours — dark enough to contrast on light monochrome basemap ─
-    const CONN_COLORS = { High: '#0052cc', Moderate: '#c45c00', Low: '#b30000' };
+    const CONN_COLORS = { High: '#0052cc', Moderate: '#f0d10a', Low: '#b30000' };
     let resolvedConnectorId = null;
     let corridorVisible     = false;
     let connAnimFrame       = null;
