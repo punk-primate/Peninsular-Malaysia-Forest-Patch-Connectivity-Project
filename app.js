@@ -592,7 +592,7 @@ map.on('idle', () => {
 
         const tierDesc = {
             'Tier 1 (Core Habitat)': 'One of the most structurally important forest patches in this landscape. Large enough to support a high level of biodiversity, with substantial interior area protected from edge effects.',
-            'Tier 2 (Major Stepping Stones)': 'A high-quality patch that functions as a key hub or stepping stone in the movement network. Critical for regional habitat connectivity.',
+            'Tier 2 (Major Stepping Stones)': 'A high-quality patch that could function as a key hub or stepping stone in the movement network, where possible. Critical for regional habitat connectivity.',
             'Tier 3 (Connected Fragments)': 'A moderately connected forest fragment that could play a bridging role between larger patches in the landscape.',
             'Tier 4 (Vulnerable Edge Fragments)': 'A patch with significant edge exposure relative to its size. Functionally important but vulnerable to further habitat loss or degradation.',
             'Tier 5 (Isolated Fragments)': 'A small, isolated forest fragment with limited connectivity to the surrounding landscape.',
@@ -601,7 +601,7 @@ map.on('idle', () => {
         const connDesc = {
             'High':    'This patch has high connectivity potential. The surrounding landscape is likely to support relatively free movement to neighbouring patches.',
             'Moderate':'This patch has moderate connectivity potential. Movement to neighbouring patches may be possible but depends on the routes available through the landscape.',
-            'Low':     'This patch has low connectivity potential. The surrounding landscape is likely to impose significant resistance to movement between patches.',
+            'Low':     'This patch has low connectivity potential. The surrounding landscape is likely to impose significant resistance to movement between patches, even with a corridor in place.',
             'Barrier': 'This patch has negligible connectivity potential. The surrounding landscape forms an effective barrier, making movement to neighbouring patches unlikely, even with a corridor in place.',
             'No Data': 'Connectivity data is not available for this patch.'
         };
