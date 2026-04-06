@@ -224,6 +224,37 @@ map.on('idle', () => {
                 map.addLayer(outlineSpec, resolvedConnectorId);
                 console.log('Corridor outline layer added successfully');
             }
+            // Wide invisible touch target layer for mobile — 24px transparent line
+            if (connDef && connDef.source && !map.getLayer('connector-touch')) {
+                const touchSpec = {
+                    id:     'connector-touch',
+                    type:   'line',
+                    source: connDef.source,
+                    minzoom: 10,
+                    layout: { 'visibility': 'none' },
+                    paint:  { 'line-color': 'transparent', 'line-width': 24, 'line-opacity': 0 }
+                };
+                if (connDef['source-layer']) touchSpec['source-layer'] = connDef['source-layer'];
+                map.addLayer(touchSpec);
+                // Route touch layer events to the same handlers
+                map.on('click', 'connector-touch', (e) => {
+                    if (!e.features || !e.features.length) return;
+                    const f = e.features[0].properties;
+                    const el = document.getElementById('patch-info-content');
+                    if (el) {
+                        el.innerHTML = '<div style="padding:4px"><strong>Potential movement corridor</strong><br><br>' +
+                            '<strong>Gap to nearest patch:</strong> ' + f.gap_m + ' m<br>' +
+                            '<strong>Connectivity:</strong> ' + f.connectivity + '<br>' +
+                            '<strong>Source patch area:</strong> ' + f.area_ha + ' ha<br>' +
+                            '<strong>Mean composite flow:</strong> ' + f.mean_flow + '<br><br>' +
+                            '<em>' + (f.crossing_note || '') + '</em></div>';
+                    }
+                    const sidebar = document.getElementById('sidebar');
+                    if (sidebar && sidebar.classList.contains('collapsed')) document.getElementById('toggle-sidebar-btn').click();
+                    const infoPanel = document.getElementById('info-panel-section');
+                    if (infoPanel) setTimeout(() => infoPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                });
+            }
         } catch(e) {
             console.warn('Could not add corridor outline layer:', e.message);
         }
@@ -289,10 +320,23 @@ map.on('idle', () => {
                 if (map.getLayer('connector-outline')) {
                     map.setLayoutProperty('connector-outline', 'visibility', corridorVisible ? 'visible' : 'none');
                 }
+                if (map.getLayer('connector-touch')) {
+                    map.setLayoutProperty('connector-touch', 'visibility', corridorVisible ? 'visible' : 'none');
+                }
                 if (levelPanel) levelPanel.style.display = corridorVisible ? 'flex' : 'none';
                 if (corridorVisible) {
                     toggleBtn.textContent = 'Hide corridors';
                     toggleBtn.classList.add('active');
+                    // Show corridor count badge on first reveal
+                    if (!toggleBtn.dataset.counted) {
+                        try {
+                            const allCorridors = map.queryRenderedFeatures({ layers: [resolvedConnectorId] });
+                            if (allCorridors.length > 0) {
+                                toggleBtn.textContent = 'Hide corridors (' + allCorridors.length.toLocaleString() + ')';
+                            }
+                        } catch(e) { /* queryRenderedFeatures may not work for imported layers */ }
+                        toggleBtn.dataset.counted = '1';
+                    }
                     connAnimStep = 0;
                     function animate(ts) {
                         if (ts - connLastTs > 60) {
@@ -351,9 +395,16 @@ map.on('idle', () => {
         map.on('click', resolvedPatchId, (e) => {
             if (e.features && e.features.length > 0) {
                 displayPatchInfo(e.features[0].properties);
+                // Fly to patch at a comfortable zoom
+                map.flyTo({ center: e.lngLat, zoom: Math.max(map.getZoom(), 14), duration: 600 });
                 const sidebar = document.getElementById('sidebar');
                 if (sidebar && sidebar.classList.contains('collapsed')) {
                     document.getElementById('toggle-sidebar-btn').click();
+                }
+                // Scroll sidebar to patch details panel
+                const infoPanel = document.getElementById('info-panel-section');
+                if (infoPanel && sidebar && !sidebar.classList.contains('collapsed')) {
+                    setTimeout(() => infoPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
                 }
             }
         });
@@ -573,19 +624,19 @@ map.on('idle', () => {
             }
         }
 
-        let breakdownHtml = '<h5>Breakdown by Visible Category:</h5>';
-        if (features.length > 0 || currentlyCheckedTiers.length > 0 ) { 
-             currentlyCheckedTiers.forEach(tier => {
-                if (tierStats[tier]) { 
+        let breakdownHtml = '<h5>Breakdown by visible category:</h5>';
+        if (features.length > 0 || currentlyCheckedTiers.length > 0) {
+            currentlyCheckedTiers.forEach(tier => {
+                if (tierStats[tier]) {
                     breakdownHtml += `<p><strong>${formatPropertyName(tier)}:</strong> ${tierStats[tier].count.toLocaleString()} patches, ${tierStats[tier].area.toFixed(2).toLocaleString()} ha</p>`;
                 }
             });
-             if (features.length === 0 && currentlyCheckedTiers.length > 0) {
-                breakdownHtml += '<p>No patches match current filter combination.</p>';
+            if (features.length === 0 && currentlyCheckedTiers.length > 0) {
+                breakdownHtml += '<p style="color:#888;font-style:italic">No patches match the current filters. Try adjusting the area filter or re-enabling categories.</p>';
             }
         } else if (features.length === 0 && currentlyCheckedTiers.length === 0) {
-             breakdownHtml += '<p>No categories selected.</p>';
-        } else { 
+            breakdownHtml += '<p style="color:#888;font-style:italic">No categories selected. Use the checkboxes above to show patches.</p>';
+        } else {
             breakdownHtml += '<p>No patches visible with current filters.</p>';
         }
         breakdownEl.innerHTML = breakdownHtml;
