@@ -33,9 +33,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     map.on('load', () => {
     // Standard initialization logic
-    if (map.getSource('mapbox-dem')) {
-        map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+    // Add digital elevation terrain — patches drape naturally over real topography
+    if (!map.getSource('mapbox-dem')) {
+        map.addSource('mapbox-dem', {
+            type: 'raster-dem',
+            url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+            tileSize: 512,
+            maxzoom: 14
+        });
     }
+    map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.8 });
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
     initializeTierFilters();
@@ -154,7 +161,7 @@ map.on('idle', () => {
     }
 
     // ── Corridor colours — dark enough to contrast on light monochrome basemap ─
-    const CONN_COLORS = { High: '#0052cc', Moderate: '#f0d10a', Low: '#b30000' };
+    const CONN_COLORS = { High: '#0052cc', Moderate: '#c45c00', Low: '#b30000' };
     let resolvedConnectorId = null;
     let corridorVisible     = false;
     let connAnimFrame       = null;
@@ -211,7 +218,7 @@ map.on('idle', () => {
                     source: connDef.source,
                     minzoom: 10,
                     layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
-                    paint:  { 'line-color': '#ffffff', 'line-width': 10, 'line-opacity': 1.0 }
+                    paint:  { 'line-color': '#ffffff', 'line-width': 10, 'line-opacity': 0.7 }
                 };
                 if (connDef['source-layer']) outlineSpec['source-layer'] = connDef['source-layer'];
                 map.addLayer(outlineSpec, resolvedConnectorId);
@@ -390,7 +397,15 @@ map.on('idle', () => {
             map.once('style.load', () => {
                 loadingIndicator.style.display = 'none';
                 map.setCenter([lng, lat]); map.setZoom(zoom); map.setBearing(bearing); map.setPitch(pitch);
-                if (map.getSource('mapbox-dem')) map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+                if (!map.getSource('mapbox-dem')) {
+                    map.addSource('mapbox-dem', {
+                        type: 'raster-dem',
+                        url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+                        tileSize: 512,
+                        maxzoom: 14
+                    });
+                }
+                map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.8 });
                 
                 const patchInfoContent = document.getElementById('patch-info-content');
                 if (newStyleUrl === MAP_STYLE_CUSTOM) {
@@ -591,18 +606,18 @@ map.on('idle', () => {
         const id   = properties[PATCH_ID_ATTRIBUTE];
 
         const tierDesc = {
-            'Tier 1 (Core Habitat)': 'One of the most structurally important forest patches in this landscape. Large enough to support a high level of biodiversity, with substantial interior area protected from edge effects.',
-            'Tier 2 (Major Stepping Stones)': 'A high-quality patch that could function as a key hub or stepping stone in the movement network, where possible. Critical for regional habitat connectivity.',
-            'Tier 3 (Connected Fragments)': 'A moderately connected forest fragment that could play a bridging role between larger patches in the landscape.',
+            'Tier 1 (Core Habitat)': 'One of the most structurally important forest patches in this landscape. Large enough to support a resident group of arboreal animals, with substantial interior area protected from edge effects.',
+            'Tier 2 (Major Stepping Stones)': 'A high-quality patch that functions as a key hub or stepping stone in the movement network. Critical for regional habitat connectivity.',
+            'Tier 3 (Connected Fragments)': 'A moderately connected forest fragment that plays a bridging role between larger patches in the landscape.',
             'Tier 4 (Vulnerable Edge Fragments)': 'A patch with significant edge exposure relative to its size. Functionally important but vulnerable to further habitat loss or degradation.',
             'Tier 5 (Isolated Fragments)': 'A small, isolated forest fragment with limited connectivity to the surrounding landscape.',
             'Tier 6 (Isolated Micro Patches)': 'A highly isolated micro-patch or remnant forest fragment. Generally too small and disconnected to support resident populations of arboreal animals, but may provide temporary shelter.'
         };
         const connDesc = {
-            'High':    'This patch has high connectivity potential. The surrounding landscape is likely to support relatively free movement to neighbouring patches.',
-            'Moderate':'This patch has moderate connectivity potential. Movement to neighbouring patches may be possible but depends on the routes available through the landscape.',
-            'Low':     'This patch has low connectivity potential. The surrounding landscape is likely to impose significant resistance to movement between patches, even with a corridor in place.',
-            'Barrier': 'This patch has negligible connectivity potential. The surrounding landscape forms an effective barrier, making movement to neighbouring patches unlikely, even with a corridor in place.',
+            'High':    'This patch sits within an active movement corridor. The surrounding landscape allows relatively free movement to neighbouring patches.',
+            'Moderate':'This patch has moderate connectivity. Movement to neighbouring patches is possible but depends on the routes available through the landscape.',
+            'Low':     'This patch has low connectivity. The surrounding landscape presents significant resistance to movement between patches.',
+            'Barrier': 'This patch is surrounded by an impermeable barrier zone such as dense urban development. Unaided movement to neighbouring patches is effectively impossible.',
             'No Data': 'Connectivity data is not available for this patch.'
         };
         const metricInfo = {
@@ -618,7 +633,7 @@ map.on('idle', () => {
         let ennMsg = 'Distance data not available.';
         if (!isNaN(ennNum)) {
             if      (ennNum <= 30)   ennMsg = 'Directly adjacent to another forest area.';
-            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, within appropriate movement range for arboreal animals.';
+            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, within typical dispersal range for arboreal animals.';
             else if (ennNum <= 2000) ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, beyond typical single-generation dispersal distance for most arboreal animals.';
             else                     ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away. This patch is functionally isolated at the landscape scale.';
         }
