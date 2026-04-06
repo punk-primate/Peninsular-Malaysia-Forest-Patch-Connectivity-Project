@@ -160,8 +160,8 @@ map.on('idle', () => {
         }
     }
 
-    // ── Corridor colours — dark enough to contrast on light monochrome basemap ─
-    const CONN_COLORS = { High: '#0052cc', Moderate: '#c45c00', Low: '#b30000' };
+    // ── Corridor colours — bright, vivid, visible on any basemap ─────────────
+    const CONN_COLORS = { High: '#00e676', Moderate: '#ffab00', Low: '#ff1744' };
     let resolvedConnectorId = null;
     let corridorVisible     = false;
     let connAnimFrame       = null;
@@ -218,7 +218,7 @@ map.on('idle', () => {
                     source: connDef.source,
                     minzoom: 10,
                     layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
-                    paint:  { 'line-color': '#ffffff', 'line-width': 10, 'line-opacity': 0.7 }
+                    paint:  { 'line-color': '#ffffff', 'line-width': 11, 'line-opacity': 1.0 }
                 };
                 if (connDef['source-layer']) outlineSpec['source-layer'] = connDef['source-layer'];
                 map.addLayer(outlineSpec, resolvedConnectorId);
