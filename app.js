@@ -625,7 +625,7 @@ map.on('idle', () => {
             }
         }
 
-        let breakdownHtml = '<h5>Breakdown by visible category:</h5>';
+        let breakdownHtml = '<h5 style="margin:0 0 5px;font-size:0.9em;color:inherit">Breakdown by visible category:</h5>';
         if (features.length > 0 || currentlyCheckedTiers.length > 0) {
             currentlyCheckedTiers.forEach(tier => {
                 if (tierStats[tier]) {
