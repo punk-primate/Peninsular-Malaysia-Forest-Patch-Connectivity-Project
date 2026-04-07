@@ -417,8 +417,8 @@ map.on('idle', () => {
         try {
             const geocoder = new MapboxGeocoder({
                 accessToken: mapboxgl.accessToken, mapboxgl: mapboxgl, marker: { color: '#FF6347' },
-                placeholder: 'Search in the Klang Valley',
-                bbox: [101.0, 2.5, 102.0, 3.5], 
+                placeholder: 'Search in Kuantan',
+                bbox: [103.0, 3.5, 103.7, 4.2], 
                 proximity: { longitude: INITIAL_CENTER[0], latitude: INITIAL_CENTER[1] },
                 countries: 'MY', types: 'country,region,postcode,district,place,locality,neighborhood,address,poi', limit: 7
             });
