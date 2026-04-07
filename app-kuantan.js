@@ -635,18 +635,18 @@ map.on('idle', () => {
         const id   = properties[PATCH_ID_ATTRIBUTE];
 
         const tierDesc = {
-            'Tier 1 (Core Habitat)': 'One of the most structurally important forest patches in this landscape. Large enough to support a resident group of arboreal animals, with substantial interior area protected from edge effects.',
-            'Tier 2 (Major Stepping Stones)': 'A high-quality patch that functions as a key hub or stepping stone in the movement network. Critical for regional habitat connectivity.',
-            'Tier 3 (Connected Fragments)': 'A moderately connected forest fragment that plays a bridging role between larger patches in the landscape.',
+            'Tier 1 (Core Habitat)': 'One of the more structurally important forest patches in this landscape. Large enough to support a high level of biodiversity, with substantial interior area protected from edge effects.',
+            'Tier 2 (Major Stepping Stones)': 'A high-quality patch that could function as a key hub or stepping stone in a potential movement network. Important for regional habitat connectivity.',
+            'Tier 3 (Connected Fragments)': 'A moderately connected forest fragment that could play a bridging role between larger patches in the landscape.',
             'Tier 4 (Vulnerable Edge Fragments)': 'A patch with significant edge exposure relative to its size. Functionally important but vulnerable to further habitat loss or degradation.',
-            'Tier 5 (Isolated Fragments)': 'A small, isolated forest fragment with limited connectivity to the surrounding landscape.',
-            'Tier 6 (Isolated Micro Patches)': 'A highly isolated micro-patch or remnant forest fragment. Generally too small and disconnected to support resident populations of arboreal animals, but may provide temporary shelter.'
+            'Tier 5 (Isolated Fragments)': 'A small, isolated forest fragment with limited connectivity potential to the surrounding landscape.',
+            'Tier 6 (Isolated Micro Patches)': 'A highly isolated micro-patch or remnant forest fragment. Generally too small and disconnected to support resident populations, but may provide temporary shelter.'
         };
         const connDesc = {
-            'High':    'This patch sits within an active movement corridor. The surrounding landscape allows relatively free movement to neighbouring patches.',
-            'Moderate':'This patch has moderate connectivity. Movement to neighbouring patches is possible but depends on the routes available through the landscape.',
-            'Low':     'This patch has low connectivity. The surrounding landscape presents significant resistance to movement between patches.',
-            'Barrier': 'This patch is surrounded by an impermeable barrier zone such as dense urban development. Unaided movement to neighbouring patches is effectively impossible.',
+            'High':    'This patch has high connectivity potential. The surrounding landscape presents less barriers to movement to neighbouring patches, suitable for a corridor.',
+            'Moderate':'This patch has moderate connectivity potential. A corridor to neighbouring patches is possible but depends on the routes available through the landscape.',
+            'Low':     'This patch has low connectivity potential. The surrounding landscape presents significant resistance to movement between patches, even with a corridor in place.',
+            'Barrier': 'This patch is surrounded by an impermeable barrier zone such as dense urban development. Movement to neighbouring patches is effectively impossible, even with a corridor in place',
             'No Data': 'Connectivity data is not available for this patch.'
         };
         const metricInfo = {
@@ -750,7 +750,7 @@ map.on('idle', () => {
         if (name === TIER_ATTRIBUTE) return 'Category';
         if (name === PATCH_AREA_ATTRIBUTE) return 'Patch Area';
         if (name === CORE_AREA_ATTRIBUTE) return 'Core Area';
-        if (name === CONNECTIVITY_ATTRIBUTE) return 'Connectivity';
+        if (name === CONNECTIVITY_ATTRIBUTE) return 'Connectivity Potential';
         if (name === MEAN_FLOW_ATTRIBUTE) return 'Mean Composite Flow';
         return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
