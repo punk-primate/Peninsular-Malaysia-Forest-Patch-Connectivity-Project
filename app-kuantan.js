@@ -723,7 +723,7 @@ map.on('idle', () => {
         if (flow !== undefined && flow !== null)
             h += '<li><strong>Mean composite flow:</strong> ' + (typeof flow === 'number' ? flow.toFixed(2) : flow) + infoBtn('flow') + '</li>';
         h += '</ul>';
-        h += '<div id="metric-inline-popup" style="display:none;margin-top:8px;background:#f0f4ff;border:1px solid #c0cfe8;border-radius:4px;padding:8px 10px;font-size:0.83em;line-height:1.5;color:inherit"></div>';
+        h += '<div id="metric-inline-popup" style="display:none;margin-top:8px;background:#f0f4ff;border:1px solid #c0cfe8;border-radius:4px;padding:8px 10px;font-size:0.83em;line-height:1.5;color:#212529"></div>';
         h += '</details></div>';
         el.innerHTML = h;
 
@@ -756,10 +756,10 @@ map.on('idle', () => {
         if (!desc) return;
         metricPopup = document.createElement('div');
         metricPopup.id = 'metric-info-popup';
-        metricPopup.innerHTML = '<p style="margin:0 0 8px;font-size:0.85em">' + desc + '</p><button class="close-metric-popup-btn" style="padding:4px 10px;cursor:pointer">Close</button>';
+        metricPopup.innerHTML = '<p style="margin:0 0 8px;font-size:0.85em;color:#212529">' + desc + '</p><button class="close-metric-popup-btn" style="padding:4px 10px;cursor:pointer;color:#212529">Close</button>';
         document.body.appendChild(metricPopup);
         const r = iconElement.getBoundingClientRect();
-        metricPopup.style.cssText = 'position:fixed;top:' + (r.bottom+5) + 'px;left:' + r.left + 'px;z-index:1060;background:white;border:1px solid #ccc;padding:12px;max-width:260px;border-radius:4px;font-family:-apple-system,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.2)';
+        metricPopup.style.cssText = 'position:fixed;top:' + (r.bottom+5) + 'px;left:' + r.left + 'px;z-index:1060;background:#ffffff;color:#212529;border:1px solid #ccc;padding:12px;max-width:260px;border-radius:4px;font-family:-apple-system,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.2)';
         metricPopup.querySelector('.close-metric-popup-btn').addEventListener('click', () => { metricPopup.remove(); metricPopup = null; });
     }
 
