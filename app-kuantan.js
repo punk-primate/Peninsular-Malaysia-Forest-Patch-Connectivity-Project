@@ -231,11 +231,15 @@ map.on('idle', () => {
                 if (srcDef.tiles) tileUrl = srcDef.tiles;
             }
             if (tileUrl && srcLayer && !map.getSource('corridor-outline-src')) {
-                map.addSource('corridor-outline-src', {
-                    type: 'vector',
-                    url:   Array.isArray(tileUrl) ? undefined : tileUrl,
-                    tiles: Array.isArray(tileUrl) ? tileUrl   : undefined
-                });
+                // Build source spec with only the relevant key — passing both
+                // url and tiles (even with one undefined) causes a GL validation error
+                const srcSpec = { type: 'vector' };
+                if (Array.isArray(tileUrl)) {
+                    srcSpec.tiles = tileUrl;
+                } else {
+                    srcSpec.url = tileUrl;
+                }
+                map.addSource('corridor-outline-src', srcSpec);
                 map.addLayer({
                     id: 'connector-outline', type: 'line',
                     source: 'corridor-outline-src', 'source-layer': srcLayer,
