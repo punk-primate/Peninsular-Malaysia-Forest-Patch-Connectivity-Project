@@ -161,13 +161,13 @@ map.on('idle', () => {
     }
 
     // ── Corridor colours — maximum contrast on any basemap ────────────────────
-    const CONN_COLORS = { High: '#39ff14', Moderate: '#ffcc00', Low: '#ff6600' };
+    const CONN_COLORS = { High: '#00fffb', Moderate: '#ff00ea', Low: '#ff0011' };
     let resolvedConnectorId = null;
     let corridorVisible     = false;
     let connAnimFrame       = null;
     let connAnimStep        = 0;
     let connLastTs          = 0;
-    let connActiveFilters   = new Set(['High', 'Moderate', 'Low']);
+    let connActiveFilters   = new Set(['High potential', 'Moderate potential', 'Low potential']);
 
     const dashSeq = [
         [0,4,3],[0.5,4,2.5],[1,4,2],[1.5,4,1.5],[2,4,1],[2.5,4,0.5],[3,4,0],
