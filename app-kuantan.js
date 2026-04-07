@@ -417,8 +417,8 @@ map.on('idle', () => {
         try {
             const geocoder = new MapboxGeocoder({
                 accessToken: mapboxgl.accessToken, mapboxgl: mapboxgl, marker: { color: '#FF6347' },
-                placeholder: 'Search in Kuantan',
-                bbox: [103.0, 3.5, 103.7, 4.2], 
+                placeholder: 'Search in the Klang Valley',
+                bbox: [101.0, 2.5, 102.0, 3.5], 
                 proximity: { longitude: INITIAL_CENTER[0], latitude: INITIAL_CENTER[1] },
                 countries: 'MY', types: 'country,region,postcode,district,place,locality,neighborhood,address,poi', limit: 7
             });
@@ -625,7 +625,7 @@ map.on('idle', () => {
             }
         }
 
-        let breakdownHtml = '<h5>Breakdown by visible category:</h5>';
+        let breakdownHtml = '<h5 style="margin:0 0 5px;font-size:0.9em;color:inherit">Breakdown by visible category:</h5>';
         if (features.length > 0 || currentlyCheckedTiers.length > 0) {
             currentlyCheckedTiers.forEach(tier => {
                 if (tierStats[tier]) {
