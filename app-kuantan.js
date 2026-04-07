@@ -32,17 +32,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentMaxArea = null;
 
     map.on('load', () => {
-    // Standard initialization logic
-    // Add digital elevation terrain — patches drape naturally over real topography
-    if (!map.getSource('mapbox-dem')) {
-        map.addSource('mapbox-dem', {
-            type: 'raster-dem',
-            url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
-            tileSize: 512,
-            maxzoom: 14
-        });
+
+    // Add digital elevation terrain — wrapped in try-catch so any style
+    // conflict does not block the rest of map initialization
+    try {
+        if (!map.getSource('mapbox-dem')) {
+            map.addSource('mapbox-dem', {
+                type: 'raster-dem',
+                url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+                tileSize: 512,
+                maxzoom: 14
+            });
+        }
+        map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.8 });
+    } catch(terrainErr) {
+        console.warn('Terrain setup skipped:', terrainErr.message);
     }
-    map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.8 });
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
     initializeTierFilters();
@@ -436,15 +441,19 @@ map.on('idle', () => {
             map.once('style.load', () => {
                 loadingIndicator.style.display = 'none';
                 map.setCenter([lng, lat]); map.setZoom(zoom); map.setBearing(bearing); map.setPitch(pitch);
-                if (!map.getSource('mapbox-dem')) {
-                    map.addSource('mapbox-dem', {
-                        type: 'raster-dem',
-                        url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
-                        tileSize: 512,
-                        maxzoom: 14
-                    });
+                try {
+                    if (!map.getSource('mapbox-dem')) {
+                        map.addSource('mapbox-dem', {
+                            type: 'raster-dem',
+                            url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+                            tileSize: 512,
+                            maxzoom: 14
+                        });
+                    }
+                    map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.8 });
+                } catch(terrainErr) {
+                    console.warn('Terrain restore skipped:', terrainErr.message);
                 }
-                map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.8 });
                 
                 const patchInfoContent = document.getElementById('patch-info-content');
                 if (newStyleUrl === MAP_STYLE_CUSTOM) {
