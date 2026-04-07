@@ -160,14 +160,14 @@ map.on('idle', () => {
         }
     }
 
-     // ── Corridor colours — maximum contrast on any basemap ────────────────────
+    // ── Corridor colours — maximum contrast on any basemap ────────────────────
     const CONN_COLORS = { High: '#00fffb', Moderate: '#ff00ea', Low: '#ff0011' };
     let resolvedConnectorId = null;
     let corridorVisible     = false;
     let connAnimFrame       = null;
     let connAnimStep        = 0;
     let connLastTs          = 0;
-    let connActiveFilters   = new Set(['High potential', 'Moderate potential', 'Low potential']);
+    let connActiveFilters   = new Set(['High', 'Moderate', 'Low']);
 
     const dashSeq = [
         [0,4,3],[0.5,4,2.5],[1,4,2],[1.5,4,1.5],[2,4,1],[2.5,4,0.5],[3,4,0],
@@ -204,8 +204,14 @@ map.on('idle', () => {
             return;
         }
 
-        // Hide on load
+        // Hide on load — hide both the main layer and the Studio outline duplicate if present
         map.setLayoutProperty(resolvedConnectorId, 'visibility', 'none');
+        const studioOutlineId = resolvedConnectorId.replace('Connectors', 'Connectors_outline')
+                                                    .replace('connectors', 'connectors_outline');
+        if (map.getLayer(studioOutlineId)) {
+            map.setLayoutProperty(studioOutlineId, 'visibility', 'none');
+            console.log('Studio outline layer found and hidden:', studioOutlineId);
+        }
 
         // Add a white outline using a fresh registered source so GL v3 scoping cannot block it.
         try {
@@ -249,6 +255,7 @@ map.on('idle', () => {
         map.setPaintProperty(resolvedConnectorId, 'line-color', lineColor);
         map.setPaintProperty(resolvedConnectorId, 'line-width', 7);
         map.setPaintProperty(resolvedConnectorId, 'line-opacity', 1.0);
+        map.setPaintProperty(resolvedConnectorId, 'line-blur', 0.8); // soft glow makes colours pop
 
         // Level toggle buttons
         ['High', 'Moderate', 'Low'].forEach(level => {
@@ -300,6 +307,9 @@ map.on('idle', () => {
                 map.setLayoutProperty(resolvedConnectorId, 'visibility', corridorVisible ? 'visible' : 'none');
                 if (map.getLayer('connector-outline')) {
                     map.setLayoutProperty('connector-outline', 'visibility', corridorVisible ? 'visible' : 'none');
+                }
+                if (map.getLayer(studioOutlineId)) {
+                    map.setLayoutProperty(studioOutlineId, 'visibility', corridorVisible ? 'visible' : 'none');
                 }
                 if (levelPanel) levelPanel.style.display = corridorVisible ? 'flex' : 'none';
                 if (corridorVisible) {
@@ -634,7 +644,7 @@ map.on('idle', () => {
         const flow = properties[MEAN_FLOW_ATTRIBUTE];
         const id   = properties[PATCH_ID_ATTRIBUTE];
 
-         const tierDesc = {
+        const tierDesc = {
             'Tier 1 (Core Habitat)': 'One of the more structurally important forest patches in this landscape. Large enough to support a high level of biodiversity, with substantial interior area protected from edge effects.',
             'Tier 2 (Major Stepping Stones)': 'A high-quality patch that could function as a key hub or stepping stone in a potential movement network. Important for regional habitat connectivity.',
             'Tier 3 (Connected Fragments)': 'A moderately connected forest fragment that could play a bridging role between larger patches in the landscape.',
@@ -657,7 +667,7 @@ map.on('idle', () => {
             enn:    'The straight-line distance to the nearest adjacent forest patch, in metres. Lower values indicate the patch is closer to other forest and more likely to be reached by dispersing animals.',
             flow:   'The mean composite current flow value across all resistance scenarios and spatial scales, on a 0 to 300 scale. Higher values indicate the patch carries more movement current and is more central to the regional connectivity network.'
         };
-        
+
         const ennNum = typeof enn === 'number' ? enn : parseFloat(enn);
         let ennMsg = 'Distance data not available.';
         if (!isNaN(ennNum)) {
