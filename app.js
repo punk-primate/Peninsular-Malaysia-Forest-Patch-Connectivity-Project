@@ -160,8 +160,8 @@ map.on('idle', () => {
         }
     }
 
-    // ── Corridor colours — bright, vivid, visible on any basemap ─────────────
-    const CONN_COLORS = { High: '#00e676', Moderate: '#ffab00', Low: '#ff1744' };
+    // ── Corridor colours — maximum contrast on any basemap ────────────────────
+    const CONN_COLORS = { High: '#39ff14', Moderate: '#ffcc00', Low: '#ff6600' };
     let resolvedConnectorId = null;
     let corridorVisible     = false;
     let connAnimFrame       = null;
@@ -204,69 +204,50 @@ map.on('idle', () => {
             return;
         }
 
-        // Hide on load — always, regardless of Studio default
+        // Hide on load
         map.setLayoutProperty(resolvedConnectorId, 'visibility', 'none');
 
-        // Add a white outline layer behind the corridors to lift them off any basemap
+        // Add a white outline using a fresh registered source so GL v3 scoping cannot block it.
         try {
-            const style   = map.getStyle();
-            const connDef = style.layers.find(l => l.id === resolvedConnectorId);
-            if (connDef && connDef.source && !map.getLayer('connector-outline')) {
-                const outlineSpec = {
-                    id:     'connector-outline',
-                    type:   'line',
-                    source: connDef.source,
+            const styleDef  = map.getStyle();
+            const connLayer = styleDef.layers.find(l => l.id === resolvedConnectorId);
+            const srcName   = connLayer && connLayer.source;
+            const srcLayer  = connLayer && connLayer['source-layer'];
+            const srcDef    = srcName && styleDef.sources[srcName];
+            let tileUrl = null;
+            if (srcDef) {
+                if (srcDef.url)   tileUrl = srcDef.url;
+                if (srcDef.tiles) tileUrl = srcDef.tiles;
+            }
+            if (tileUrl && srcLayer && !map.getSource('corridor-outline-src')) {
+                map.addSource('corridor-outline-src', {
+                    type: 'vector',
+                    url:   Array.isArray(tileUrl) ? undefined : tileUrl,
+                    tiles: Array.isArray(tileUrl) ? tileUrl   : undefined
+                });
+                map.addLayer({
+                    id: 'connector-outline', type: 'line',
+                    source: 'corridor-outline-src', 'source-layer': srcLayer,
                     minzoom: 10,
                     layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
-                    paint:  { 'line-color': '#ffffff', 'line-width': 11, 'line-opacity': 1.0 }
-                };
-                if (connDef['source-layer']) outlineSpec['source-layer'] = connDef['source-layer'];
-                map.addLayer(outlineSpec, resolvedConnectorId);
-                console.log('Corridor outline layer added successfully');
+                    paint:  { 'line-color': '#ffffff', 'line-width': 13, 'line-opacity': 1.0 }
+                }, resolvedConnectorId);
+                console.log('Corridor outline added via fresh source');
+            } else {
+                console.warn('Outline source info missing — srcLayer:', srcLayer, 'tileUrl:', tileUrl);
             }
-            // Wide invisible touch target layer for mobile — 24px transparent line
-            if (connDef && connDef.source && !map.getLayer('connector-touch')) {
-                const touchSpec = {
-                    id:     'connector-touch',
-                    type:   'line',
-                    source: connDef.source,
-                    minzoom: 10,
-                    layout: { 'visibility': 'none' },
-                    paint:  { 'line-color': 'transparent', 'line-width': 24, 'line-opacity': 0 }
-                };
-                if (connDef['source-layer']) touchSpec['source-layer'] = connDef['source-layer'];
-                map.addLayer(touchSpec);
-                // Route touch layer events to the same handlers
-                map.on('click', 'connector-touch', (e) => {
-                    if (!e.features || !e.features.length) return;
-                    const f = e.features[0].properties;
-                    const el = document.getElementById('patch-info-content');
-                    if (el) {
-                        el.innerHTML = '<div style="padding:4px"><strong>Potential movement corridor</strong><br><br>' +
-                            '<strong>Gap to nearest patch:</strong> ' + f.gap_m + ' m<br>' +
-                            '<strong>Connectivity:</strong> ' + f.connectivity + '<br>' +
-                            '<strong>Source patch area:</strong> ' + f.area_ha + ' ha<br>' +
-                            '<strong>Mean composite flow:</strong> ' + f.mean_flow + '<br><br>' +
-                            '<em>' + (f.crossing_note || '') + '</em></div>';
-                    }
-                    const sidebar = document.getElementById('sidebar');
-                    if (sidebar && sidebar.classList.contains('collapsed')) document.getElementById('toggle-sidebar-btn').click();
-                    const infoPanel = document.getElementById('info-panel-section');
-                    if (infoPanel) setTimeout(() => infoPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-                });
-            }
-        } catch(e) {
-            console.warn('Could not add corridor outline layer:', e.message);
+        } catch(err) {
+            console.warn('Corridor outline setup failed:', err.message);
         }
 
-        // Main corridor line — dark saturated colours, 5px thick
+        // Main corridor line — neon colours, 7px, on top of white outline
         const lineColor = ['match', ['get', 'connectivity'],
             'High',     CONN_COLORS.High,
             'Moderate', CONN_COLORS.Moderate,
             'Low',      CONN_COLORS.Low,
-            '#555555'];
+            '#ffffff'];
         map.setPaintProperty(resolvedConnectorId, 'line-color', lineColor);
-        map.setPaintProperty(resolvedConnectorId, 'line-width', 5);
+        map.setPaintProperty(resolvedConnectorId, 'line-width', 7);
         map.setPaintProperty(resolvedConnectorId, 'line-opacity', 1.0);
 
         // Level toggle buttons
@@ -319,9 +300,6 @@ map.on('idle', () => {
                 map.setLayoutProperty(resolvedConnectorId, 'visibility', corridorVisible ? 'visible' : 'none');
                 if (map.getLayer('connector-outline')) {
                     map.setLayoutProperty('connector-outline', 'visibility', corridorVisible ? 'visible' : 'none');
-                }
-                if (map.getLayer('connector-touch')) {
-                    map.setLayoutProperty('connector-touch', 'visibility', corridorVisible ? 'visible' : 'none');
                 }
                 if (levelPanel) levelPanel.style.display = corridorVisible ? 'flex' : 'none';
                 if (corridorVisible) {
