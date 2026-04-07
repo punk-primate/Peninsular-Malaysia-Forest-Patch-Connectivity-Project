@@ -167,7 +167,7 @@ map.on('idle', () => {
     let connAnimFrame       = null;
     let connAnimStep        = 0;
     let connLastTs          = 0;
-    let connActiveFilters   = new Set(['High potential', 'Moderate potential', 'Low potential']);
+    let connActiveFilters   = new Set(['High', 'Moderate', 'Low']);
 
     const dashSeq = [
         [0,4,3],[0.5,4,2.5],[1,4,2],[1.5,4,1.5],[2,4,1],[2.5,4,0.5],[3,4,0],
@@ -204,8 +204,14 @@ map.on('idle', () => {
             return;
         }
 
-        // Hide on load
+        // Hide on load — hide both the main layer and the Studio outline duplicate if present
         map.setLayoutProperty(resolvedConnectorId, 'visibility', 'none');
+        const studioOutlineId = resolvedConnectorId.replace('Connectors', 'Connectors_outline')
+                                                    .replace('connectors', 'connectors_outline');
+        if (map.getLayer(studioOutlineId)) {
+            map.setLayoutProperty(studioOutlineId, 'visibility', 'none');
+            console.log('Studio outline layer found and hidden:', studioOutlineId);
+        }
 
         // Add a white outline using a fresh registered source so GL v3 scoping cannot block it.
         try {
@@ -249,6 +255,7 @@ map.on('idle', () => {
         map.setPaintProperty(resolvedConnectorId, 'line-color', lineColor);
         map.setPaintProperty(resolvedConnectorId, 'line-width', 7);
         map.setPaintProperty(resolvedConnectorId, 'line-opacity', 1.0);
+        map.setPaintProperty(resolvedConnectorId, 'line-blur', 0.8); // soft glow makes colours pop
 
         // Level toggle buttons
         ['High', 'Moderate', 'Low'].forEach(level => {
@@ -300,6 +307,9 @@ map.on('idle', () => {
                 map.setLayoutProperty(resolvedConnectorId, 'visibility', corridorVisible ? 'visible' : 'none');
                 if (map.getLayer('connector-outline')) {
                     map.setLayoutProperty('connector-outline', 'visibility', corridorVisible ? 'visible' : 'none');
+                }
+                if (map.getLayer(studioOutlineId)) {
+                    map.setLayoutProperty(studioOutlineId, 'visibility', corridorVisible ? 'visible' : 'none');
                 }
                 if (levelPanel) levelPanel.style.display = corridorVisible ? 'flex' : 'none';
                 if (corridorVisible) {
