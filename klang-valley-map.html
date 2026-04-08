@@ -382,10 +382,46 @@
                     </div>
                 </div>
                 <a href="index.html" id="home-btn" title="Back to home">🏠</a>
+                <button id="copy-link-btn" title="Copy link to this view" style="background:none;border:1px solid #ccc;border-radius:5px;padding:5px 9px;font-size:12px;font-weight:600;cursor:pointer;color:#333;transition:background 0.15s">🔗 Share</button>
             </div>
 
             <div id="zoom-warning">
                 [ SYSTEM NOTICE ]<br>ZOOM IN TO VIEW FOREST PATCHES
+            </div>
+
+            <!-- Corridor tier filter — only shown if connector layer has Tier data -->
+            <div id="corridor-tier-filter" style="display:none;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(255,255,255,0.97);border-radius:8px;padding:7px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.18);gap:6px;align-items:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;white-space:nowrap">
+                <span style="font-weight:600;color:#555;margin-right:4px">Show corridors for:</span>
+                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 1 (Core Habitat)">T1</button>
+                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 2 (Major Stepping Stones)">T2</button>
+                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 3 (Connected Fragments)">T3</button>
+                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 4 (Vulnerable Edge Fragments)">T4</button>
+                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 5 (Isolated Fragments)">T5</button>
+                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 6 (Isolated Micro Patches)">T6</button>
+            </div>
+
+            <!-- First-visit onboarding overlay -->
+            <div id="onboarding-overlay" style="display:none;position:absolute;inset:0;z-index:999;background:rgba(0,0,0,0.72);align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+                <div style="background:white;border-radius:12px;padding:32px 36px;max-width:420px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,0.35);text-align:center">
+                    <div style="font-size:2em;margin-bottom:12px">🌿</div>
+                    <h2 style="margin:0 0 8px;font-size:1.2em;color:#1a2e1a">Welcome to the Forest Patch Connectivity Map</h2>
+                    <p style="margin:0 0 20px;font-size:0.9em;color:#555;line-height:1.6">Here are three things to get you started:</p>
+                    <div style="text-align:left;margin-bottom:24px">
+                        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
+                            <span style="background:#2a8234;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">1</span>
+                            <p style="margin:0;font-size:0.88em;color:#333;line-height:1.5"><strong>Zoom into the map</strong> until green forest patches appear, then click any patch to see its conservation tier and connectivity rating.</p>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
+                            <span style="background:#2a8234;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">2</span>
+                            <p style="margin:0;font-size:0.88em;color:#333;line-height:1.5"><strong>Toggle potential movement corridors</strong> using the "Show corridors" button at the top of the map.</p>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:12px">
+                            <span style="background:#2a8234;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">3</span>
+                            <p style="margin:0;font-size:0.88em;color:#333;line-height:1.5"><strong>Right-click and drag</strong> to tilt the map and view forest patches across the real terrain in 3D.</p>
+                        </div>
+                    </div>
+                    <button id="onboarding-dismiss" style="background:#2a8234;color:white;border:none;border-radius:6px;padding:10px 28px;font-size:0.95em;font-weight:600;cursor:pointer;font-family:inherit;transition:background 0.15s" onmouseover="this.style.background='#1e6b27'" onmouseout="this.style.background='#2a8234'">Get started</button>
+                </div>
             </div>
 
             <div id="loading-indicator">
