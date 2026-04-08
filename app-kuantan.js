@@ -77,15 +77,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Update the idle listener to hide the terminal loader
+    // ── Debounce helper ───────────────────────────────────────────────────────
+    function debounce(fn, ms) {
+        let timer = null;
+        return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+    }
+    const debouncedUpdateStats = debounce(updateSummaryStatistics, 500);
+
 map.on('idle', () => {
     const loadingIndicator = document.getElementById('loading-indicator');
     if (loadingIndicator) {
-        // Slight delay so the user can actually read the "boot sequence"
-        setTimeout(() => {
-            loadingIndicator.style.display = 'none';
-        }, 1200);
+        setTimeout(() => { loadingIndicator.style.display = 'none'; }, 1200);
     }
-    updateSummaryStatistics();
+    debouncedUpdateStats();
 });
     map.on('error', (e) => {
         console.error('Mapbox GL Error:', e);
@@ -280,6 +284,51 @@ map.on('idle', () => {
             });
         });
 
+        // Tier filter for corridors — show only corridors involving specific tiers
+        // Only activates if connector features carry a Tier property
+        const tierFilterPanel = document.getElementById('corridor-tier-filter');
+        if (tierFilterPanel) {
+            // Probe a rendered feature to see if Tier data is present
+            setTimeout(() => {
+                try {
+                    const sample = map.queryRenderedFeatures({ layers: [resolvedConnectorId] });
+                    if (sample.length > 0 && sample[0].properties && sample[0].properties[TIER_ATTRIBUTE]) {
+                        tierFilterPanel.style.display = 'flex';
+                    }
+                } catch(e) {}
+            }, 2000);
+
+            document.querySelectorAll('.corr-tier-btn').forEach(btn => {
+                btn.classList.add('active');
+                btn.addEventListener('click', () => {
+                    btn.classList.toggle('active');
+                    applyCorridorTierFilter();
+                });
+            });
+        }
+
+        function applyCorridorTierFilter() {
+            if (!resolvedConnectorId || !map.getLayer(resolvedConnectorId)) return;
+            const activeTiers = Array.from(document.querySelectorAll('.corr-tier-btn.active'))
+                .map(b => b.dataset.tier);
+            const activeConn  = Array.from(connActiveFilters);
+            const filters = [];
+            if (activeTiers.length > 0 && activeTiers.length < 6) {
+                filters.push(['match', ['get', TIER_ATTRIBUTE], activeTiers, true, false]);
+            }
+            if (activeConn.length === 0) {
+                filters.push(['==', ['get', 'connectivity'], '__none__']);
+            } else if (activeConn.length < 3) {
+                filters.push(['match', ['get', 'connectivity'], activeConn, true, false]);
+            }
+            map.setFilter(resolvedConnectorId, filters.length ? ['all', ...filters] : null);
+        }
+
+        // Override applyConnectorFilter to also respect tier filter
+        applyConnectorFilter = function() {
+            applyCorridorTierFilter();
+        };
+
         // Hover popup
         const connPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'custom-hover-popup' });
         map.on('mousemove', resolvedConnectorId, (e) => {
@@ -360,15 +409,29 @@ map.on('idle', () => {
         const hoverPopup = new mapboxgl.Popup({
             closeButton: false, closeOnClick: false, className: 'custom-hover-popup'
         });
+        let hoveredId = null;
+
         map.on('mousemove', resolvedPatchId, (e) => {
             if (e.features && e.features.length > 0) {
                 map.getCanvas().style.cursor = 'pointer';
-                const p = e.features[0].properties;
-                const tierName = p[TIER_ATTRIBUTE] || 'Forest patch';
-                const conn     = p[CONNECTIVITY_ATTRIBUTE];
+                const p   = e.features[0].properties;
+                const id  = p[PATCH_ID_ATTRIBUTE];
+
+                // Highlight hovered patch by dimming others
+                if (id !== hoveredId) {
+                    hoveredId = id;
+                    try {
+                        map.setPaintProperty(resolvedPatchId, 'fill-opacity', [
+                            'case', ['==', ['get', PATCH_ID_ATTRIBUTE], id], 1.0, 0.55
+                        ]);
+                    } catch(err) {}
+                }
+
+                const tierName  = p[TIER_ATTRIBUTE] || 'Forest patch';
+                const conn      = p[CONNECTIVITY_ATTRIBUTE];
                 const connColor = (typeof CONNECTIVITY_COLORS !== 'undefined' && CONNECTIVITY_COLORS[conn])
                     ? CONNECTIVITY_COLORS[conn] : null;
-                const connText = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#fff';
+                const connText  = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#fff';
                 const connBadge = connColor
                     ? `<br><span style="display:inline-block;margin-top:3px;padding:1px 7px;border-radius:3px;background:${connColor};color:${connText};font-size:0.85em;font-weight:bold">${conn}</span>`
                     : '';
@@ -377,8 +440,11 @@ map.on('idle', () => {
                     .addTo(map);
             }
         });
+
         map.on('mouseleave', resolvedPatchId, () => {
             map.getCanvas().style.cursor = '';
+            hoveredId = null;
+            try { map.setPaintProperty(resolvedPatchId, 'fill-opacity', 1.0); } catch(err) {}
             hoverPopup.remove();
         });
     }
@@ -555,9 +621,9 @@ map.on('idle', () => {
             // Apply the filter to the map
             map.setFilter(resolvedPatchId, combinedFilterExpression);
             
-            // Immediately force the summary stats to update so they match the screen
-            if (typeof updateSummaryStatistics === 'function') {
-                setTimeout(updateSummaryStatistics, 100); 
+            // Debounced stats update so rapid filter changes don't thrash
+            if (typeof debouncedUpdateStats === 'function') {
+                debouncedUpdateStats();
             }
         } catch (error) { 
             console.error(`DEBUG: Error applying combined filter:`, error); 
@@ -869,4 +935,60 @@ map.on('idle', () => {
     } else {
         console.error("Sidebar toggle elements not found: #toggle-sidebar-btn, #sidebar, or #app-container.");
     }
+
+    // ── Shareable URL hash ────────────────────────────────────────────────────
+    // Encodes zoom/lat/lng into the URL so a link opens the map at the same view.
+    function updateUrlHash() {
+        const c    = map.getCenter();
+        const hash = map.getZoom().toFixed(2) + '/' + c.lat.toFixed(5) + '/' + c.lng.toFixed(5);
+        history.replaceState(null, '', '#' + hash);
+    }
+
+    function applyUrlHash() {
+        const hash = window.location.hash.slice(1);
+        if (!hash) return;
+        const parts = hash.split('/');
+        if (parts.length >= 3) {
+            const zoom = parseFloat(parts[0]);
+            const lat  = parseFloat(parts[1]);
+            const lng  = parseFloat(parts[2]);
+            if (!isNaN(zoom) && !isNaN(lat) && !isNaN(lng)) {
+                map.jumpTo({ center: [lng, lat], zoom });
+            }
+        }
+    }
+
+    map.on('load', applyUrlHash);
+    map.on('moveend', updateUrlHash);
+
+    // Copy link button
+    const copyLinkBtn = document.getElementById('copy-link-btn');
+    if (copyLinkBtn) {
+        copyLinkBtn.addEventListener('click', () => {
+            updateUrlHash();
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                const orig = copyLinkBtn.textContent;
+                copyLinkBtn.textContent = 'Copied!';
+                setTimeout(() => { copyLinkBtn.textContent = orig; }, 2000);
+            }).catch(() => {
+                // Fallback for browsers that block clipboard
+                prompt('Copy this link:', window.location.href);
+            });
+        });
+    }
+
+    // ── First-visit onboarding ────────────────────────────────────────────────
+    function initializeOnboarding() {
+        if (localStorage.getItem('hasVisited') === '1') return;
+        const overlay = document.getElementById('onboarding-overlay');
+        if (!overlay) return;
+        overlay.style.display = 'flex';
+        document.getElementById('onboarding-dismiss').addEventListener('click', () => {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => { overlay.style.display = 'none'; }, 300);
+            localStorage.setItem('hasVisited', '1');
+        });
+    }
+    initializeOnboarding();
 }); // End DOMContentLoaded
