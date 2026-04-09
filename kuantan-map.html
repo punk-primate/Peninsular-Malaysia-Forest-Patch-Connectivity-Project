@@ -402,11 +402,9 @@
 
             <!-- First-visit onboarding overlay -->
             <div id="onboarding-overlay" style="display:none;position:absolute;inset:0;z-index:999;background:rgba(0,0,0,0.72);align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
-                <div style="background:white;border-radius:12px;padding:32px 36px;max-width:420px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,0.35);text-align:center">
-                    <div style="font-size:2em;margin-bottom:12px">🌿</div>
-                    <h2 style="margin:0 0 8px;font-size:1.2em;color:#1a2e1a">Welcome to the Forest Patch Connectivity Map</h2>
-                    <p style="margin:0 0 20px;font-size:0.9em;color:#555;line-height:1.6">Here are three things to get you started:</p>
-                    <div style="text-align:left;margin-bottom:24px">
+                <div style="background:white;border-radius:12px;padding:32px 36px;max-width:420px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,0.35)">
+                    <h2 style="margin:0 0 20px;font-size:1.1em;color:#1a2e1a">Getting started</h2>
+                    <div style="margin-bottom:24px">
                         <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
                             <span style="background:#2a8234;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">1</span>
                             <p style="margin:0;font-size:0.88em;color:#333;line-height:1.5"><strong>Zoom into the map</strong> until green forest patches appear, then click any patch to see its conservation tier and connectivity rating.</p>
@@ -417,10 +415,10 @@
                         </div>
                         <div style="display:flex;align-items:flex-start;gap:12px">
                             <span style="background:#2a8234;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">3</span>
-                            <p style="margin:0;font-size:0.88em;color:#333;line-height:1.5"><strong>Right-click and drag</strong> to tilt the map and view forest patches across the real terrain in 3D.</p>
+                            <p style="margin:0;font-size:0.88em;color:#333;line-height:1.5">To see full technical details, click the <strong>How to use this map</strong> button in the top panel.</p>
                         </div>
                     </div>
-                    <button id="onboarding-dismiss" style="background:#2a8234;color:white;border:none;border-radius:6px;padding:10px 28px;font-size:0.95em;font-weight:600;cursor:pointer;font-family:inherit;transition:background 0.15s" onmouseover="this.style.background='#1e6b27'" onmouseout="this.style.background='#2a8234'">Get started</button>
+                    <button id="onboarding-dismiss" style="background:#2a8234;color:white;border:none;border-radius:6px;padding:10px 28px;font-size:0.95em;font-weight:600;cursor:pointer;font-family:inherit;width:100%" onmouseover="this.style.background='#1e6b27'" onmouseout="this.style.background='#2a8234'">Get started</button>
                 </div>
             </div>
 
@@ -474,6 +472,9 @@
 
             <h3>Potential movement corridors</h3>
             <p>Click "Show corridors" to reveal lines connecting forest patches to their nearest neighbours. Each line is coloured by connectivity level. Use the High, Moderate, and Low buttons to toggle each level on or off. Click any corridor line to see details in the sidebar.</p>
+
+            <h3>Sharing a specific view</h3>
+            <p>The URL in your browser updates automatically as you pan and zoom to encode the current map position. Use the 🔗 Share button in the top bar to copy the link directly to your clipboard. Anyone opening that link will see the map at exactly the same location and zoom level.</p>
 
             <h3>Filtering patches</h3>
             <p>Use the "Filter by patch area" tool in the sidebar to show only patches above or below a certain size in hectares. This can help you focus on large core habitats or identify which smaller patches are most at risk.</p>
