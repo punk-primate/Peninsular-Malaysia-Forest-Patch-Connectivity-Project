@@ -170,7 +170,7 @@ map.on('idle', () => {
     }
 
     // ── Corridor colours — maximum contrast on any basemap ────────────────────
-    const CONN_COLORS = { High: '#00fffb', Moderate: '#ff00ea', Low: '#ff0011' };
+    const CONN_COLORS = { High: '#00fffb', Moderate: '#9600d1', Low: '#ed7700' };
     let resolvedConnectorId = null;
     let corridorVisible     = false;
     let connAnimFrame       = null;
