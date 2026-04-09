@@ -409,24 +409,11 @@ map.on('idle', () => {
         const hoverPopup = new mapboxgl.Popup({
             closeButton: false, closeOnClick: false, className: 'custom-hover-popup'
         });
-        let hoveredId = null;
 
         map.on('mousemove', resolvedPatchId, (e) => {
             if (e.features && e.features.length > 0) {
                 map.getCanvas().style.cursor = 'pointer';
-                const p   = e.features[0].properties;
-                const id  = p[PATCH_ID_ATTRIBUTE];
-
-                // Highlight hovered patch by dimming others
-                if (id !== hoveredId) {
-                    hoveredId = id;
-                    try {
-                        map.setPaintProperty(resolvedPatchId, 'fill-opacity', [
-                            'case', ['==', ['get', PATCH_ID_ATTRIBUTE], id], 1.0, 0.55
-                        ]);
-                    } catch(err) {}
-                }
-
+                const p         = e.features[0].properties;
                 const tierName  = p[TIER_ATTRIBUTE] || 'Forest patch';
                 const conn      = p[CONNECTIVITY_ATTRIBUTE];
                 const connColor = (typeof CONNECTIVITY_COLORS !== 'undefined' && CONNECTIVITY_COLORS[conn])
@@ -443,8 +430,6 @@ map.on('idle', () => {
 
         map.on('mouseleave', resolvedPatchId, () => {
             map.getCanvas().style.cursor = '';
-            hoveredId = null;
-            try { map.setPaintProperty(resolvedPatchId, 'fill-opacity', 1.0); } catch(err) {}
             hoverPopup.remove();
         });
     }
