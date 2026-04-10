@@ -170,7 +170,7 @@ map.on('idle', () => {
     }
 
     // ── Corridor colours — maximum contrast on any basemap ────────────────────
-    const CONN_COLORS = { High: '#00fffb', Moderate: '#9600d1', Low: '#ed7700' };
+    const CONN_COLORS = { High: '#00fffb', Moderate: '#ff00ea', Low: '#ff0011' };
     let resolvedConnectorId = null;
     let corridorVisible     = false;
     let connAnimFrame       = null;
@@ -459,24 +459,123 @@ map.on('idle', () => {
     }
 
     function initializeGeocoder() {
-        console.log("DEBUG GEOCODER: initializeGeocoder() function EXECUTED.");
-        const geocoderContainer = document.getElementById('search-geocoder-container');
-        if (!geocoderContainer) { console.error("DEBUG GEOCODER: Geocoder container NOT FOUND!"); return; }
-        if (typeof MapboxGeocoder === 'undefined') {
-            console.error("CRITICAL DEBUG GEOCODER: MapboxGeocoder class is UNDEFINED."); return;
+        const container = document.getElementById('search-geocoder-container');
+        if (!container) return;
+
+        // ── Build custom Nominatim search UI ─────────────────────────────────
+        container.innerHTML = `
+            <div id="nominatim-search" style="position:relative;margin-bottom:8px">
+                <input
+                    id="nominatim-input"
+                    type="text"
+                    placeholder="Search for a place..."
+                    autocomplete="off"
+                    style="width:100%;padding:7px 30px 7px 9px;border:1px solid #ced4da;border-radius:4px;
+                           box-sizing:border-box;font-size:0.87em;color:#212529;background:white;
+                           font-family:inherit;transition:border-color 0.15s;outline:none"
+                    onfocus="this.style.borderColor='#2a8234'"
+                    onblur="this.style.borderColor='#ced4da'"
+                />
+                <span id="nominatim-clear"
+                    style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);
+                           cursor:pointer;color:#aaa;font-size:14px;line-height:1;user-select:none">&#215;</span>
+                <div id="nominatim-results"
+                    style="display:none;position:absolute;top:100%;left:0;right:0;z-index:1000;
+                           background:white;border:1px solid #ced4da;border-top:none;border-radius:0 0 4px 4px;
+                           max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+                </div>
+            </div>`;
+
+        const input   = document.getElementById('nominatim-input');
+        const results = document.getElementById('nominatim-results');
+        const clear   = document.getElementById('nominatim-clear');
+
+        let debounceTimer = null;
+        let lastQuery     = '';
+
+        // Dark mode styling
+        function applyDarkMode() {
+            const dark = document.body.classList.contains('dark-mode');
+            input.style.background   = dark ? '#1e3020' : 'white';
+            input.style.color        = dark ? '#dcedc8' : '#212529';
+            input.style.borderColor  = dark ? '#2c3a2c' : '#ced4da';
+            results.style.background = dark ? '#1e3020' : 'white';
+            results.style.borderColor = dark ? '#2c3a2c' : '#ced4da';
         }
-        try {
-            const geocoder = new MapboxGeocoder({
-                accessToken: mapboxgl.accessToken, mapboxgl: mapboxgl, marker: { color: '#FF6347' },
-                placeholder: 'Search in Kuantan',
-                bbox: [103.0, 3.5, 103.7, 4.2], 
-                proximity: { longitude: INITIAL_CENTER[0], latitude: INITIAL_CENTER[1] },
-                countries: 'MY', types: 'country,region,postcode,district,place,locality,neighborhood,address,poi', limit: 7
+        applyDarkMode();
+        const dmBtn = document.getElementById('dark-mode-toggle');
+        if (dmBtn) dmBtn.addEventListener('click', () => setTimeout(applyDarkMode, 50));
+
+        function showResults(items) {
+            results.innerHTML = '';
+            if (!items.length) {
+                results.innerHTML = '<div style="padding:8px 10px;font-size:0.85em;color:#888">No results found</div>';
+                results.style.display = 'block';
+                return;
+            }
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.style.cssText = 'padding:8px 10px;font-size:0.85em;cursor:pointer;border-bottom:1px solid #f0f0f0;line-height:1.4';
+                div.textContent = item.display_name;
+                div.addEventListener('mouseenter', () => div.style.background = '#f0f7f0');
+                div.addEventListener('mouseleave', () => div.style.background = '');
+                div.addEventListener('click', () => {
+                    input.value = item.display_name.split(',')[0];
+                    results.style.display = 'none';
+                    clear.style.display = 'inline';
+                    const lat = parseFloat(item.lat);
+                    const lng = parseFloat(item.lon);
+                    map.flyTo({ center: [lng, lat], zoom: 14, duration: 1000 });
+                    // Drop a marker
+                    if (window._nominatimMarker) window._nominatimMarker.remove();
+                    window._nominatimMarker = new mapboxgl.Marker({ color: '#2a8234' })
+                        .setLngLat([lng, lat])
+                        .addTo(map);
+                });
+                results.appendChild(div);
             });
-            geocoderContainer.innerHTML = '';
-            geocoderContainer.appendChild(geocoder.onAdd(map));
-            geocoder.on('error', (e) => { console.error("DEBUG GEOCODER: Error:", e.error ? e.error.message : e); });
-        } catch (error) { console.error("CRITICAL GEOCODER INIT ERROR:", error); }
+            results.style.display = 'block';
+        }
+
+        function search(q) {
+            if (q.length < 3) { results.style.display = 'none'; return; }
+            if (q === lastQuery) return;
+            lastQuery = q;
+
+            // Bias results to Malaysia using countrycodes and viewbox
+            const bbox = INITIAL_CENTER[0] > 103
+                ? '102.8,3.4,103.8,4.3'   // Kuantan
+                : '100.8,2.6,102.2,3.6';   // Klang Valley
+
+            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=7&countrycodes=my&viewbox=${bbox}&bounded=0&addressdetails=0`;
+
+            fetch(url, { headers: { 'Accept-Language': 'en', 'User-Agent': 'myforestconnect.online' } })
+                .then(r => r.json())
+                .then(data => { if (input.value.trim() === q) showResults(data); })
+                .catch(() => { results.style.display = 'none'; });
+        }
+
+        input.addEventListener('input', () => {
+            const q = input.value.trim();
+            clear.style.display = q ? 'inline' : 'none';
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => search(q), 350);
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { results.style.display = 'none'; input.blur(); }
+        });
+
+        clear.addEventListener('click', () => {
+            input.value = '';
+            clear.style.display = 'none';
+            results.style.display = 'none';
+            if (window._nominatimMarker) { window._nominatimMarker.remove(); window._nominatimMarker = null; }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!container.contains(e.target)) results.style.display = 'none';
+        });
     }
     
     function initializeBasemapToggle() {
