@@ -73,6 +73,40 @@ map.on('idle', () => {
     }
     updateSummaryStatistics();
 });
+    // ── Neutralise basemap land cover colours ─────────────────────────────────
+    // Studio edits to land cover don't propagate when the style is built on
+    // Mapbox Standard (v3 import fragments). setPaintProperty at runtime
+    // overrides the browser renderer directly, bypassing tile CDN cache.
+    // Runs once after first idle so all layers are registered and resolvedPatchId
+    // has been set by resolvePatchLayerId().
+    map.once('idle', () => {
+        const LAND_NEUTRAL = '#f2d8a2';
+        const style = map.getStyle();
+        if (!style || !style.layers) return;
+        style.layers.forEach(layer => {
+            if (layer.type !== 'fill') return;
+            const id = layer.id;
+            if (id === resolvedPatchId) return;
+            const low = id.toLowerCase();
+            if (low.includes('water')     || low.includes('ocean')   ||
+                low.includes('river')     || low.includes('lake')    ||
+                low.includes('road')      || low.includes('street')  ||
+                low.includes('highway')   || low.includes('rail')    ||
+                low.includes('building')  || low.includes('tunnel')  ||
+                low.includes('bridge')    || low.includes('connector') ||
+                low.includes('patch')     || low.includes('forest')  ||
+                low.includes('klang')     || low.includes('kuantan') ||
+                low.includes('boundary')  || low.includes('admin')) return;
+            try {
+                map.setPaintProperty(id, 'fill-color', LAND_NEUTRAL);
+                map.setPaintProperty(id, 'fill-opacity', 1);
+                console.log('[land-override] Applied to:', id);
+            } catch(e) {
+                console.warn('[land-override] Skipped:', id, '-', e.message);
+            }
+        });
+    });
+
     map.on('error', (e) => {
         console.error('Mapbox GL Error:', e);
         if (loadingIndicator) {
