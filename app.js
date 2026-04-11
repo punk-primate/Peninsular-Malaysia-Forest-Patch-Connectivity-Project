@@ -86,7 +86,6 @@ map.on('idle', () => {
         style.layers.forEach(layer => {
             if (layer.type !== 'fill') return;
             const id = layer.id;
-            if (id === resolvedPatchId) return;
             const low = id.toLowerCase();
             if (low.includes('water')     || low.includes('ocean')   ||
                 low.includes('river')     || low.includes('lake')    ||
