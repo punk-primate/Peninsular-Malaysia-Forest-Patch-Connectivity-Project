@@ -38,24 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-    // ── Override basemap land cover colours ───────────────────────────────────
-    // Suppresses green OSM areas (parks, grass, woodland) that are visually
-    // indistinguishable from clickable forest patches, preventing user confusion.
-    const LAND_NEUTRAL = '#f2d8a2';
-    const landCoverLayers = [
-        'landcover-wood', 'landcover-grass', 'landcover-scrub', 'landcover-crop',
-        'landuse-park', 'landuse-pitch', 'landuse-industrial',
-        'national-park', 'park', 'grass', 'wood', 'scrub', 'farmland'
-    ];
-    landCoverLayers.forEach(id => {
-        try {
-            if (map.getLayer(id)) {
-                map.setPaintProperty(id, 'fill-color', LAND_NEUTRAL);
-                map.setPaintProperty(id, 'fill-opacity', 1);
-            }
-        } catch(e) {}
-    });
-
     initializeTierFilters();
     initializeHoverPopups();
     initializeClickInfoPanel();
