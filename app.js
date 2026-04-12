@@ -175,12 +175,12 @@ initializeTierFilters();
             return;
         }
 
-        map.setLayoutProperty(resolvedConnectorId, 'visibility', 'none');
-        const studioOutlineId = resolvedConnectorId.replace('Connectors', 'Connectors_outline')
-                                                    .replace('connectors', 'connectors_outline');
-        if (map.getLayer(studioOutlineId)) {
-            map.setLayoutProperty(studioOutlineId, 'visibility', 'none');
-        }
+        // Hide ALL connector-related style layers on init (catches casings, outlines, etc.)
+        map.getStyle().layers.forEach(layer => {
+            if (layer.id.toLowerCase().includes('connector'))
+                try { map.setLayoutProperty(layer.id, 'visibility', 'none'); } catch(e) {}
+        });
+        const studioOutlineId = '';
 
         try {
             const styleDef  = map.getStyle();
@@ -245,11 +245,7 @@ initializeTierFilters();
             console.warn('Corridor outline setup failed:', err.message);
         }
 
-        const lineColor = ['match', ['get', 'connectivity'],
-            'High', CONN_COLORS.High, 'Moderate', CONN_COLORS.Moderate, 'Low', CONN_COLORS.Low, '#ffffff'];
-        map.setPaintProperty(resolvedConnectorId, 'line-color', lineColor);
-        map.setPaintProperty(resolvedConnectorId, 'line-width', 12);
-        map.setPaintProperty(resolvedConnectorId, 'line-opacity', 1.0);
+        // resolvedConnectorId stays permanently hidden — custom layers handle all rendering
 
         ['High', 'Moderate', 'Low'].forEach(level => {
             const btn = document.getElementById('conn-filter-' + level.toLowerCase());
@@ -327,12 +323,7 @@ initializeTierFilters();
             toggleBtn.addEventListener('click', () => {
                 corridorVisible = !corridorVisible;
                 const vis = corridorVisible ? 'visible' : 'none';
-                // Hide all corridor-related layers — includes Studio auto-generated casings
-                map.getStyle().layers.forEach(layer => {
-                    if (layer.id.toLowerCase().includes('connector'))
-                        try { map.setLayoutProperty(layer.id, 'visibility', vis); } catch(e) {}
-                });
-                ['connector-glow', 'connector-solid', 'connector-centre'].forEach(id => {
+                ['connector-glow', 'connector-solid'].forEach(id => {
                     if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis);
                 });
                 if (levelPanel) levelPanel.style.display = corridorVisible ? 'flex' : 'none';
@@ -347,8 +338,8 @@ initializeTierFilters();
                         } catch(e) {}
                         toggleBtn.dataset.counted = '1';
                     }
+                    if (connAnimFrame) { cancelAnimationFrame(connAnimFrame); connAnimFrame = null; }
                     function animate(ts) {
-                        // Pulse the glow dramatically — near-off to full brightness
                         const glowOpacity = 0.5 + 0.5 * Math.sin(ts / 400);
                         if (map.getLayer('connector-glow'))
                             map.setPaintProperty('connector-glow', 'line-opacity', glowOpacity);
@@ -696,7 +687,7 @@ initializeTierFilters();
         let ennMsg = 'Distance data not available.';
         if (!isNaN(ennNum)) {
             if      (ennNum <= 30)   ennMsg = 'Directly adjacent to another forest area.';
-            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, a short-enough distance applicable for most dispersing arboreal animals.';
+            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, within typical dispersal range for arboreal animals.';
             else if (ennNum <= 2000) ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, beyond typical single-generation dispersal distance for most arboreal animals.';
             else                     ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away. This patch is functionally isolated at the landscape scale.';
         }
