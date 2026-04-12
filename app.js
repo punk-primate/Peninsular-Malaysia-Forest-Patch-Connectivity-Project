@@ -525,15 +525,27 @@ initializeTierFilters();
                     resolvedConnectorId = null;
                     corridorVisible = false;
                     if (connAnimFrame) { cancelAnimationFrame(connAnimFrame); connAnimFrame = null; }
-                    const toggleBtn = document.getElementById('corridor-toggle-fab');
                     const levelPanel = document.getElementById('conn-level-toggles');
-                    if (toggleBtn) { toggleBtn.textContent = 'Show corridors'; toggleBtn.classList.remove('active'); delete toggleBtn.dataset.counted; }
                     if (levelPanel) levelPanel.style.display = 'none';
+                    // Clone toggle button to remove stale event listeners before reinitialising
+                    const oldBtn = document.getElementById('corridor-toggle-fab');
+                    if (oldBtn) {
+                        const newBtn = oldBtn.cloneNode(true);
+                        newBtn.textContent = 'Show corridors';
+                        newBtn.classList.remove('active');
+                        delete newBtn.dataset.counted;
+                        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+                    }
+                    // Also clone level filter buttons to remove stale listeners
+                    ['conn-filter-high','conn-filter-moderate','conn-filter-low'].forEach(id => {
+                        const old = document.getElementById(id);
+                        if (old) old.parentNode.replaceChild(old.cloneNode(true), old);
+                    });
                     setTimeout(() => {
                         resolvePatchLayerId();
                         if (map.getLayer(resolvedPatchId)) { applyForestFilter(); initializeHoverPopups(); initializeClickInfoPanel(); }
                         initializeConnectorLayer();
-                    }, 250);
+                    }, 800);
                 } else {
                     if(filterSection) filterSection.style.display = 'none';
                     if(areaFilterControls) areaFilterControls.style.display = 'none';
