@@ -46,6 +46,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
+        // ── Neutralise Standard basemap land/vegetation colours ───────────────
+        try {
+            map.setConfigProperty('basemap', 'colorVegetation', '#f2d8a2');
+            map.setConfigProperty('basemap', 'colorBase',       '#f2d8a2');
+        } catch(e) {
+            console.warn('setConfigProperty not available:', e.message);
+        }
+
         initializeTierFilters();
         initializeConnectorLayer();
         resolvePatchLayerId();
