@@ -521,8 +521,18 @@ initializeTierFilters();
                     if(areaFilterControls) areaFilterControls.style.display = 'block';
                     if(statsSection) statsSection.style.display = 'block';
                     if(patchInfoContent) patchInfoContent.innerHTML = 'Select a patch on the map to see details.';
+                    // Reset corridor state — style switch destroys all programmatic sources/layers
+                    resolvedConnectorId = null;
+                    corridorVisible = false;
+                    if (connAnimFrame) { cancelAnimationFrame(connAnimFrame); connAnimFrame = null; }
+                    const toggleBtn = document.getElementById('corridor-toggle-fab');
+                    const levelPanel = document.getElementById('conn-level-toggles');
+                    if (toggleBtn) { toggleBtn.textContent = 'Show corridors'; toggleBtn.classList.remove('active'); delete toggleBtn.dataset.counted; }
+                    if (levelPanel) levelPanel.style.display = 'none';
                     setTimeout(() => {
+                        resolvePatchLayerId();
                         if (map.getLayer(resolvedPatchId)) { applyForestFilter(); initializeHoverPopups(); initializeClickInfoPanel(); }
+                        initializeConnectorLayer();
                     }, 250);
                 } else {
                     if(filterSection) filterSection.style.display = 'none';
