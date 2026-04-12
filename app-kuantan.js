@@ -295,7 +295,8 @@ initializeTierFilters();
         applyConnectorFilter = function() { applyCorridorTierFilter(); };
 
         const connPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'custom-hover-popup' });
-        map.on('mousemove', resolvedConnectorId, (e) => {
+        const connInteractId = map.getLayer('connector-solid') ? 'connector-solid' : resolvedConnectorId;
+        map.on('mousemove', connInteractId, (e) => {
             if (!e.features || !e.features.length) return;
             map.getCanvas().style.cursor = 'pointer';
             const f = e.features[0].properties;
@@ -303,9 +304,9 @@ initializeTierFilters();
                 .setHTML('<strong>Potential movement corridor</strong><br>Gap: ' + f.gap_m + ' m | Connectivity: ' + f.connectivity)
                 .addTo(map);
         });
-        map.on('mouseleave', resolvedConnectorId, () => { map.getCanvas().style.cursor = ''; connPopup.remove(); });
+        map.on('mouseleave', connInteractId, () => { map.getCanvas().style.cursor = ''; connPopup.remove(); });
 
-        map.on('click', resolvedConnectorId, (e) => {
+        map.on('click', connInteractId, (e) => {
             if (!e.features || !e.features.length) return;
             const f = e.features[0].properties;
             const el = document.getElementById('patch-info-content');
