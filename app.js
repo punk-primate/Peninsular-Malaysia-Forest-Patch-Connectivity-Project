@@ -46,6 +46,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
+        // ── Dark overlay — dims basemap so patches and corridors pop ─────────
+        try {
+            if (!map.getSource('dark-overlay-src')) {
+                map.addSource('dark-overlay-src', {
+                    type: 'geojson',
+                    data: {
+                        type: 'Feature',
+                        geometry: {
+                            type: 'Polygon',
+                            coordinates: [[[-180,-90],[-180,90],[180,90],[180,-90],[-180,-90]]]
+                        }
+                    }
+                });
+                map.addLayer({
+                    id: 'dark-overlay',
+                    type: 'fill',
+                    source: 'dark-overlay-src',
+                    paint: { 'fill-color': '#000000', 'fill-opacity': 0.45 }
+                }, FOREST_PATCH_LAYER_ID);
+            }
+        } catch(e) { console.warn('Dark overlay skipped:', e.message); }
+
         initializeTierFilters();
         initializeConnectorLayer();
         resolvePatchLayerId();
@@ -342,7 +364,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         } catch(e) {}
                         toggleBtn.dataset.counted = '1';
                     }
-                    // No animation loop needed — neon glow is purely CSS/paint
+                    function animate(ts) {
+                        // Pulse connector-solid opacity between 0.5 and 1.0
+                        const opacity = 0.75 + 0.25 * Math.sin(ts / 300);
+                        if (map.getLayer('connector-solid'))
+                            map.setPaintProperty('connector-solid', 'line-opacity', opacity);
+                        connAnimFrame = requestAnimationFrame(animate);
+                    }
+                    connAnimFrame = requestAnimationFrame(animate);
                 } else {
                     toggleBtn.textContent = 'Show corridors';
                     toggleBtn.classList.remove('active');
