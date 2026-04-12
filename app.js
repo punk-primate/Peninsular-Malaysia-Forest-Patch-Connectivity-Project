@@ -140,7 +140,7 @@ initializeTierFilters();
         }
     }
 
-    const CONN_COLORS = { High: '#00ffff', Moderate: '#ff00ff', Low: '#ff3300' };
+    const CONN_COLORS = { High: '#00ffff', Moderate: '#ffff00', Low: '#ff3300' };
     let resolvedConnectorId = null;
     let corridorVisible     = false;
     let connAnimFrame       = null;
@@ -198,7 +198,7 @@ initializeTierFilters();
                 if (Array.isArray(tileUrl)) { srcSpec.tiles = tileUrl; } else { srcSpec.url = tileUrl; }
                 map.addSource('corridor-outline-src', srcSpec);
                 const corrColorExpr = ['match', ['get', 'connectivity'],
-                    'High', '#00ffff', 'Moderate', '#ff00ff', 'Low', '#ff3300', '#ffffff'];
+                    'High', '#00ffff', 'Moderate', '#ffff00', 'Low', '#ff3300', '#ffffff'];
 
                 // Neon glow — wide blurred halo, fully emissive (bypasses Standard lighting)
                 map.addLayer({
