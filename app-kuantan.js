@@ -197,13 +197,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 const srcSpec = { type: 'vector' };
                 if (Array.isArray(tileUrl)) { srcSpec.tiles = tileUrl; } else { srcSpec.url = tileUrl; }
                 map.addSource('corridor-outline-src', srcSpec);
+                // Neon glow layer 1 — wide blurred halo
                 map.addLayer({
-                    id: 'connector-outline', type: 'line',
+                    id: 'connector-glow', type: 'line',
                     source: 'corridor-outline-src', 'source-layer': srcLayer,
                     minzoom: 10,
                     layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
-                    paint:  { 'line-color': '#cccccc', 'line-width': 12, 'line-opacity': 0.0 }
+                    paint: {
+                        'line-color': ['match', ['get', 'connectivity'],
+                            'High', '#00fffb', 'Moderate', '#ff00ea', 'Low', '#ff0011', '#ffffff'],
+                        'line-width': 24,
+                        'line-blur': 12,
+                        'line-opacity': 0.55
+                    }
                 }, resolvedConnectorId);
+                // Neon glow layer 2 — thin white centre line
+                map.addLayer({
+                    id: 'connector-centre', type: 'line',
+                    source: 'corridor-outline-src', 'source-layer': srcLayer,
+                    minzoom: 10,
+                    layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
+                    paint: {
+                        'line-color': '#ffffff',
+                        'line-width': 2,
+                        'line-blur': 0,
+                        'line-opacity': 1.0
+                    }
+                });
             }
         } catch(err) {
             console.warn('Corridor outline setup failed:', err.message);
@@ -291,8 +311,9 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleBtn.addEventListener('click', () => {
                 corridorVisible = !corridorVisible;
                 map.setLayoutProperty(resolvedConnectorId, 'visibility', corridorVisible ? 'visible' : 'none');
-                if (map.getLayer('connector-outline'))
-                    map.setLayoutProperty('connector-outline', 'visibility', corridorVisible ? 'visible' : 'none');
+                ['connector-glow', 'connector-centre'].forEach(id => {
+                    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', corridorVisible ? 'visible' : 'none');
+                });
                 if (map.getLayer(studioOutlineId))
                     map.setLayoutProperty(studioOutlineId, 'visibility', corridorVisible ? 'visible' : 'none');
                 if (levelPanel) levelPanel.style.display = corridorVisible ? 'flex' : 'none';
@@ -307,14 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         } catch(e) {}
                         toggleBtn.dataset.counted = '1';
                     }
-                    function animate(ts) {
-                        // Smooth sine-wave opacity pulse between 0.4 and 1.0
-                        const opacity = 0.7 + 0.3 * Math.sin(ts / 600);
-                        if (map.getLayer(resolvedConnectorId))
-                            map.setPaintProperty(resolvedConnectorId, 'line-opacity', opacity);
-                        connAnimFrame = requestAnimationFrame(animate);
-                    }
-                    connAnimFrame = requestAnimationFrame(animate);
+                    // No animation loop needed — neon glow is purely CSS/paint
                 } else {
                     toggleBtn.textContent = 'Show corridors';
                     toggleBtn.classList.remove('active');
