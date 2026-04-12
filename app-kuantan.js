@@ -220,9 +220,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const lineColor = ['match', ['get', 'connectivity'],
             'High', CONN_COLORS.High, 'Moderate', CONN_COLORS.Moderate, 'Low', CONN_COLORS.Low, '#ffffff'];
         map.setPaintProperty(resolvedConnectorId, 'line-color', lineColor);
-        map.setPaintProperty(resolvedConnectorId, 'line-width', 7);
+        map.setPaintProperty(resolvedConnectorId, 'line-width', 12);
         map.setPaintProperty(resolvedConnectorId, 'line-opacity', 1.0);
-        map.setPaintProperty(resolvedConnectorId, 'line-blur', 0.8);
 
         ['High', 'Moderate', 'Low'].forEach(level => {
             const btn = document.getElementById('conn-filter-' + level.toLowerCase());
