@@ -197,48 +197,43 @@ initializeTierFilters();
                 const srcSpec = { type: 'vector' };
                 if (Array.isArray(tileUrl)) { srcSpec.tiles = tileUrl; } else { srcSpec.url = tileUrl; }
                 map.addSource('corridor-outline-src', srcSpec);
-                // Neon glow layer 1 — wide blurred halo
+                const corrColorExpr = ['match', ['get', 'connectivity'],
+                    'High', '#00ffff', 'Moderate', '#ff00ff', 'Low', '#ff3300', '#ffffff'];
+
+                // Neon glow — wide blurred halo, fully emissive (bypasses Standard lighting)
                 map.addLayer({
                     id: 'connector-glow', type: 'line',
                     source: 'corridor-outline-src', 'source-layer': srcLayer,
-                    minzoom: 10,
-                    slot: 'top',
+                    minzoom: 10, slot: 'top',
                     layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
                     paint: {
-                        'line-color': ['match', ['get', 'connectivity'],
-                            'High', '#00ffcc', 'Moderate', '#ff9900', 'Low', '#ff3333', '#ffffff'],
-                        'line-width': 24,
-                        'line-blur': 12,
-                        'line-opacity': 0.55
+                        'line-color': corrColorExpr,
+                        'line-width': 28, 'line-blur': 14,
+                        'line-opacity': 0.9, 'line-emissive-strength': 1
                     }
                 });
-                // Neon glow layer 2 — solid opaque colour body
+                // Solid body — fully emissive
                 map.addLayer({
                     id: 'connector-solid', type: 'line',
                     source: 'corridor-outline-src', 'source-layer': srcLayer,
-                    minzoom: 10,
-                    slot: 'top',
+                    minzoom: 10, slot: 'top',
                     layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
                     paint: {
-                        'line-color': ['match', ['get', 'connectivity'],
-                            'High', '#00ffcc', 'Moderate', '#ff9900', 'Low', '#ff3333', '#ffffff'],
-                        'line-width': 10,
-                        'line-blur': 0,
-                        'line-opacity': 1.0
+                        'line-color': corrColorExpr,
+                        'line-width': 10, 'line-blur': 0,
+                        'line-opacity': 1.0, 'line-emissive-strength': 1
                     }
                 });
-                // Neon glow layer 3 — thin white centre line
+                // White centre line — fully emissive
                 map.addLayer({
                     id: 'connector-centre', type: 'line',
                     source: 'corridor-outline-src', 'source-layer': srcLayer,
-                    minzoom: 10,
-                    slot: 'top',
+                    minzoom: 10, slot: 'top',
                     layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
                     paint: {
                         'line-color': '#ffffff',
-                        'line-width': 2,
-                        'line-blur': 0,
-                        'line-opacity': 1.0
+                        'line-width': 2, 'line-blur': 0,
+                        'line-opacity': 1.0, 'line-emissive-strength': 1
                     }
                 });
                 // Move all corridor layers to very top so they render above roads/buildings
@@ -350,10 +345,10 @@ initializeTierFilters();
                         toggleBtn.dataset.counted = '1';
                     }
                     function animate(ts) {
-                        // Pulse connector-solid opacity between 0.5 and 1.0
-                        const opacity = 0.85 + 0.15 * Math.sin(ts / 400);
-                        if (map.getLayer('connector-solid'))
-                            map.setPaintProperty('connector-solid', 'line-opacity', opacity);
+                        // Pulse the glow dramatically — near-off to full brightness
+                        const glowOpacity = 0.5 + 0.5 * Math.sin(ts / 400);
+                        if (map.getLayer('connector-glow'))
+                            map.setPaintProperty('connector-glow', 'line-opacity', glowOpacity);
                         connAnimFrame = requestAnimationFrame(animate);
                     }
                     connAnimFrame = requestAnimationFrame(animate);
