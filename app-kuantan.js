@@ -140,7 +140,7 @@ initializeTierFilters();
         }
     }
 
-    const CONN_COLORS = { High: '#00ffff', Moderate: '#ff00ff', Low: '#ff3300' };
+    const CONN_COLORS = { High: '#00ffff', Moderate: '#ffff00', Low: '#ff3300' };
     let resolvedConnectorId = null;
     let corridorVisible     = false;
     let connAnimFrame       = null;
@@ -198,7 +198,7 @@ initializeTierFilters();
                 if (Array.isArray(tileUrl)) { srcSpec.tiles = tileUrl; } else { srcSpec.url = tileUrl; }
                 map.addSource('corridor-outline-src', srcSpec);
                 const corrColorExpr = ['match', ['get', 'connectivity'],
-                    'High', '#00ffff', 'Moderate', '#ff00ff', 'Low', '#ff3300', '#ffffff'];
+                    'High', '#00ffff', 'Moderate', '#ffff00', 'Low', '#ff3300', '#ffffff'];
 
                 // Neon glow — wide blurred halo, fully emissive (bypasses Standard lighting)
                 map.addLayer({
@@ -696,7 +696,7 @@ initializeTierFilters();
         let ennMsg = 'Distance data not available.';
         if (!isNaN(ennNum)) {
             if      (ennNum <= 30)   ennMsg = 'Directly adjacent to another forest area.';
-            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, a short-enough distance applicable for most dispersing arboreal animals.';
+            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, a short-enough distance applicable for most dispersing aboreal animals.';
             else if (ennNum <= 2000) ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, beyond typical single-generation dispersal distance for most arboreal animals.';
             else                     ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away. This patch is functionally isolated at the landscape scale.';
         }
