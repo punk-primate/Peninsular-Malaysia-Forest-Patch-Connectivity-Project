@@ -326,12 +326,15 @@ initializeTierFilters();
         if (toggleBtn) {
             toggleBtn.addEventListener('click', () => {
                 corridorVisible = !corridorVisible;
-                map.setLayoutProperty(resolvedConnectorId, 'visibility', corridorVisible ? 'visible' : 'none');
-                ['connector-glow', 'connector-solid', 'connector-centre'].forEach(id => {
-                    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', corridorVisible ? 'visible' : 'none');
+                const vis = corridorVisible ? 'visible' : 'none';
+                // Hide all corridor-related layers — includes Studio auto-generated casings
+                map.getStyle().layers.forEach(layer => {
+                    if (layer.id.toLowerCase().includes('connector'))
+                        try { map.setLayoutProperty(layer.id, 'visibility', vis); } catch(e) {}
                 });
-                if (map.getLayer(studioOutlineId))
-                    map.setLayoutProperty(studioOutlineId, 'visibility', corridorVisible ? 'visible' : 'none');
+                ['connector-glow', 'connector-solid', 'connector-centre'].forEach(id => {
+                    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis);
+                });
                 if (levelPanel) levelPanel.style.display = corridorVisible ? 'flex' : 'none';
                 if (corridorVisible) {
                     toggleBtn.textContent = 'Hide corridors';
