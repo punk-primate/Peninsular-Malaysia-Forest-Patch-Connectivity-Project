@@ -46,29 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-        // ── Dark overlay — dims basemap so patches and corridors pop ─────────
-        try {
-            if (!map.getSource('dark-overlay-src')) {
-                map.addSource('dark-overlay-src', {
-                    type: 'geojson',
-                    data: {
-                        type: 'Feature',
-                        geometry: {
-                            type: 'Polygon',
-                            coordinates: [[[-180,-90],[-180,90],[180,90],[180,-90],[-180,-90]]]
-                        }
-                    }
-                });
-                map.addLayer({
-                    id: 'dark-overlay',
-                    type: 'fill',
-                    source: 'dark-overlay-src',
-                    paint: { 'fill-color': '#000000', 'fill-opacity': 0.45 }
-                }, FOREST_PATCH_LAYER_ID);
-            }
-        } catch(e) { console.warn('Dark overlay skipped:', e.message); }
-
-        initializeTierFilters();
+initializeTierFilters();
         initializeConnectorLayer();
         resolvePatchLayerId();
         initializeHoverPopups();
@@ -162,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    const CONN_COLORS = { High: '#00fffb', Moderate: '#ff00ea', Low: '#ff0011' };
+    const CONN_COLORS = { High: '#00ffff', Moderate: '#ff00ff', Low: '#ff3300' };
     let resolvedConnectorId = null;
     let corridorVisible     = false;
     let connAnimFrame       = null;
@@ -224,24 +202,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     id: 'connector-glow', type: 'line',
                     source: 'corridor-outline-src', 'source-layer': srcLayer,
                     minzoom: 10,
+                    slot: 'top',
                     layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
                     paint: {
                         'line-color': ['match', ['get', 'connectivity'],
-                            'High', '#00fffb', 'Moderate', '#ff00ea', 'Low', '#ff0011', '#ffffff'],
+                            'High', '#00ffcc', 'Moderate', '#ff9900', 'Low', '#ff3333', '#ffffff'],
                         'line-width': 24,
                         'line-blur': 12,
                         'line-opacity': 0.55
                     }
-                }, resolvedConnectorId);
+                });
                 // Neon glow layer 2 — solid opaque colour body
                 map.addLayer({
                     id: 'connector-solid', type: 'line',
                     source: 'corridor-outline-src', 'source-layer': srcLayer,
                     minzoom: 10,
+                    slot: 'top',
                     layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
                     paint: {
                         'line-color': ['match', ['get', 'connectivity'],
-                            'High', '#00fffb', 'Moderate', '#ff00ea', 'Low', '#ff0011', '#ffffff'],
+                            'High', '#00ffcc', 'Moderate', '#ff9900', 'Low', '#ff3333', '#ffffff'],
                         'line-width': 10,
                         'line-blur': 0,
                         'line-opacity': 1.0
@@ -252,6 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     id: 'connector-centre', type: 'line',
                     source: 'corridor-outline-src', 'source-layer': srcLayer,
                     minzoom: 10,
+                    slot: 'top',
                     layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
                     paint: {
                         'line-color': '#ffffff',
@@ -259,6 +240,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         'line-blur': 0,
                         'line-opacity': 1.0
                     }
+                });
+                // Move all corridor layers to very top so they render above roads/buildings
+                ['connector-glow', 'connector-solid', 'connector-centre'].forEach(id => {
+                    if (map.getLayer(id)) map.moveLayer(id);
                 });
             }
         } catch(err) {
@@ -366,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     function animate(ts) {
                         // Pulse connector-solid opacity between 0.5 and 1.0
-                        const opacity = 0.75 + 0.25 * Math.sin(ts / 300);
+                        const opacity = 0.85 + 0.15 * Math.sin(ts / 400);
                         if (map.getLayer('connector-solid'))
                             map.setPaintProperty('connector-solid', 'line-opacity', opacity);
                         connAnimFrame = requestAnimationFrame(animate);
