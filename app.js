@@ -144,15 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let resolvedConnectorId = null;
     let corridorVisible     = false;
     let connAnimFrame       = null;
-    let connAnimStep        = 0;
-    let connLastTs          = 0;
     let connActiveFilters   = new Set(['High', 'Moderate', 'Low']);
-
-    const dashSeq = [
-        [0,4,3],[0.5,4,2.5],[1,4,2],[1.5,4,1.5],[2,4,1],[2.5,4,0.5],[3,4,0],
-        [0,0.5,3,3.5],[0,1,3,3],[0,1.5,3,2.5],[0,2,3,2],[0,2.5,3,1.5],
-        [0,3,3,1],[0,3.5,3,0.5],[0,4,3,0]
-    ];
 
     function applyConnectorFilter() {
         if (!resolvedConnectorId || !map.getLayer(resolvedConnectorId)) return;
@@ -210,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     source: 'corridor-outline-src', 'source-layer': srcLayer,
                     minzoom: 10,
                     layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
-                    paint:  { 'line-color': '#cccccc', 'line-width': 12, 'line-opacity': 1.0 }
+                    paint:  { 'line-color': '#cccccc', 'line-width': 12, 'line-opacity': 0.0 }
                 }, resolvedConnectorId);
             }
         } catch(err) {
@@ -315,14 +307,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         } catch(e) {}
                         toggleBtn.dataset.counted = '1';
                     }
-                    connAnimStep = 0;
                     function animate(ts) {
-                        if (ts - connLastTs > 60) {
-                            connAnimStep = (connAnimStep + 1) % dashSeq.length;
-                            if (map.getLayer(resolvedConnectorId))
-                                map.setPaintProperty(resolvedConnectorId, 'line-dasharray', dashSeq[connAnimStep]);
-                            connLastTs = ts;
-                        }
+                        // Smooth sine-wave opacity pulse between 0.4 and 1.0
+                        const opacity = 0.7 + 0.3 * Math.sin(ts / 600);
+                        if (map.getLayer(resolvedConnectorId))
+                            map.setPaintProperty(resolvedConnectorId, 'line-opacity', opacity);
                         connAnimFrame = requestAnimationFrame(animate);
                     }
                     connAnimFrame = requestAnimationFrame(animate);
