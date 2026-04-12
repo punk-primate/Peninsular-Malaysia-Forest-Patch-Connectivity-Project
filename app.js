@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     source: 'corridor-outline-src', 'source-layer': srcLayer,
                     minzoom: 10,
                     layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
-                    paint:  { 'line-color': '#ffffff', 'line-width': 13, 'line-opacity': 1.0 }
+                    paint:  { 'line-color': ['match', ['get', 'connectivity'], 'High', '#00fffb', 'Moderate', '#ff00ea', 'Low', '#ff0011', '#ffffff'], 'line-width': 12, 'line-opacity': 0.35 }
                 }, resolvedConnectorId);
             }
         } catch(err) {
