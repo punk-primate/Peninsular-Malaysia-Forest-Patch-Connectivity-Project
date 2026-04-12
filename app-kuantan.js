@@ -147,15 +147,15 @@ initializeTierFilters();
     let connActiveFilters   = new Set(['High', 'Moderate', 'Low']);
 
     function applyConnectorFilter() {
-        if (!resolvedConnectorId || !map.getLayer(resolvedConnectorId)) return;
         const active = Array.from(connActiveFilters);
-        if (active.length === 0) {
-            map.setFilter(resolvedConnectorId, ['==', ['get', 'connectivity'], '__none__']);
-        } else if (active.length === 3) {
-            map.setFilter(resolvedConnectorId, null);
-        } else {
-            map.setFilter(resolvedConnectorId, ['match', ['get', 'connectivity'], active, true, false]);
-        }
+        const filterExpr = active.length === 0
+            ? ['==', ['get', 'connectivity'], '__none__']
+            : active.length === 3
+                ? null
+                : ['match', ['get', 'connectivity'], active, true, false];
+        ['connector-glow', 'connector-solid'].forEach(id => {
+            if (map.getLayer(id)) map.setFilter(id, filterExpr);
+        });
     }
 
     function updateLevelBtn(btn, level) {
@@ -277,7 +277,6 @@ initializeTierFilters();
         }
 
         function applyCorridorTierFilter() {
-            if (!resolvedConnectorId || !map.getLayer(resolvedConnectorId)) return;
             const activeTiers = Array.from(document.querySelectorAll('.corr-tier-btn.active')).map(b => b.dataset.tier);
             const activeConn  = Array.from(connActiveFilters);
             const filters = [];
@@ -287,7 +286,10 @@ initializeTierFilters();
                 filters.push(['==', ['get', 'connectivity'], '__none__']);
             else if (activeConn.length < 3)
                 filters.push(['match', ['get', 'connectivity'], activeConn, true, false]);
-            map.setFilter(resolvedConnectorId, filters.length ? ['all', ...filters] : null);
+            const filterExpr = filters.length ? ['all', ...filters] : null;
+            ['connector-glow', 'connector-solid'].forEach(id => {
+                if (map.getLayer(id)) map.setFilter(id, filterExpr);
+            });
         }
 
         applyConnectorFilter = function() { applyCorridorTierFilter(); };
