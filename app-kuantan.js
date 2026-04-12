@@ -46,14 +46,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-        // ── Neutralise Standard basemap land/vegetation colours ───────────────
-        try {
-            map.setConfigProperty('basemap', 'colorVegetation', '#f2d8a2');
-            map.setConfigProperty('basemap', 'colorBase',       '#f2d8a2');
-        } catch(e) {
-            console.warn('setConfigProperty not available:', e.message);
-        }
-
         initializeTierFilters();
         initializeConnectorLayer();
         resolvePatchLayerId();
@@ -86,40 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         debouncedUpdateStats();
     });
-
-    // ── Neutralise basemap land cover colours ─────────────────────────────────
-    // Studio edits to land cover don't propagate when the style uses Mapbox Standard
-    // import fragments. setPaintProperty at runtime overrides the browser renderer
-    // directly, bypassing the tile CDN cache entirely.
-    // Placed inside DOMContentLoaded so resolvedPatchId is in scope.
-    map.once('idle', () => {
-        const LAND_NEUTRAL = '#f2d8a2';
-        const style = map.getStyle();
-        if (!style || !style.layers) return;
-        style.layers.forEach(layer => {
-            if (layer.type !== 'fill') return;
-            const id  = layer.id;
-            const low = id.toLowerCase();
-            if (id === resolvedPatchId) return;
-            if (low.includes('water')    || low.includes('ocean')    ||
-                low.includes('river')    || low.includes('lake')     ||
-                low.includes('road')     || low.includes('street')   ||
-                low.includes('highway')  || low.includes('rail')     ||
-                low.includes('building') || low.includes('tunnel')   ||
-                low.includes('bridge')   || low.includes('connector')||
-                low.includes('patch')    || low.includes('forest')   ||
-                low.includes('klang')    || low.includes('kuantan')  ||
-                low.includes('boundary') || low.includes('admin')) return;
-            try {
-                map.setPaintProperty(id, 'fill-color', LAND_NEUTRAL);
-                map.setPaintProperty(id, 'fill-opacity', 1);
-                console.log('[land-override] Applied to:', id);
-            } catch(e) {
-                console.warn('[land-override] Skipped:', id, '-', e.message);
-            }
-        });
-    });
-
     map.on('error', (e) => {
         console.error('Mapbox GL Error:', e);
         if (loadingIndicator) {
