@@ -211,7 +211,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         'line-opacity': 0.55
                     }
                 }, resolvedConnectorId);
-                // Neon glow layer 2 — thin white centre line
+                // Neon glow layer 2 — solid opaque colour body
+                map.addLayer({
+                    id: 'connector-solid', type: 'line',
+                    source: 'corridor-outline-src', 'source-layer': srcLayer,
+                    minzoom: 10,
+                    layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
+                    paint: {
+                        'line-color': ['match', ['get', 'connectivity'],
+                            'High', '#00fffb', 'Moderate', '#ff00ea', 'Low', '#ff0011', '#ffffff'],
+                        'line-width': 10,
+                        'line-blur': 0,
+                        'line-opacity': 1.0
+                    }
+                });
+                // Neon glow layer 3 — thin white centre line
                 map.addLayer({
                     id: 'connector-centre', type: 'line',
                     source: 'corridor-outline-src', 'source-layer': srcLayer,
@@ -311,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleBtn.addEventListener('click', () => {
                 corridorVisible = !corridorVisible;
                 map.setLayoutProperty(resolvedConnectorId, 'visibility', corridorVisible ? 'visible' : 'none');
-                ['connector-glow', 'connector-centre'].forEach(id => {
+                ['connector-glow', 'connector-solid', 'connector-centre'].forEach(id => {
                     if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', corridorVisible ? 'visible' : 'none');
                 });
                 if (map.getLayer(studioOutlineId))
