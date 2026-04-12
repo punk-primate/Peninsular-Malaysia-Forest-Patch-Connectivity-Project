@@ -690,7 +690,7 @@ initializeTierFilters();
         let ennMsg = 'Distance data not available.';
         if (!isNaN(ennNum)) {
             if      (ennNum <= 30)   ennMsg = 'Directly adjacent to another forest area.';
-            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, an appropriate range for most dispersing arboreal animals.';
+            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, an appropriate distance for most dispersing arboreal animals.';
             else if (ennNum <= 2000) ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, beyond typical single-generation dispersal distance for most arboreal animals.';
             else                     ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away. This patch is functionally isolated at the landscape scale.';
         }
