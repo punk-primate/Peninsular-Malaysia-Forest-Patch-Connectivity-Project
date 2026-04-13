@@ -104,7 +104,7 @@ initializeTierFilters();
             checkbox.addEventListener('change', applyForestFilter);
             label.appendChild(colorBox);
             label.appendChild(checkbox);
-            label.appendChild(document.createTextNode(' ' + tierValueFromConfig));
+            label.appendChild(document.createTextNode(' ' + ((typeof TIER_DISPLAY_NAMES !== 'undefined' && TIER_DISPLAY_NAMES[tierValueFromConfig]) || tierValueFromConfig)));
             filterContainer.appendChild(label);
         });
         applyForestFilter();
@@ -364,7 +364,7 @@ initializeTierFilters();
             if (e.features && e.features.length > 0) {
                 map.getCanvas().style.cursor = 'pointer';
                 const p         = e.features[0].properties;
-                const tierName  = p[TIER_ATTRIBUTE] || 'Forest patch';
+                const tierName  = (typeof TIER_DISPLAY_NAMES !== 'undefined' && TIER_DISPLAY_NAMES[p[TIER_ATTRIBUTE]]) || p[TIER_ATTRIBUTE] || 'Forest patch';
                 const conn      = p[CONNECTIVITY_ATTRIBUTE];
                 const connColor = (typeof CONNECTIVITY_COLORS !== 'undefined' && CONNECTIVITY_COLORS[conn]) ? CONNECTIVITY_COLORS[conn] : null;
                 const connText  = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#fff';
@@ -640,8 +640,10 @@ initializeTierFilters();
             html += '<p style="color:#888;font-style:italic">No categories selected.</p>';
         } else {
             checkedTiers.forEach(tier => {
-                if (tierStats[tier])
-                    html += `<p><strong>${formatPropertyName(tier)}:</strong> ${tierStats[tier].count.toLocaleString()} patches, ${tierStats[tier].area.toFixed(2).toLocaleString()} ha</p>`;
+                if (tierStats[tier]) {
+                    const tierLabel = (typeof TIER_DISPLAY_NAMES !== 'undefined' && TIER_DISPLAY_NAMES[tier]) || tier;
+                    html += `<p><strong>${tierLabel}:</strong> ${tierStats[tier].count.toLocaleString()} patches, ${tierStats[tier].area.toFixed(2).toLocaleString()} ha</p>`;
+                }
             });
             if (features.length === 0 && checkedTiers.length > 0)
                 html += '<p style="color:#888;font-style:italic">No patches match current filters.</p>';
@@ -663,12 +665,12 @@ initializeTierFilters();
         const id   = properties[PATCH_ID_ATTRIBUTE];
 
         const tierDesc = {
-            'Tier 1 (Core Habitat)': 'One of the more structurally important forest patches in this landscape. Large enough to support a high level of biodiversity, with substantial interior area protected from edge effects.',
-            'Tier 2 (Major Stepping Stones)': 'A high-quality patch that could function as a key hub or stepping stone in a potential movement network. Important for regional habitat connectivity.',
-            'Tier 3 (Connected Fragments)': 'A moderately connected forest fragment that could play a bridging role between larger patches in the landscape.',
-            'Tier 4 (Vulnerable Edge Fragments)': 'A patch with significant edge exposure relative to its size. Functionally important but vulnerable to further habitat loss or degradation.',
-            'Tier 5 (Isolated Fragments)': 'A small, isolated forest fragment with limited connectivity potential to the surrounding landscape.',
-            'Tier 6 (Isolated Micro Patches)': 'A highly isolated micro-patch or remnant forest fragment. Generally too small and disconnected to support resident populations, but may provide temporary shelter.'
+            'Tier 1 (Primary forest)': 'One of the more structurally important forest patches in this landscape. Large enough to support a high level of biodiversity, with substantial interior area protected from edge effects.',
+            'Tier 2 (Established forest)': 'A high-quality patch that could function as a key hub or stepping stone in a potential movement network. Important for regional habitat connectivity.',
+            'Tier 3 (Functional fragments)': 'A moderately connected forest fragment that could play a bridging role between larger patches in the landscape.',
+            'Tier 4 (Vulnerable fragments)': 'A patch with significant edge exposure relative to its size. Functionally important but vulnerable to further habitat loss or degradation.',
+            'Tier 5 (Marginal fragments)': 'A small, isolated forest fragment with limited connectivity potential to the surrounding landscape.',
+            'Tier 6 (Remnant patches)': 'A highly isolated micro-patch or remnant forest fragment. Generally too small and disconnected to support resident populations, but may provide temporary shelter.'
         };
         const connDesc = {
             'High':    'This patch has high connectivity potential. The surrounding landscape presents less barriers to movement to neighbouring patches, suitable for a corridor.',
@@ -690,7 +692,7 @@ initializeTierFilters();
         let ennMsg = 'Distance data not available.';
         if (!isNaN(ennNum)) {
             if      (ennNum <= 30)   ennMsg = 'Directly adjacent to another forest area.';
-            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, an appropriate distance for most dispersing arboreal animals.';
+            else if (ennNum <= 800)  ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, within typical dispersal range for arboreal animals.';
             else if (ennNum <= 2000) ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away, beyond typical single-generation dispersal distance for most arboreal animals.';
             else                     ennMsg = 'The nearest patch is ' + Math.round(ennNum) + ' m away. This patch is functionally isolated at the landscape scale.';
         }
@@ -704,7 +706,8 @@ initializeTierFilters();
         }
 
         let h = '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">';
-        h += '<div style="background:' + tc + ';color:#fff;padding:5px 9px;border-radius:3px;font-weight:700;margin-bottom:8px;font-size:0.82em">' + (tier || 'Unknown') + '</div>';
+        const tierDisplay = (typeof TIER_DISPLAY_NAMES !== 'undefined' && TIER_DISPLAY_NAMES[tier]) || tier || 'Unknown';
+        h += '<div style="background:' + tc + ';color:#fff;padding:5px 9px;border-radius:3px;font-weight:700;margin-bottom:8px;font-size:0.82em">' + tierDisplay + '</div>';
         h += '<p style="margin:0 0 10px;font-size:0.87em;line-height:1.5;color:inherit">' + (tierDesc[tier] || '') + '</p>';
         if (conn && conn !== 'No Data') {
             h += '<div style="margin-bottom:4px;font-size:0.87em"><strong>Connectivity:</strong> <span style="background:' + cc + ';color:' + ct + ';padding:1px 7px;border-radius:3px;font-weight:700">' + conn + '</span></div>';
