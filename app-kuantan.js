@@ -224,21 +224,13 @@ initializeTierFilters();
                         'line-opacity': 1.0, 'line-emissive-strength': 1
                     }
                 });
-                // White centre line — fully emissive
-                map.addLayer({
-                    id: 'connector-centre', type: 'line',
-                    source: 'corridor-outline-src', 'source-layer': srcLayer,
-                    minzoom: 10, slot: 'top',
-                    layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
-                    paint: {
-                        'line-color': '#ffffff',
-                        'line-width': 2, 'line-blur': 0,
-                        'line-opacity': 1.0, 'line-emissive-strength': 1
+                // Move corridor layers to very top so they render above roads/buildings
+                // Re-hide after moveLayer in case it resets visibility
+                ['connector-glow', 'connector-solid'].forEach(id => {
+                    if (map.getLayer(id)) {
+                        map.moveLayer(id);
+                        map.setLayoutProperty(id, 'visibility', 'none');
                     }
-                });
-                // Move all corridor layers to very top so they render above roads/buildings
-                ['connector-glow', 'connector-solid', 'connector-centre'].forEach(id => {
-                    if (map.getLayer(id)) map.moveLayer(id);
                 });
             }
         } catch(err) {
