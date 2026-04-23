@@ -1,4 +1,4 @@
-# myforestconnect — Peninsular Malaysia Forest Patch Connectivity
+# myforestconnect - Peninsular Malaysia Forest Patch Connectivity
 
 An open-access interactive web platform and analysis pipeline for assessing forest habitat quality and landscape connectivity for arboreal wildlife in urban and peri-urban Peninsular Malaysia.
 
