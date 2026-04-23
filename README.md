@@ -14,7 +14,7 @@ The work is part of a PhD research project at Universiti Sains Malaysia examinin
 
 The accompanying journal paper is currently under review:
 
-> Galea, B. (in prep). *myforestconnect: an open-access web platform for assessing forest habitat quality and landscape connectivity for arboreal wildlife in urban Peninsular Malaysia.*
+> Citation. *myforestconnect: an open-access web platform for assessing forest habitat quality and landscape connectivity for arboreal wildlife in urban Peninsular Malaysia.*
 
 ---
 
@@ -122,4 +122,4 @@ Universiti Sains Malaysia
 
 ## Licence
 
-Source code is released under the MIT licence. Patch data and connectivity outputs are made available for non-commercial research and educational use. Please cite the accompanying paper if you use this platform or pipeline in your work.
+Patch data and connectivity outputs are made available for non-commercial research and educational use. Please cite the accompanying paper if you use this platform or pipeline in your work.
