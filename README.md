@@ -10,7 +10,7 @@ An open-access interactive web platform and analysis pipeline for assessing fore
 
 This repository contains the complete source code for the myforestconnect web platform, along with the full analytical pipeline used to produce the underlying dataset. The platform provides open public access to patch-level habitat quality and connectivity data for two study landscapes in Peninsular Malaysia: the Klang Valley (greater Kuala Lumpur) and Kuantan (Pahang).
 
-The work is part of a PhD research project at Universiti Sains Malaysia examining structural and functional landscape connectivity for the white-handed gibbon (*Hylobates lar*) across contrasting urban and peri-urban environments.
+The work is part of a PhD research project at Universiti Sains Malaysia examining structural and functional landscape connectivity across contrasting urban and peri-urban environments.
 
 The accompanying journal paper is currently under review:
 
@@ -114,7 +114,6 @@ Full documentation is provided in the script headers.
 ## Contact
 
 **Benjamin Galea**
-Universiti Sains Malaysia
 [bengalea97@gmail.com](mailto:bengalea97@gmail.com)
 [ResearchGate](https://www.researchgate.net/profile/Benjamin-Galea)
 
@@ -122,4 +121,8 @@ Universiti Sains Malaysia
 
 ## Licence
 
-Patch data and connectivity outputs are made available for non-commercial research and educational use. Please cite the accompanying paper if you use this platform or pipeline in your work.
+Patch data and connectivity outputs are made available for non-commercial research and educational use. Please credit and cite the accompanying paper if you use this platform or pipeline in your work.
+
+*myforestconnect: an open-access web platform for assessing forest habitat quality and landscape connectivity for arboreal wildlife in urban Peninsular Malaysia.*
+
+
