@@ -8,7 +8,7 @@ An open-access interactive web platform and analysis pipeline for assessing fore
 
 ## About
 
-This repository contains the complete source code for the myforestconnect web platform, along with the full analytical pipeline used to produce the underlying dataset. The platform provides open public access to patch-level habitat quality and connectivity data for two study landscapes in Peninsular Malaysia: the Klang Valley (greater Kuala Lumpur) and Kuantan (Pahang).
+This repository contains the complete source code for the myforestconnect web platform, along with the full analytical pipeline used to produce the underlying dataset. The platform provides open public access to patch-level habitat quality and connectivity data for two study landscapes in Peninsular Malaysia: Klang Valley (greater Kuala Lumpur) and Kuantan (Pahang).
 
 The work is part of a PhD research project at Universiti Sains Malaysia examining structural and functional landscape connectivity across contrasting urban and peri-urban environments.
 
