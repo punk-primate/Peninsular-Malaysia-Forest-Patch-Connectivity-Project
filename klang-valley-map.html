@@ -11,9 +11,6 @@
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
 
     <link rel="stylesheet" href="style.css">
-    <link href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css' rel='stylesheet' />
-    <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js'></script>
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js'></script>
 </head>
 <body>
     <div id="app-container">
@@ -110,18 +107,22 @@
 
     <script src="config.js"></script>
     <script src="app.js"></script>
+
+
 <script>
-// ── ADDITIVE FEATURES: What-If Scenario Builder + Fast Hover Tooltip + Report Cards ─────
+// ── ADDITIVE FEATURES: What-If + Fast Hover Tooltip + Report Cards ────────────
 // Fully independent — does not modify any existing functionality.
+// MapboxDraw and Turf are loaded on-demand only when the what-if button is
+// clicked, so they cannot interfere with map initialisation.
 
 document.addEventListener('DOMContentLoaded', () => {
     const waitForMap = setInterval(() => {
         if (!window._mapInstance) return;
         clearInterval(waitForMap);
         const map = window._mapInstance;
-        const init = () => { initWhatIf(map); improveHoverTooltip(map); };
+        const init = () => { improveHoverTooltip(map); addWhatIfButton(map); };
         map.loaded() ? init() : map.on('load', init);
-    }, 200);
+    }, 300);
 });
 
 // ── 1. FAST HOVER TOOLTIP ─────────────────────────────────────────────────────
@@ -129,14 +130,13 @@ document.addEventListener('DOMContentLoaded', () => {
 function improveHoverTooltip(map) {
     const tip = document.createElement('div');
     tip.id = 'fast-tooltip';
-    tip.style.cssText = [
-        'position:fixed;pointer-events:none;display:none;z-index:500;',
-        'background:rgba(15,30,15,0.92);color:#dcedc8;',
-        'padding:7px 11px;border-radius:5px;font-size:12px;',
-        'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;',
-        'box-shadow:0 3px 12px rgba(0,0,0,0.35);max-width:220px;',
-        'border-left:3px solid #52b788;line-height:1.5;'
-    ].join('');
+    tip.style.cssText =
+        'position:fixed;pointer-events:none;display:none;z-index:500;' +
+        'background:rgba(15,30,15,0.92);color:#dcedc8;' +
+        'padding:7px 11px;border-radius:5px;font-size:12px;' +
+        'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
+        'box-shadow:0 3px 12px rgba(0,0,0,0.35);max-width:220px;' +
+        'border-left:3px solid #52b788;line-height:1.5;';
     document.body.appendChild(tip);
 
     const CONN_COLORS = {
@@ -158,13 +158,13 @@ function improveHoverTooltip(map) {
     }
 
     let patchLayerId = null;
-    setTimeout(() => { patchLayerId = getPatchLayer(); }, 1000);
+    setTimeout(() => { patchLayerId = getPatchLayer(); }, 1500);
 
     map.getCanvas().addEventListener('mousemove', (e) => {
         if (!patchLayerId) { patchLayerId = getPatchLayer(); return; }
-        const rect  = map.getCanvas().getBoundingClientRect();
-        const pt    = [e.clientX - rect.left, e.clientY - rect.top];
-        let feats   = [];
+        const rect = map.getCanvas().getBoundingClientRect();
+        const pt   = [e.clientX - rect.left, e.clientY - rect.top];
+        let feats  = [];
         try { feats = map.queryRenderedFeatures(pt, { layers: [patchLayerId] }); } catch(_) {}
 
         if (!feats.length) { tip.style.display = 'none'; return; }
@@ -178,10 +178,10 @@ function improveHoverTooltip(map) {
         const ct   = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#fff';
 
         tip.innerHTML =
-            `<div style="font-weight:700;margin-bottom:3px;color:#c8e6c9">${tier}</div>` +
-            (conn ? `<div style="margin-bottom:2px"><span style="display:inline-block;padding:1px 7px;border-radius:3px;background:${cc};color:${ct};font-size:11px;font-weight:700">${conn}</span></div>` : '') +
-            (area ? `<div style="font-size:11px;opacity:0.75;margin-top:2px">${area}</div>` : '') +
-            `<div style="font-size:10px;opacity:0.55;margin-top:3px;font-style:italic">Click for full details</div>`;
+            '<div style="font-weight:700;margin-bottom:3px;color:#c8e6c9">' + tier + '</div>' +
+            (conn ? '<div style="margin-bottom:2px"><span style="display:inline-block;padding:1px 7px;border-radius:3px;background:' + cc + ';color:' + ct + ';font-size:11px;font-weight:700">' + conn + '</span></div>' : '') +
+            (area ? '<div style="font-size:11px;opacity:0.75;margin-top:2px">' + area + '</div>' : '') +
+            '<div style="font-size:10px;opacity:0.55;margin-top:3px;font-style:italic">Click for full details</div>';
 
         tip.style.display = 'block';
         tip.style.left    = (e.clientX + 16) + 'px';
@@ -191,42 +191,18 @@ function improveHoverTooltip(map) {
     map.getCanvas().addEventListener('mouseleave', () => { tip.style.display = 'none'; });
 }
 
-// ── 2. WHAT-IF SCENARIO BUILDER ───────────────────────────────────────────────
+// ── 2. WHAT-IF: button added immediately, libs loaded on first click ──────────
 
-function initWhatIf(map) {
-    if (typeof MapboxDraw === 'undefined' || typeof turf === 'undefined') {
-        console.warn('MapboxDraw or Turf not loaded — what-if unavailable.');
-        return;
-    }
-
-    const draw = new MapboxDraw({
-        displayControlsDefault: false,
-        controls: { polygon: true, trash: true },
-        styles: [
-            { id:'gl-draw-polygon-fill', type:'fill',
-              filter:['all',['==','$type','Polygon']],
-              paint:{'fill-color':'#e07c1f','fill-opacity':0.15} },
-            { id:'gl-draw-polygon-stroke', type:'line',
-              filter:['all',['==','$type','Polygon']],
-              paint:{'line-color':'#e07c1f','line-width':2.5,'line-dasharray':[3,2]} },
-            { id:'gl-draw-polygon-fill-active', type:'fill',
-              filter:['all',['==','$type','Polygon'],['==','active','true']],
-              paint:{'fill-color':'#e07c1f','fill-opacity':0.2} },
-            { id:'gl-draw-vertex', type:'circle',
-              filter:['all',['==','$type','Point']],
-              paint:{'circle-radius':5,'circle-color':'#e07c1f'} }
-        ]
-    });
-    map.addControl(draw, 'top-right');
-
+function addWhatIfButton(map) {
     const topBar = document.getElementById('map-top-bar');
     if (!topBar) return;
 
     const btn = document.createElement('button');
     btn.id    = 'whatif-btn';
     btn.innerHTML = '&#x2295; What-if?';
-    btn.title = 'Draw a development zone to see which patches and corridors would be affected';
-    btn.style.cssText = 'background:#e07c1f;color:white;border:none;border-radius:5px;' +
+    btn.title = 'Draw a development zone to analyse impact on patches and corridors';
+    btn.style.cssText =
+        'background:#e07c1f;color:white;border:none;border-radius:5px;' +
         'padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;' +
         'font-family:inherit;letter-spacing:0.02em;transition:background 0.15s;';
     btn.addEventListener('mouseover', () => { if (!btn.classList.contains('active')) btn.style.background = '#b85f10'; });
@@ -235,16 +211,26 @@ function initWhatIf(map) {
 
     const panel = document.createElement('div');
     panel.id = 'whatif-panel';
-    panel.style.cssText = 'display:none;position:absolute;bottom:40px;right:12px;z-index:20;' +
+    panel.style.cssText =
+        'display:none;position:absolute;bottom:40px;right:12px;z-index:20;' +
         'background:rgba(255,255,255,0.97);border-radius:8px;padding:14px 16px;' +
         'max-width:280px;box-shadow:0 4px 20px rgba(0,0,0,0.2);' +
         'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
         'font-size:13px;color:#212529;max-height:350px;overflow-y:auto;';
     document.getElementById('map-container').appendChild(panel);
 
+    let loaded = false;
     let drawActive = false;
+    let draw = null;
 
     btn.addEventListener('click', () => {
+        if (!loaded) {
+            // Load libs on first click, then re-trigger
+            panel.innerHTML = '<div style="color:#555;font-style:italic">Loading what-if tools…</div>';
+            panel.style.display = 'block';
+            loadLibs(() => { loaded = true; initDraw(); btn.click(); });
+            return;
+        }
         drawActive = !drawActive;
         if (drawActive) {
             btn.textContent = '✕ Exit what-if';
@@ -258,13 +244,62 @@ function initWhatIf(map) {
         }
     });
 
+    function loadLibs(cb) {
+        let loaded = 0;
+        const check = () => { if (++loaded === 2) cb(); };
+
+        const css = document.createElement('link');
+        css.rel  = 'stylesheet';
+        css.href = 'https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css';
+        document.head.appendChild(css);
+
+        const drawScript = document.createElement('script');
+        drawScript.src = 'https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js';
+        drawScript.onload  = check;
+        drawScript.onerror = () => {
+            panel.innerHTML = '<div style="color:#721c24">Could not load drawing tools. Please check your connection.</div>';
+        };
+        document.head.appendChild(drawScript);
+
+        const turfScript = document.createElement('script');
+        turfScript.src = 'https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js';
+        turfScript.onload  = check;
+        turfScript.onerror = () => {
+            panel.innerHTML = '<div style="color:#721c24">Could not load analysis tools. Please check your connection.</div>';
+        };
+        document.head.appendChild(turfScript);
+    }
+
+    function initDraw() {
+        if (draw) return;
+        draw = new MapboxDraw({
+            displayControlsDefault: false,
+            controls: { polygon: true, trash: true },
+            styles: [
+                { id:'gl-draw-polygon-fill', type:'fill',
+                  filter:['all',['==','$type','Polygon']],
+                  paint:{'fill-color':'#e07c1f','fill-opacity':0.15} },
+                { id:'gl-draw-polygon-stroke', type:'line',
+                  filter:['all',['==','$type','Polygon']],
+                  paint:{'line-color':'#e07c1f','line-width':2.5,'line-dasharray':[3,2]} },
+                { id:'gl-draw-vertex', type:'circle',
+                  filter:['all',['==','$type','Point']],
+                  paint:{'circle-radius':5,'circle-color':'#e07c1f'} }
+            ]
+        });
+        map.addControl(draw, 'top-right');
+        map.on('draw.create', analyzeImpact);
+        map.on('draw.update', analyzeImpact);
+        map.on('draw.delete', () => { clearHighlights(); panel.style.display = 'none'; });
+    }
+
     function exitWhatIf() {
         drawActive = false;
         btn.innerHTML = '&#x2295; What-if?';
         btn.style.background = '#e07c1f';
         btn.classList.remove('active');
         panel.style.display = 'none';
-        draw.deleteAll();
+        if (draw) draw.deleteAll();
         clearHighlights();
         removeHint();
     }
@@ -273,7 +308,8 @@ function initWhatIf(map) {
         removeHint();
         const h = document.createElement('div');
         h.id = 'whatif-hint';
-        h.style.cssText = 'position:absolute;top:60px;left:50%;transform:translateX(-50%);' +
+        h.style.cssText =
+            'position:absolute;top:60px;left:50%;transform:translateX(-50%);' +
             'background:rgba(224,124,31,0.95);color:white;padding:8px 16px;' +
             'border-radius:5px;font-size:12px;font-weight:600;z-index:100;' +
             'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
@@ -321,11 +357,11 @@ function initWhatIf(map) {
         const poly = all.features && all.features[0];
         if (!poly) return;
 
+        const DISP = window.TIER_DISPLAY_NAMES || {};
         const affected = features.filter(f => {
             try { return turf.booleanIntersects(f, poly); } catch(_) { return false; }
         });
 
-        const DISP = window.TIER_DISPLAY_NAMES || {};
         const tierCounts = {}; let totalArea = 0, tier1Count = 0;
         affected.forEach(f => {
             const p    = f.properties;
@@ -347,31 +383,28 @@ function initWhatIf(map) {
         highlightPatches(patchLayerId, affected.map(f => f.properties.id || f.id));
 
         if (!affected.length) {
-            panel.innerHTML = '<div style="font-weight:700;margin-bottom:8px;color:#1a3d1a">What-if analysis</div>' +
+            panel.innerHTML =
+                '<div style="font-weight:700;margin-bottom:8px;color:#1a3d1a">What-if analysis</div>' +
                 '<p style="color:#555">No patches found in this zone. Try zooming in further.</p>';
         } else {
             const warn = tier1Count > 0
-                ? `<div style="background:#f8d7da;border:1px solid #f5c6cb;border-radius:4px;padding:7px 10px;margin-bottom:10px;font-size:12px;color:#721c24">
-                    ⚠ <strong>${tier1Count} Primary forest patch${tier1Count>1?'es':''}</strong> would be directly impacted.
-                   </div>` : '';
-
+                ? '<div style="background:#f8d7da;border:1px solid #f5c6cb;border-radius:4px;padding:7px 10px;margin-bottom:10px;font-size:12px;color:#721c24">⚠ <strong>' + tier1Count + ' Primary forest patch' + (tier1Count>1?'es':'') + '</strong> would be directly impacted.</div>'
+                : '';
             const rows = Object.entries(tierCounts)
                 .sort((a,b) => a[0].localeCompare(b[0]))
-                .map(([t,c]) => `<tr><td style="padding:2px 6px 2px 0;color:#555">${t}</td><td style="font-weight:700;color:#1a3d1a;text-align:right">${c}</td></tr>`)
+                .map(([t,c]) => '<tr><td style="padding:2px 6px 2px 0;color:#555">' + t + '</td><td style="font-weight:700;color:#1a3d1a;text-align:right">' + c + '</td></tr>')
                 .join('');
-
             panel.innerHTML =
-                `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                    <strong style="color:#1a3d1a">What-if analysis</strong>
-                    <span style="font-size:10px;color:#888;cursor:pointer" onclick="document.getElementById('whatif-panel').style.display='none'">✕</span>
-                 </div>` +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">' +
+                '<strong style="color:#1a3d1a">What-if analysis</strong>' +
+                '<span style="font-size:10px;color:#888;cursor:pointer" onclick="document.getElementById(\'whatif-panel\').style.display=\'none\'">✕</span></div>' +
                 warn +
-                `<div style="margin-bottom:8px"><strong>${affected.length}</strong> patch${affected.length!==1?'es':''} affected &nbsp;·&nbsp; <strong>${totalArea.toFixed(0)}</strong> ha total</div>` +
-                `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px">${rows}</table>` +
+                '<div style="margin-bottom:8px"><strong>' + affected.length + '</strong> patch' + (affected.length!==1?'es':'') + ' affected &nbsp;·&nbsp; <strong>' + totalArea.toFixed(0) + '</strong> ha total</div>' +
+                '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px">' + rows + '</table>' +
                 (corridorCount > 0
-                    ? `<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:6px 10px;font-size:12px;color:#856404">🔗 <strong>${corridorCount}</strong> corridor segment${corridorCount!==1?'s':''} would be severed.</div>`
-                    : `<div style="font-size:12px;color:#555">No active corridors pass through this zone.</div>`) +
-                `<div style="margin-top:10px;font-size:10px;color:#999;font-style:italic">Based on currently visible patches. Zoom in for complete results.</div>`;
+                    ? '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:6px 10px;font-size:12px;color:#856404">🔗 <strong>' + corridorCount + '</strong> corridor segment' + (corridorCount!==1?'s':'') + ' would be severed.</div>'
+                    : '<div style="font-size:12px;color:#555">No active corridors pass through this zone.</div>') +
+                '<div style="margin-top:10px;font-size:10px;color:#999;font-style:italic">Based on currently visible patches. Zoom in for complete results.</div>';
         }
         panel.style.display = 'block';
     }
@@ -395,10 +428,6 @@ function initWhatIf(map) {
     function clearHighlights() {
         if (map.getLayer('whatif-highlight')) map.removeLayer('whatif-highlight');
     }
-
-    map.on('draw.create', analyzeImpact);
-    map.on('draw.update', analyzeImpact);
-    map.on('draw.delete', () => { clearHighlights(); panel.style.display = 'none'; });
 }
 
 // ── 3. REPORT CARDS ───────────────────────────────────────────────────────────
@@ -408,16 +437,18 @@ function initWhatIf(map) {
         const content = document.getElementById('patch-info-content');
         if (!content || document.getElementById('report-card-btn')) return;
         if (!window._lastPatchProps) return;
-        if (content.textContent.trim() === 'Select a patch on the map.') return;
-        if (content.textContent.includes('No data')) return;
+        const text = content.textContent.trim();
+        if (text === 'Select a patch on the map.' || text === 'No data for this patch.') return;
 
         const btn = document.createElement('button');
         btn.id = 'report-card-btn';
         btn.textContent = '⬇ Download report card';
-        btn.style.cssText = 'display:block;width:100%;margin-top:10px;padding:7px 10px;' +
+        btn.style.cssText =
+            'display:block;width:100%;margin-top:10px;padding:7px 10px;' +
             'background:#2a8234;color:white;border:none;border-radius:4px;' +
             'font-size:12px;font-weight:600;cursor:pointer;' +
-            'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;transition:background 0.15s;';
+            'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
+            'transition:background 0.15s;';
         btn.addEventListener('mouseover', () => btn.style.background = '#1e6b27');
         btn.addEventListener('mouseout',  () => btn.style.background = '#2a8234');
         btn.addEventListener('click', () => generateReportCard(window._lastPatchProps));
@@ -443,16 +474,10 @@ function generateReportCard(p) {
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
 
-    // Background
     ctx.fillStyle = '#f5f3ee'; ctx.fillRect(0, 0, W, H);
-
-    // Header band
     ctx.fillStyle = '#1a3d1a'; ctx.fillRect(0, 0, W, 72);
+    ctx.fillStyle = tierColor;  ctx.fillRect(0, 0, 8, H);
 
-    // Left accent stripe
-    ctx.fillStyle = tierColor; ctx.fillRect(0, 0, 8, H);
-
-    // Header text
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 17px -apple-system, sans-serif';
     ctx.fillText('Forest Patch Report Card', 24, 28);
@@ -466,56 +491,40 @@ function generateReportCard(p) {
         ctx.fillText('Patch ID: ' + p.id, W - 130, 36);
     }
 
-    // Tier badge
-    ctx.fillStyle = tierColor;
-    rr(ctx, 24, 88, 300, 38, 5); ctx.fill();
+    ctx.fillStyle = tierColor; rr(ctx, 24, 88, 300, 38, 5); ctx.fill();
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 15px -apple-system, sans-serif';
     ctx.fillText(tierLabel, 36, 112);
 
-    // Connectivity badge
-    ctx.fillStyle = connColor;
-    rr(ctx, 336, 88, 150, 38, 5); ctx.fill();
+    ctx.fillStyle = connColor; rr(ctx, 336, 88, 150, 38, 5); ctx.fill();
     ctx.fillStyle = connText;
     ctx.font = 'bold 13px -apple-system, sans-serif';
     ctx.fillText('Connectivity: ' + conn, 348, 112);
 
-    // Metric cards
     const metrics = [
-        { label:'Total area',    value: p.area   != null ? parseFloat(p.area).toFixed(2)   + ' ha' : '—' },
-        { label:'Core area',     value: p.core   != null ? parseFloat(p.core).toFixed(2)   + ' ha' : '—' },
-        { label:'Contiguity',    value: p.contig != null ? parseFloat(p.contig).toFixed(3)       : '—' },
-        { label:'ENN distance',  value: p.enn    != null ? Math.round(p.enn)                + ' m' : '—' },
-        { label:'Perim-area ratio', value: p.para != null ? parseFloat(p.para).toFixed(5)        : '—' },
-        { label:'Mean flow',     value: p.mean_flow != null ? parseFloat(p.mean_flow).toFixed(2) : '—' },
+        { label:'Total area',       value: p.area      != null ? parseFloat(p.area).toFixed(2)      + ' ha' : '—' },
+        { label:'Core area',        value: p.core      != null ? parseFloat(p.core).toFixed(2)      + ' ha' : '—' },
+        { label:'Contiguity',       value: p.contig    != null ? parseFloat(p.contig).toFixed(3)          : '—' },
+        { label:'ENN distance',     value: p.enn       != null ? Math.round(p.enn)                  + ' m' : '—' },
+        { label:'Perim-area ratio', value: p.para      != null ? parseFloat(p.para).toFixed(5)           : '—' },
+        { label:'Mean flow',        value: p.mean_flow != null ? parseFloat(p.mean_flow).toFixed(2)      : '—' },
     ];
 
     const colW = (W - 48 - 20) / 3;
     metrics.forEach((m, i) => {
         const col = i % 3, row = Math.floor(i / 3);
         const x = 24 + col * (colW + 10), y = 148 + row * 72;
-
-        ctx.fillStyle = '#ffffff';
-        rr(ctx, x, y, colW, 62, 5); ctx.fill();
-        ctx.strokeStyle = '#e0dbd0'; ctx.lineWidth = 1;
-        rr(ctx, x, y, colW, 62, 5); ctx.stroke();
-
-        ctx.fillStyle = '#2a8234';
-        ctx.fillRect(x, y, 4, 62);
-
-        ctx.fillStyle = '#888';
-        ctx.font = '10px -apple-system, sans-serif';
+        ctx.fillStyle = '#ffffff'; rr(ctx, x, y, colW, 62, 5); ctx.fill();
+        ctx.strokeStyle = '#e0dbd0'; ctx.lineWidth = 1; rr(ctx, x, y, colW, 62, 5); ctx.stroke();
+        ctx.fillStyle = '#2a8234'; ctx.fillRect(x, y, 4, 62);
+        ctx.fillStyle = '#888'; ctx.font = '10px -apple-system, sans-serif';
         ctx.fillText(m.label, x + 12, y + 20);
-
-        ctx.fillStyle = '#1a3d1a';
-        ctx.font = 'bold 16px -apple-system, sans-serif';
+        ctx.fillStyle = '#1a3d1a'; ctx.font = 'bold 16px -apple-system, sans-serif';
         ctx.fillText(m.value, x + 12, y + 46);
     });
 
-    // Footer
     ctx.fillStyle = '#2a8234'; ctx.fillRect(0, H - 36, W, 36);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '11px -apple-system, sans-serif';
+    ctx.fillStyle = '#ffffff'; ctx.font = '11px -apple-system, sans-serif';
     const d = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
     ctx.fillText('Generated ' + d + '  ·  myforestconnect.online', 24, H - 14);
 
@@ -527,14 +536,14 @@ function generateReportCard(p) {
 
 function rr(ctx, x, y, w, h, r) {
     ctx.beginPath();
-    ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y);
-    ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-    ctx.lineTo(x+w, y+h-r);
-    ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-    ctx.lineTo(x+r, y+h);
-    ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-    ctx.lineTo(x, y+r);
-    ctx.quadraticCurveTo(x, y, x+r, y);
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+    ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r);
+    ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h);
+    ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r);
+    ctx.quadraticCurveTo(x,y,x+r,y);
     ctx.closePath();
 }
 </script>
