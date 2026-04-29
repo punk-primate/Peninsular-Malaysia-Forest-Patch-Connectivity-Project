@@ -2,349 +2,62 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="favicon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Klang Valley Forest Patches</title>
 
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+
     <link rel="stylesheet" href="style.css">
-
-    <style>
-        /* ── Font reset ── */
-        #sidebar, #sidebar *, .modal-content, .modal-content * {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-                         "Helvetica Neue", Arial, sans-serif !important;
-        }
-
-        /* ── Critical layout ── */
-        html, body { margin:0; padding:0; height:100%; }
-        #app-container { display:flex !important; height:100vh !important; overflow:hidden !important; }
-        #sidebar {
-            width:330px !important; min-width:330px !important; flex-shrink:0 !important;
-            overflow-y:auto !important; background:#ffffff; border-right:1px solid #e0e4e8;
-            padding:16px !important; display:flex !important; flex-direction:column !important;
-            z-index:10; box-sizing:border-box;
-            box-shadow: 2px 0 8px rgba(0,0,0,0.06);
-        }
-        /* ── Sidebar collapsed state — keep toggle button accessible ── */
-        #sidebar.collapsed {
-            width:32px !important; min-width:32px !important;
-            padding:6px 0 !important; overflow:hidden !important;
-            align-items:center !important;
-        }
-        #sidebar.collapsed > .sidebar-section,
-        #sidebar.collapsed > #sidebar-footer { display:none !important; }
-        #sidebar.collapsed > #sidebar-header > h2 { display:none !important; }
-        #sidebar.collapsed > #sidebar-header > .header-buttons > #dark-mode-toggle { display:none !important; }
-        #sidebar.collapsed > #sidebar-header {
-            padding:0 !important; border-bottom:none !important;
-            width:100%; display:flex; justify-content:center;
-            align-items:flex-start; padding-top:8px !important;
-        }
-        #sidebar.collapsed > #sidebar-header > .header-buttons {
-            display:flex !important; flex-direction:column; align-items:center; margin-left:0;
-        }
-        #sidebar.collapsed #toggle-sidebar-btn {
-            display:inline-flex !important; padding:8px 6px; font-size:1.2em;
-        }
-        #map-container { flex-grow:1 !important; position:relative !important; height:100% !important; min-width:0; }
-        #map { position:absolute !important; top:0; bottom:0; left:0; right:0; }
-
-        /* ── Sidebar header ── */
-        #sidebar-header {
-            display:flex; justify-content:space-between; align-items:flex-start;
-            margin-bottom:16px; border-bottom:2px solid #2a8234; padding-bottom:12px;
-        }
-        #sidebar-header h2 { margin:0; font-size:1.05em; font-weight:700; color:#1a2e1a; line-height:1.3; }
-        .header-buttons { display:flex; gap:5px; flex-shrink:0; margin-left:8px; }
-        .header-buttons button {
-            background:none; border:1px solid #dee2e6; border-radius:4px;
-            padding:5px 7px; cursor:pointer; font-size:1em; color:#495057;
-            transition: background 0.15s;
-        }
-        .header-buttons button:hover { background:#f0f0f0; }
-
-        /* ── Sidebar sections — green left border on headings ── */
-        .sidebar-section { margin-bottom:18px; }
-        .sidebar-section h3 {
-            font-size:0.78em; font-weight:700; color:#2a8234;
-            text-transform:uppercase; letter-spacing:0.06em;
-            margin:0 0 10px; padding:0 0 6px 8px;
-            border-left:3px solid #2a8234; border-bottom:1px solid #e9ecef;
-        }
-
-        /* ── Tier filter items ── */
-        .filter-legend-item {
-            display:flex; align-items:center; padding:4px 4px;
-            cursor:pointer; font-size:0.87em; color:#212529;
-            border-radius:4px; transition:background 0.12s;
-        }
-        .filter-legend-item:hover { background:#f0f7f0; }
-        .legend-color-box {
-            width:13px; height:13px; margin-right:7px; flex-shrink:0;
-            border:1px solid rgba(0,0,0,0.15); border-radius:2px;
-        }
-        .filter-legend-item input[type="checkbox"] { margin:0 7px 0 0; cursor:pointer; }
-
-        /* ── Patch info panel ── */
-        #patch-info-content {
-            font-size:0.87em; color:#212529; border:1px solid #dee2e6; border-radius:6px;
-            padding:12px; min-height:70px; background:#f8faf8; line-height:1.5;
-            max-height:400px; overflow-y:auto;
-            transition: opacity 0.2s ease;
-        }
-
-        /* ── Stats ── */
-        #stats-content p { margin:4px 0; font-size:0.87em; color:#212529; }
-        #stats-content span { font-weight:700; color:#2a8234; }
-        #tier-stats-breakdown { font-size:0.8em; border-top:1px dashed #e9ecef; padding-top:6px; margin-top:6px; color:#495057; }
-        #tier-stats-breakdown h5 { margin:0 0 5px; font-size:0.9em; color:#343a40; }
-        #tier-stats-breakdown p { margin:2px 0 2px 4px; }
-
-        /* ── Tools section ── */
-        #tools-section label { display:block; margin-bottom:3px; font-size:0.84em; font-weight:600; color:#495057; }
-        #tools-section select, #area-filter-controls input[type="number"] {
-            width:100%; padding:7px 9px; margin-bottom:8px; border:1px solid #ced4da;
-            border-radius:4px; box-sizing:border-box; font-size:0.87em; color:#212529;
-            background:white; transition:border-color 0.15s;
-        }
-        #tools-section select:focus, #area-filter-controls input:focus {
-            outline:none; border-color:#2a8234;
-        }
-        #area-filter-controls { margin-top:10px; padding-top:10px; border-top:1px solid #e9ecef; }
-        #area-filter-controls h4 { margin:0 0 8px; font-size:0.88em; font-weight:700; color:#343a40; }
-        .area-input-group { display:flex; align-items:center; margin-bottom:5px; gap:6px; }
-        .area-input-group label { width:30px; font-size:0.84em; color:#495057; flex-shrink:0; }
-        .area-input-group input { flex-grow:1; margin-bottom:0 !important; }
-        .area-filter-buttons { display:flex; gap:6px; margin-top:8px; }
-        .area-filter-buttons button {
-            flex-grow:1; padding:7px 8px; font-size:0.84em; font-weight:600;
-            border:none; border-radius:4px; cursor:pointer; color:white;
-            background:#5c636a; transition:background 0.15s;
-        }
-        .area-filter-buttons button:hover { background:#454b50; }
-        .filter-error-message {
-            color:#721c24; background:#f8d7da; border:1px solid #f5c6cb;
-            padding:6px 10px; border-radius:4px; font-size:0.83em; margin-top:5px;
-        }
-        #sidebar-footer { margin-top:auto; padding-top:12px; border-top:1px solid #e9ecef; }
-        #about-btn {
-            width:100%; padding:8px; font-size:0.87em; font-weight:600;
-            border:none; border-radius:4px; cursor:pointer; color:white;
-            background:#2a8234; transition:background 0.15s;
-        }
-        #about-btn:hover { background:#1e6b27; }
-
-        /* ── Dark mode ── */
-        body.dark-mode #sidebar { background:#1a2120; border-color:#2c3a2c; }
-        body.dark-mode #sidebar-header { border-color:#4a7c52; }
-        body.dark-mode #sidebar-header h2 { color:#c8e6c9; }
-        body.dark-mode .sidebar-section h3 { color:#81c784; border-color:#4a7c52; }
-        body.dark-mode .filter-legend-item { color:#dcedc8; }
-        body.dark-mode .filter-legend-item:hover { background:#1e3020; }
-        body.dark-mode #patch-info-content { background:#1e3020; border-color:#2c3a2c; color:#dcedc8; }
-        body.dark-mode #stats-content p { color:#c8e6c9; }
-        body.dark-mode #stats-content span { color:#81c784; }
-        body.dark-mode #tier-stats-breakdown { color:#a5d6a7; }
-        body.dark-mode #tier-stats-breakdown h5 { color:#a5d6a7; }
-        body.dark-mode #tools-section label { color:#a5d6a7; }
-        body.dark-mode #tools-section select,
-        body.dark-mode #area-filter-controls input { background:#1e3020; border-color:#2c3a2c; color:#dcedc8; }
-        body.dark-mode .header-buttons button { border-color:#2c3a2c; color:#a5d6a7; }
-        body.dark-mode .header-buttons button:hover { background:#1e3020; }
-        body.dark-mode #about-btn { background:#1e6b27; }
-        body.dark-mode #about-btn:hover { background:#145218; }
-
-        /* ── Map top bar ── */
-        #map-top-bar {
-            position:absolute; top:10px; left:50%; transform:translateX(-50%);
-            z-index:10; display:flex; align-items:center; gap:8px;
-            background:rgba(255,255,255,0.97); border-radius:8px;
-            padding:7px 12px; box-shadow:0 2px 12px rgba(0,0,0,0.18);
-            white-space:nowrap;
-            font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-        }
-        body.dark-mode #map-top-bar { background:rgba(22,30,22,0.97); }
-
-        /* How to use — text on desktop, icon only on mobile */
-        #howto-btn {
-            background:none; border:1px solid #ccc; border-radius:5px;
-            padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; color:#333;
-            transition:background 0.15s;
-        }
-        body.dark-mode #howto-btn { color:#c8e6c9; border-color:#4a7c52; }
-        #howto-btn:hover { background:#f0f0f0; }
-        body.dark-mode #howto-btn:hover { background:#1e3020; }
-        #copy-link-btn { color:#333; }
-        body.dark-mode #copy-link-btn { color:#c8e6c9; border-color:#4a7c52; }
-        #howto-btn .howto-text { display:inline; }
-        #howto-btn .howto-icon { display:none; }
-
-        /* Corridor controls */
-        #corridor-controls { display:flex; align-items:center; gap:6px; }
-        #corridor-toggle-fab {
-            background:#2a8234; color:white; border:none; border-radius:5px;
-            padding:5px 13px; font-size:12px; font-weight:700; cursor:pointer;
-            font-family:inherit; transition:background 0.15s;
-            letter-spacing:0.02em;
-        }
-        #corridor-toggle-fab:hover  { background:#1e6b27; }
-        #corridor-toggle-fab.active { background:#1e5c26; box-shadow:inset 0 1px 3px rgba(0,0,0,0.3); }
-
-        #conn-level-toggles { display:flex; gap:5px; align-items:center; }
-
-        /* Connectivity level buttons — neutral, no colour, maximum readability */
-        .conn-level-btn {
-            background: #f0f0f0;
-            border: 1px solid #bbb;
-            border-radius: 4px;
-            padding: 4px 10px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            font-family: inherit;
-            color: #444;
-            opacity: 0.5;
-            transition: opacity 0.15s, background 0.15s, color 0.15s;
-        }
-        .conn-level-btn.active {
-            opacity: 1;
-            background: #2a8234;
-            color: white;
-            border-color: #1e6b27;
-        }
-        .conn-level-btn:hover { opacity: 0.8; }
-        body.dark-mode .conn-level-btn { background:#2c3034; border-color:#555; color:#aaa; }
-        body.dark-mode .conn-level-btn.active { background:#2a8234; color:white; border-color:#1e6b27; }
-
-        #home-btn {
-            display:flex; align-items:center; justify-content:center;
-            width:32px; height:32px; font-size:16px; text-decoration:none;
-            border:1px solid #ccc; border-radius:5px; background:white;
-            transition:background 0.15s;
-        }
-        body.dark-mode #home-btn { background:#1e3020; border-color:#4a7c52; }
-        #home-btn:hover { background:#f0f0f0; }
-
-        /* ── Modals ── */
-        .modal {
-            display:none; position:fixed; z-index:1001; left:0; top:0;
-            width:100%; height:100%; background:rgba(0,0,0,0.55);
-            align-items:center; justify-content:center;
-            font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-        }
-        .modal-content {
-            background:white; padding:28px 32px; border-radius:8px;
-            max-width:640px; width:90%; max-height:82vh; overflow-y:auto;
-            position:relative; box-shadow:0 12px 32px rgba(0,0,0,0.25); color:#212529;
-        }
-        .modal-content h2 { margin:0 0 6px; font-size:1.25em; color:#1a2e1a; }
-        .modal-content h3 { font-size:0.95em; margin:16px 0 5px; color:#2a8234; }
-        .modal-content p  { font-size:0.92em; line-height:1.65; margin:0 0 8px; }
-        .modal-content ul { font-size:0.92em; line-height:1.65; margin:4px 0 8px; padding-left:18px; }
-        .close-modal-btn {
-            position:absolute; top:12px; right:16px; font-size:20px; font-weight:bold;
-            cursor:pointer; background:none; border:none; color:#888; padding:0;
-            transition:color 0.15s;
-        }
-        .close-modal-btn:hover { color:#1a2e1a; }
-
-        /* ── Zoom warning / loading ── */
-        #zoom-warning {
-            display:none; position:absolute; top:60px; left:50%; transform:translateX(-50%);
-            background:#306230; color:#9bbc0f; padding:12px 20px;
-            border:3px solid #8bac0f; z-index:1000; text-align:center;
-            pointer-events:none; font-size:11px; border-radius:3px;
-        }
-        #loading-indicator {
-            position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-            background:rgba(0,0,0,0.84); color:white; padding:24px 30px;
-            border-radius:10px; z-index:1000; text-align:center;
-        }
-        .spinner {
-            border:4px solid rgba(255,255,255,0.25); border-top:4px solid #81c784;
-            border-radius:50%; width:28px; height:28px;
-            animation:spin 0.9s linear infinite; margin:0 auto 12px;
-        }
-        @keyframes spin { to { transform:rotate(360deg); } }
-        .terminal-loader { text-align:left; color:#9bbc0f; font-size:10px; }
-        .typing {
-            overflow:hidden; white-space:nowrap; border-right:8px solid #9bbc0f;
-            animation:typing 1.2s steps(30) forwards, blink 0.8s step-end infinite;
-            margin-bottom:8px;
-        }
-        @keyframes typing { from { width:0 } to { width:100% } }
-        @keyframes blink  { from,to { border-color:transparent } 50% { border-color:#9bbc0f } }
-
-        /* ── Mobile responsiveness ── */
-        @media (max-width: 768px) {
-            #sidebar {
-                position:absolute; height:100%; width:85%; max-width:320px;
-                z-index:1000; box-shadow:4px 0 15px rgba(0,0,0,0.4);
-            }
-            #map-container, #app-container.sidebar-collapsed #map-container {
-                margin-left:0 !important; width:100%;
-            }
-            #sidebar.collapsed { width:38px !important; }
-
-            /* Hide full text on mobile, show ? icon */
-            #howto-btn .howto-text { display:none; }
-            #howto-btn .howto-icon { display:inline; }
-            #howto-btn { padding:5px 7px; }
-
-            /* Shrink corridor labels on mobile */
-            #conn-filter-high     { padding:4px 6px; font-size:10px; }
-            #conn-filter-moderate { padding:4px 5px; font-size:10px; }
-            #conn-filter-low      { padding:4px 6px; font-size:10px; }
-
-            .mapboxgl-ctrl-top-right { top:60px; }
-
-            #tools-section select,
-            #area-filter-controls input[type="number"] { font-size:16px !important; }
-        }
-    </style>
+    <link href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css' rel='stylesheet' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js'></script>
 </head>
 <body>
     <div id="app-container">
         <aside id="sidebar">
             <div id="sidebar-header">
                 <h2>Klang Valley Forest Patches</h2>
-                <div class="header-buttons">
-                    <button id="dark-mode-toggle" title="Toggle dark/light mode" aria-label="Toggle dark mode">🌓</button>
-                    <button id="toggle-sidebar-btn" title="Toggle sidebar" aria-label="Toggle sidebar" aria-expanded="true">&#8249;</button>
+                <div class="header-buttons"> 
+                    <button id="dark-mode-toggle" title="Toggle Dark/Light Mode" aria-label="Toggle dark mode">🌓</button>
+                    <button id="toggle-sidebar-btn" title="Toggle Sidebar" aria-label="Toggle sidebar" aria-expanded="true">‹</button>
                 </div>
             </div>
 
             <div class="sidebar-section" id="filter-section">
-                <h3>Filter by category</h3>
-            </div>
+                <h3>Filter by Category</h3> 
+                </div>
 
             <div class="sidebar-section" id="info-panel-section">
-                <h3>Patch details</h3>
+                <h3>Patch Details</h3>
                 <div id="patch-info-content">Select a patch on the map.</div>
             </div>
 
             <div class="sidebar-section" id="stats-section">
-                <h3>Summary statistics</h3>
+                <h3>Summary Statistics</h3>
                 <div id="stats-content">
-                    <p>Visible patches: <span id="visible-patches-count">-</span></p>
-                    <p>Total area: <span id="visible-patches-area">- ha</span></p>
+                    <p>Visible Patches: <span id="visible-patches-count">-</span></p>
+                    <p>Total Area: <span id="visible-patches-area">- ha</span></p>
                     <p>Average ENN: <span id="visible-patches-enn">- m</span></p>
-                    <div id="tier-stats-breakdown"></div>
+                    <div id="tier-stats-breakdown">
+                        </div>
                 </div>
             </div>
 
             <div class="sidebar-section" id="tools-section">
                 <h3>Tools</h3>
                 <div id="search-geocoder-container"></div>
-                <label for="basemap-toggle" style="margin-top:10px">Basemap:</label>
+                
+               <label for="basemap-toggle" style="margin-top: 1em; display: block;">Basemap:</label>
                 <select id="basemap-toggle">
-                    <option value="custom">Custom style</option>
+                    <option value="custom">Custom Style</option>
                     <option value="satellite">Satellite</option>
                 </select>
+
                 <div id="area-filter-controls">
-                    <h4>Filter by patch area (ha)</h4>
+                    <h4>Filter by Patch Area (ha)</h4>
                     <div class="area-input-group">
                         <label for="min-area-input">Min:</label>
                         <input type="number" id="min-area-input" placeholder="0" min="0">
@@ -353,141 +66,478 @@
                         <label for="max-area-input">Max:</label>
                         <input type="number" id="max-area-input" placeholder="e.g., 5000" min="0">
                     </div>
-                    <div id="area-filter-error" class="filter-error-message" style="display:none;"></div>
+                    <div id="area-filter-error" class="filter-error-message" style="display: none;"></div>
                     <div class="area-filter-buttons">
-                        <button id="apply-area-filter-btn">Apply</button>
-                        <button id="reset-area-filter-btn">Reset</button>
+                        <button id="apply-area-filter-btn">Apply Area</button>
+                        <button id="reset-area-filter-btn">Reset Area</button>
                     </div>
                 </div>
             </div>
 
             <div id="sidebar-footer">
-                <button id="about-btn">About this project</button>
+                <button id="about-btn">About This Project</button>
             </div>
         </aside>
 
-        <main id="map-container">
-            <div id="map"></div>
-
-            <div id="map-top-bar">
-                <button id="howto-btn">
-                    <span class="howto-text">How to use this map</span>
-                    <span class="howto-icon">?</span>
-                </button>
-                <div id="corridor-controls">
-                    <button id="corridor-toggle-fab">Show corridors</button>
-                    <div id="conn-level-toggles" style="display:none">
-                        <button id="conn-filter-high">High</button>
-                        <button id="conn-filter-moderate">Moderate</button>
-                        <button id="conn-filter-low">Low</button>
-                    </div>
-                </div>
-                <a href="index.html" id="home-btn" title="Back to home">🏠</a>
-                <button id="copy-link-btn" title="Copy link to this view" style="background:none;border:1px solid #ccc;border-radius:5px;padding:5px 9px;font-size:12px;font-weight:600;cursor:pointer;transition:background 0.15s">🔗 Share</button>
-            </div>
-
-            <div id="zoom-warning">
-                [ SYSTEM NOTICE ]<br>ZOOM IN TO VIEW FOREST PATCHES
-            </div>
-
-            <!-- Corridor tier filter — only shown if connector layer has Tier data -->
-            <div id="corridor-tier-filter" style="display:none;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(255,255,255,0.97);border-radius:8px;padding:7px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.18);gap:6px;align-items:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;white-space:nowrap">
-                <span style="font-weight:600;color:#555;margin-right:4px">Show corridors for:</span>
-                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 1 (Primary forest)">T1</button>
-                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 2 (Established forest)">T2</button>
-                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 3 (Functional fragment)">T3</button>
-                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 4 (Vulnerable fragment)">T4</button>
-                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 5 (Marginal fragment)">T5</button>
-                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 6 (Remnant patch)">T6</button>
-            </div>
-
-            <!-- First-visit onboarding overlay -->
-            <div id="onboarding-overlay" style="display:none;position:absolute;inset:0;z-index:999;background:rgba(0,0,0,0.72);align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
-                <div style="background:white;border-radius:12px;padding:32px 36px;max-width:420px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,0.35)">
-                    <h2 style="margin:0 0 20px;font-size:1.1em;color:#1a2e1a">Getting started</h2>
-                    <div style="margin-bottom:24px">
-                        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
-                            <span style="background:#2a8234;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">1</span>
-                            <p style="margin:0;font-size:0.88em;color:#333;line-height:1.5"><strong>Zoom into the map</strong> until green forest patches appear, then click any patch to see its conservation tier and connectivity rating.</p>
-                        </div>
-                        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
-                            <span style="background:#2a8234;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">2</span>
-                            <p style="margin:0;font-size:0.88em;color:#333;line-height:1.5"><strong>Toggle potential movement corridors</strong> using the "Show corridors" button at the top of the map.</p>
-                        </div>
-                        <div style="display:flex;align-items:flex-start;gap:12px">
-                            <span style="background:#2a8234;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">3</span>
-                            <p style="margin:0;font-size:0.88em;color:#333;line-height:1.5">To see full technical details, click the <strong>How to use this map</strong> button in the top panel.</p>
-                        </div>
-                    </div>
-                    <button id="onboarding-dismiss" style="background:#2a8234;color:white;border:none;border-radius:6px;padding:10px 28px;font-size:0.95em;font-weight:600;cursor:pointer;font-family:inherit;width:100%" onmouseover="this.style.background='#1e6b27'" onmouseout="this.style.background='#2a8234'">Get started</button>
-                </div>
-            </div>
-
-            <div id="loading-indicator">
-                <div class="terminal-loader">
-                    <p class="typing">> INITIALIZING GEOSPATIAL ENGINE...</p>
-                    <p class="typing" style="animation-delay:0.8s;">> LOADING KLANG_VALLEY_FORESTS.DB...</p>
-                    <p class="typing" style="animation-delay:1.6s;">> CALCULATING CONNECTIVITY TIERS...</p>
-                    <div class="spinner"></div>
-                </div>
-            </div>
-        </main>
+       <main id="map-container">
+    <div id="map"></div>
+    
+    <div id="zoom-warning">
+        [ SYSTEM NOTICE ]<br>
+        ZOOM IN TO VIEW FOREST PATCHES
     </div>
 
-    <div id="about-modal" class="modal">
-        <div class="modal-content">
-            <button class="close-modal-btn" aria-label="Close">&#215;</button>
-            <h2>Peninsular Malaysia Forest Patch Connectivity Project</h2>
-            <p>This interactive map is a product of research examining landscape connectivity for arboreal wildlife across urbanisation gradients in Peninsular Malaysia.</p>
-            <p>Each forest patch is classified into one of six conservation tiers using a Patch Structural Quality Index (PSQI), which combines five patch-scale landscape metrics: total area, core area, contiguity index, perimeter-area ratio, and Euclidean nearest-neighbour distance. Connectivity values are derived from circuit theory modelling using Omniscape, which simulates the flow of movement current across the landscape under varying resistance assumptions.</p>
-            <p>The accompanying journal paper is currently in review. </p>
-            <p style="margin-top:1em">Built by Benjamin Galea. Contact <a href="mailto:bengalea97@gmail.com" style="color:#2a8234">bengalea97@gmail.com</a> for any enquiries.</p>
+    <div id="loading-indicator">
+        <div class="terminal-loader">
+            <p class="typing">> INITIALIZING GEOSPATIAL ENGINE...</p>
+            <p class="typing" style="animation-delay: 1s;">> LOADING KLANG_VALLEY_FORESTS.DB...</p>
+            <p class="typing" style="animation-delay: 2s;">> CALCULATING CONNECTIVITY TIERS...</p>
+            <div class="spinner"></div>
         </div>
     </div>
+</main>
+    </div>
 
-    <div id="howto-modal" class="modal">
+    <div id="about-modal" class="modal" style="display:none;">
         <div class="modal-content">
-            <button class="close-modal-btn" id="close-howto-btn" aria-label="Close">&#215;</button>
-            <h2>How to use this map</h2>
-
-            <h3>Getting started</h3>
-            <p>Zoom into any part of the Klang Valley until green forest patches appear on the map. You can also use the search bar in the sidebar to jump to a specific location. Right-click and drag to tilt the map into 3D view, or drag with both fingers if using a mobile device. The map works best on a desktop browser.</p>
-
-            <h3>What the patch colours mean</h3>
-            <p>Each patch is coloured according to its conservation tier, which reflects its structural quality as a habitat:</p>
-            <ul>
-                <li><strong>Tier 1 (Primary forest)</strong> - the most ecologically intact patches, large enough to support a high level of biodiversity with substantial buffered interior area</li>
-                <li><strong>Tier 2 (Established forest)</strong> - high-quality patches that could act as critical hubs or stepping stones in a potential corridor network</li>
-                <li><strong>Tier 3 (Functional fragment)</strong> - moderately-sized patches that could help link larger areas of forest if they have high connectivity potential</li>
-                <li><strong>Tier 4 (Vulnerable fragment)</strong> - smaller patches with significant edge exposure that are still functionally important</li>
-                <li><strong>Tier 5 (Marginal fragment)</strong> - small patches with limited connectivity potential to the wider network</li>
-                <li><strong>Tier 6 (Remnant patch)</strong> - highly isolated remnant fragments, generally too small to support resident populations</li>
-            </ul>
-            <p>Use the "Filter by category" checkboxes in the sidebar to show or hide individual tiers on the map.</p>
-
-            <h3>Clicking on a patch</h3>
-            <p>Click any forest patch to see its details in the sidebar. The panel shows the conservation tier, a plain-language description of what it means ecologically, the connectivity rating, and the distance to the nearest adjacent patch. Expand "Show technical details" to see the individual landscape metrics. Each metric has a small "i" button you can click for a plain-language explanation.</p>
-
-            <h3>Connectivity potential rating</h3>
-            <p>The connectivity potential rating is derived from Omniscape circuit theory modelling, which simulates how movement current flows across the landscape. High (cyan) indicates the patch has high connectivity potential, Moderate (yellow) indicates partial connectivity potential; Low (red) indicates high surrounding landscape resistance and low connectivity potential; Barrier (dark purple) indicates the patch is surrounded by effectively impermeable matrix, with no connectivity potential.</p>
-
-            <h3>Potential movement corridors</h3>
-            <p>Click "Show corridors" to reveal lines connecting forest patches to their nearest neighbours. Each line is coloured by connectivity level. Use the High, Moderate, and Low buttons to toggle each level on or off. Click any corridor line to see details in the sidebar.</p>
-
-
-
-
-            <h3>Sharing your view</h3>
-            <p>The URL in your browser updates automatically as you pan and zoom, so you can bookmark or share a link that opens the map at exactly the same position. Click the <strong>🔗 Share</strong> button in the top bar to copy the current link directly to your clipboard.</p>
-
-            <h3>Filtering patches</h3>
-            <p>Use the "Filter by patch area" tool in the sidebar to show only patches above or below a certain size in hectares. This can help you focus on large core habitats or identify which smaller patches are most at risk.</p>
-
-            <p style="margin-top:1.4em;font-size:0.85em;color:#666;">Built by Benjamin Galea. Contact bengalea97@gmail.com with any questions.</p>
+            <span class="close-modal-btn" role="button" tabindex="0" aria-label="Close modal">×</span>
+            <h2>Peninsular Malaysia Forest Patch Connectivity Project</h2>
+            <p>This interactive map shows over 14,000 forest patches extracted from the Klang Valley region in Malaysia. Each patch is classified into one of several tiers using a Composite Habitat Suitability Index (CHSI), which combines key ecological attributes including total area, core area, contiguity, perimeter–area ratio, and Euclidean nearest-neighbour distance. The index standardises these metrics based on the landscape’s own statistical distribution and applies weighted scoring to prioritise interior habitat stability and connectivity. Patches are then grouped into six tiers, ranging from large core habitats to highly isolated micro patches. Click on the individual patches to view their details. </p>
+                        <p>Built by Benjamin Galea</p>
+            <p>Contact bengalea97@gmail.com for any enquiries</p>
         </div>
     </div>
 
     <script src="config.js"></script>
     <script src="app.js"></script>
+<script>
+// ── ADDITIVE FEATURES: What-If Scenario Builder + Fast Hover Tooltip + Report Cards ─────
+// Fully independent — does not modify any existing functionality.
+
+document.addEventListener('DOMContentLoaded', () => {
+    const waitForMap = setInterval(() => {
+        if (!window._mapInstance) return;
+        clearInterval(waitForMap);
+        const map = window._mapInstance;
+        const init = () => { initWhatIf(map); improveHoverTooltip(map); };
+        map.loaded() ? init() : map.on('load', init);
+    }, 200);
+});
+
+// ── 1. FAST HOVER TOOLTIP ─────────────────────────────────────────────────────
+
+function improveHoverTooltip(map) {
+    const tip = document.createElement('div');
+    tip.id = 'fast-tooltip';
+    tip.style.cssText = [
+        'position:fixed;pointer-events:none;display:none;z-index:500;',
+        'background:rgba(15,30,15,0.92);color:#dcedc8;',
+        'padding:7px 11px;border-radius:5px;font-size:12px;',
+        'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;',
+        'box-shadow:0 3px 12px rgba(0,0,0,0.35);max-width:220px;',
+        'border-left:3px solid #52b788;line-height:1.5;'
+    ].join('');
+    document.body.appendChild(tip);
+
+    const CONN_COLORS = {
+        High:'#52b788', Moderate:'#f7ce46',
+        Low:'#e07c1f', Barrier:'#6b3fa0', 'No Data':'#888'
+    };
+
+    function getPatchLayer() {
+        const style = map.getStyle();
+        if (!style) return null;
+        return ((style.layers || []).find(l =>
+            l.type === 'fill' && (
+                l.id.toLowerCase().includes('forest') ||
+                l.id.toLowerCase().includes('patch') ||
+                l.id.toLowerCase().includes('klang') ||
+                l.id.toLowerCase().includes('kuantan')
+            )
+        ) || {}).id || null;
+    }
+
+    let patchLayerId = null;
+    setTimeout(() => { patchLayerId = getPatchLayer(); }, 1000);
+
+    map.getCanvas().addEventListener('mousemove', (e) => {
+        if (!patchLayerId) { patchLayerId = getPatchLayer(); return; }
+        const rect  = map.getCanvas().getBoundingClientRect();
+        const pt    = [e.clientX - rect.left, e.clientY - rect.top];
+        let feats   = [];
+        try { feats = map.queryRenderedFeatures(pt, { layers: [patchLayerId] }); } catch(_) {}
+
+        if (!feats.length) { tip.style.display = 'none'; return; }
+
+        const p    = feats[0].properties;
+        const DISP = window.TIER_DISPLAY_NAMES || {};
+        const tier = DISP[p.Tier] || p.Tier || 'Forest patch';
+        const conn = p.connectivity || '';
+        const area = typeof p.area === 'number' ? p.area.toFixed(1) + ' ha' : '';
+        const cc   = CONN_COLORS[conn] || '#888';
+        const ct   = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#fff';
+
+        tip.innerHTML =
+            `<div style="font-weight:700;margin-bottom:3px;color:#c8e6c9">${tier}</div>` +
+            (conn ? `<div style="margin-bottom:2px"><span style="display:inline-block;padding:1px 7px;border-radius:3px;background:${cc};color:${ct};font-size:11px;font-weight:700">${conn}</span></div>` : '') +
+            (area ? `<div style="font-size:11px;opacity:0.75;margin-top:2px">${area}</div>` : '') +
+            `<div style="font-size:10px;opacity:0.55;margin-top:3px;font-style:italic">Click for full details</div>`;
+
+        tip.style.display = 'block';
+        tip.style.left    = (e.clientX + 16) + 'px';
+        tip.style.top     = (e.clientY - 10) + 'px';
+    });
+
+    map.getCanvas().addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+}
+
+// ── 2. WHAT-IF SCENARIO BUILDER ───────────────────────────────────────────────
+
+function initWhatIf(map) {
+    if (typeof MapboxDraw === 'undefined' || typeof turf === 'undefined') {
+        console.warn('MapboxDraw or Turf not loaded — what-if unavailable.');
+        return;
+    }
+
+    const draw = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: { polygon: true, trash: true },
+        styles: [
+            { id:'gl-draw-polygon-fill', type:'fill',
+              filter:['all',['==','$type','Polygon']],
+              paint:{'fill-color':'#e07c1f','fill-opacity':0.15} },
+            { id:'gl-draw-polygon-stroke', type:'line',
+              filter:['all',['==','$type','Polygon']],
+              paint:{'line-color':'#e07c1f','line-width':2.5,'line-dasharray':[3,2]} },
+            { id:'gl-draw-polygon-fill-active', type:'fill',
+              filter:['all',['==','$type','Polygon'],['==','active','true']],
+              paint:{'fill-color':'#e07c1f','fill-opacity':0.2} },
+            { id:'gl-draw-vertex', type:'circle',
+              filter:['all',['==','$type','Point']],
+              paint:{'circle-radius':5,'circle-color':'#e07c1f'} }
+        ]
+    });
+    map.addControl(draw, 'top-right');
+
+    const topBar = document.getElementById('map-top-bar');
+    if (!topBar) return;
+
+    const btn = document.createElement('button');
+    btn.id    = 'whatif-btn';
+    btn.innerHTML = '&#x2295; What-if?';
+    btn.title = 'Draw a development zone to see which patches and corridors would be affected';
+    btn.style.cssText = 'background:#e07c1f;color:white;border:none;border-radius:5px;' +
+        'padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;' +
+        'font-family:inherit;letter-spacing:0.02em;transition:background 0.15s;';
+    btn.addEventListener('mouseover', () => { if (!btn.classList.contains('active')) btn.style.background = '#b85f10'; });
+    btn.addEventListener('mouseout',  () => { if (!btn.classList.contains('active')) btn.style.background = '#e07c1f'; });
+    topBar.appendChild(btn);
+
+    const panel = document.createElement('div');
+    panel.id = 'whatif-panel';
+    panel.style.cssText = 'display:none;position:absolute;bottom:40px;right:12px;z-index:20;' +
+        'background:rgba(255,255,255,0.97);border-radius:8px;padding:14px 16px;' +
+        'max-width:280px;box-shadow:0 4px 20px rgba(0,0,0,0.2);' +
+        'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
+        'font-size:13px;color:#212529;max-height:350px;overflow-y:auto;';
+    document.getElementById('map-container').appendChild(panel);
+
+    let drawActive = false;
+
+    btn.addEventListener('click', () => {
+        drawActive = !drawActive;
+        if (drawActive) {
+            btn.textContent = '✕ Exit what-if';
+            btn.style.background = '#b85f10';
+            btn.classList.add('active');
+            panel.style.display = 'none';
+            draw.changeMode('draw_polygon');
+            showHint();
+        } else {
+            exitWhatIf();
+        }
+    });
+
+    function exitWhatIf() {
+        drawActive = false;
+        btn.innerHTML = '&#x2295; What-if?';
+        btn.style.background = '#e07c1f';
+        btn.classList.remove('active');
+        panel.style.display = 'none';
+        draw.deleteAll();
+        clearHighlights();
+        removeHint();
+    }
+
+    function showHint() {
+        removeHint();
+        const h = document.createElement('div');
+        h.id = 'whatif-hint';
+        h.style.cssText = 'position:absolute;top:60px;left:50%;transform:translateX(-50%);' +
+            'background:rgba(224,124,31,0.95);color:white;padding:8px 16px;' +
+            'border-radius:5px;font-size:12px;font-weight:600;z-index:100;' +
+            'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
+            'pointer-events:none;white-space:nowrap;';
+        h.textContent = 'Click to draw a development zone — double-click to finish';
+        document.getElementById('map-container').appendChild(h);
+    }
+    function removeHint() { const h = document.getElementById('whatif-hint'); if (h) h.remove(); }
+
+    function resolvePatchLayer() {
+        const style = map.getStyle();
+        if (!style) return null;
+        return ((style.layers || []).find(l =>
+            l.type === 'fill' && (
+                l.id.toLowerCase().includes('forest') ||
+                l.id.toLowerCase().includes('patch') ||
+                l.id.toLowerCase().includes('klang') ||
+                l.id.toLowerCase().includes('kuantan')
+            )
+        ) || {}).id || null;
+    }
+
+    function analyzeImpact() {
+        removeHint();
+        clearHighlights();
+        const patchLayerId = resolvePatchLayer();
+        if (!patchLayerId) {
+            panel.innerHTML = '<strong>Zoom in further</strong> to see patches before analysing.';
+            panel.style.display = 'block'; return;
+        }
+        let rendered = [];
+        try { rendered = map.queryRenderedFeatures({ layers: [patchLayerId] }); } catch(_) {}
+        if (!rendered.length) {
+            panel.innerHTML = '<p style="color:#888;font-style:italic">Zoom in until patches are visible, then redraw.</p>';
+            panel.style.display = 'block'; return;
+        }
+
+        const seen = new Set(); const features = [];
+        rendered.forEach(f => {
+            const id = f.properties.id || f.id;
+            if (!seen.has(id)) { seen.add(id); features.push(f); }
+        });
+
+        const all  = draw.getAll();
+        const poly = all.features && all.features[0];
+        if (!poly) return;
+
+        const affected = features.filter(f => {
+            try { return turf.booleanIntersects(f, poly); } catch(_) { return false; }
+        });
+
+        const DISP = window.TIER_DISPLAY_NAMES || {};
+        const tierCounts = {}; let totalArea = 0, tier1Count = 0;
+        affected.forEach(f => {
+            const p    = f.properties;
+            const tier = DISP[p.Tier] || p.Tier || 'Unknown';
+            tierCounts[tier] = (tierCounts[tier] || 0) + 1;
+            if (p.area) totalArea += parseFloat(p.area) || 0;
+            if (p.Tier && p.Tier.includes('Tier 1')) tier1Count++;
+        });
+
+        let corridorCount = 0;
+        ['connector-solid','connector-glow'].forEach(lid => {
+            if (map.getLayer(lid)) {
+                let fc = [];
+                try { fc = map.queryRenderedFeatures({ layers: [lid] }); } catch(_) {}
+                fc.forEach(f => { try { if (turf.booleanIntersects(f, poly)) corridorCount++; } catch(_) {} });
+            }
+        });
+
+        highlightPatches(patchLayerId, affected.map(f => f.properties.id || f.id));
+
+        if (!affected.length) {
+            panel.innerHTML = '<div style="font-weight:700;margin-bottom:8px;color:#1a3d1a">What-if analysis</div>' +
+                '<p style="color:#555">No patches found in this zone. Try zooming in further.</p>';
+        } else {
+            const warn = tier1Count > 0
+                ? `<div style="background:#f8d7da;border:1px solid #f5c6cb;border-radius:4px;padding:7px 10px;margin-bottom:10px;font-size:12px;color:#721c24">
+                    ⚠ <strong>${tier1Count} Primary forest patch${tier1Count>1?'es':''}</strong> would be directly impacted.
+                   </div>` : '';
+
+            const rows = Object.entries(tierCounts)
+                .sort((a,b) => a[0].localeCompare(b[0]))
+                .map(([t,c]) => `<tr><td style="padding:2px 6px 2px 0;color:#555">${t}</td><td style="font-weight:700;color:#1a3d1a;text-align:right">${c}</td></tr>`)
+                .join('');
+
+            panel.innerHTML =
+                `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                    <strong style="color:#1a3d1a">What-if analysis</strong>
+                    <span style="font-size:10px;color:#888;cursor:pointer" onclick="document.getElementById('whatif-panel').style.display='none'">✕</span>
+                 </div>` +
+                warn +
+                `<div style="margin-bottom:8px"><strong>${affected.length}</strong> patch${affected.length!==1?'es':''} affected &nbsp;·&nbsp; <strong>${totalArea.toFixed(0)}</strong> ha total</div>` +
+                `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px">${rows}</table>` +
+                (corridorCount > 0
+                    ? `<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:6px 10px;font-size:12px;color:#856404">🔗 <strong>${corridorCount}</strong> corridor segment${corridorCount!==1?'s':''} would be severed.</div>`
+                    : `<div style="font-size:12px;color:#555">No active corridors pass through this zone.</div>`) +
+                `<div style="margin-top:10px;font-size:10px;color:#999;font-style:italic">Based on currently visible patches. Zoom in for complete results.</div>`;
+        }
+        panel.style.display = 'block';
+    }
+
+    function highlightPatches(layerId, ids) {
+        clearHighlights();
+        try {
+            const style  = map.getStyle();
+            const pLayer = (style.layers || []).find(l => l.id === layerId);
+            if (!pLayer) return;
+            map.addLayer({
+                id: 'whatif-highlight', type: 'line',
+                source: pLayer.source, 'source-layer': pLayer['source-layer'],
+                filter: ['in', ['get', 'id'], ['literal', ids]],
+                paint: { 'line-color': '#e07c1f', 'line-width': 2.5, 'line-opacity': 0.9 },
+                slot: 'top'
+            });
+        } catch(err) { console.warn('Highlight layer error:', err.message); }
+    }
+
+    function clearHighlights() {
+        if (map.getLayer('whatif-highlight')) map.removeLayer('whatif-highlight');
+    }
+
+    map.on('draw.create', analyzeImpact);
+    map.on('draw.update', analyzeImpact);
+    map.on('draw.delete', () => { clearHighlights(); panel.style.display = 'none'; });
+}
+
+// ── 3. REPORT CARDS ───────────────────────────────────────────────────────────
+
+(function initReportCards() {
+    const observer = new MutationObserver(() => {
+        const content = document.getElementById('patch-info-content');
+        if (!content || document.getElementById('report-card-btn')) return;
+        if (!window._lastPatchProps) return;
+        if (content.textContent.trim() === 'Select a patch on the map.') return;
+        if (content.textContent.includes('No data')) return;
+
+        const btn = document.createElement('button');
+        btn.id = 'report-card-btn';
+        btn.textContent = '⬇ Download report card';
+        btn.style.cssText = 'display:block;width:100%;margin-top:10px;padding:7px 10px;' +
+            'background:#2a8234;color:white;border:none;border-radius:4px;' +
+            'font-size:12px;font-weight:600;cursor:pointer;' +
+            'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;transition:background 0.15s;';
+        btn.addEventListener('mouseover', () => btn.style.background = '#1e6b27');
+        btn.addEventListener('mouseout',  () => btn.style.background = '#2a8234');
+        btn.addEventListener('click', () => generateReportCard(window._lastPatchProps));
+        content.appendChild(btn);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+})();
+
+function generateReportCard(p) {
+    if (!p) return;
+    const DISP = window.TIER_DISPLAY_NAMES || {};
+    const TC   = window.TIER_COLORS || {};
+    const CC   = { High:'#52b788', Moderate:'#f7ce46', Low:'#e07c1f', Barrier:'#6b3fa0', 'No Data':'#888' };
+
+    const tierLabel = DISP[p.Tier] || p.Tier || 'Unknown tier';
+    const tierColor = TC[p.Tier]   || '#2a8234';
+    const conn      = p.connectivity || 'No Data';
+    const connColor = CC[conn] || '#888';
+    const connText  = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#ffffff';
+
+    const W = 640, H = 380;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // Background
+    ctx.fillStyle = '#f5f3ee'; ctx.fillRect(0, 0, W, H);
+
+    // Header band
+    ctx.fillStyle = '#1a3d1a'; ctx.fillRect(0, 0, W, 72);
+
+    // Left accent stripe
+    ctx.fillStyle = tierColor; ctx.fillRect(0, 0, 8, H);
+
+    // Header text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 17px -apple-system, sans-serif';
+    ctx.fillText('Forest Patch Report Card', 24, 28);
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.fillStyle = '#a5d6a7';
+    ctx.fillText('myforestconnect.online', 24, 52);
+
+    if (p.id !== undefined) {
+        ctx.fillStyle = '#c8e6c9';
+        ctx.font = '11px -apple-system, sans-serif';
+        ctx.fillText('Patch ID: ' + p.id, W - 130, 36);
+    }
+
+    // Tier badge
+    ctx.fillStyle = tierColor;
+    rr(ctx, 24, 88, 300, 38, 5); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 15px -apple-system, sans-serif';
+    ctx.fillText(tierLabel, 36, 112);
+
+    // Connectivity badge
+    ctx.fillStyle = connColor;
+    rr(ctx, 336, 88, 150, 38, 5); ctx.fill();
+    ctx.fillStyle = connText;
+    ctx.font = 'bold 13px -apple-system, sans-serif';
+    ctx.fillText('Connectivity: ' + conn, 348, 112);
+
+    // Metric cards
+    const metrics = [
+        { label:'Total area',    value: p.area   != null ? parseFloat(p.area).toFixed(2)   + ' ha' : '—' },
+        { label:'Core area',     value: p.core   != null ? parseFloat(p.core).toFixed(2)   + ' ha' : '—' },
+        { label:'Contiguity',    value: p.contig != null ? parseFloat(p.contig).toFixed(3)       : '—' },
+        { label:'ENN distance',  value: p.enn    != null ? Math.round(p.enn)                + ' m' : '—' },
+        { label:'Perim-area ratio', value: p.para != null ? parseFloat(p.para).toFixed(5)        : '—' },
+        { label:'Mean flow',     value: p.mean_flow != null ? parseFloat(p.mean_flow).toFixed(2) : '—' },
+    ];
+
+    const colW = (W - 48 - 20) / 3;
+    metrics.forEach((m, i) => {
+        const col = i % 3, row = Math.floor(i / 3);
+        const x = 24 + col * (colW + 10), y = 148 + row * 72;
+
+        ctx.fillStyle = '#ffffff';
+        rr(ctx, x, y, colW, 62, 5); ctx.fill();
+        ctx.strokeStyle = '#e0dbd0'; ctx.lineWidth = 1;
+        rr(ctx, x, y, colW, 62, 5); ctx.stroke();
+
+        ctx.fillStyle = '#2a8234';
+        ctx.fillRect(x, y, 4, 62);
+
+        ctx.fillStyle = '#888';
+        ctx.font = '10px -apple-system, sans-serif';
+        ctx.fillText(m.label, x + 12, y + 20);
+
+        ctx.fillStyle = '#1a3d1a';
+        ctx.font = 'bold 16px -apple-system, sans-serif';
+        ctx.fillText(m.value, x + 12, y + 46);
+    });
+
+    // Footer
+    ctx.fillStyle = '#2a8234'; ctx.fillRect(0, H - 36, W, 36);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '11px -apple-system, sans-serif';
+    const d = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+    ctx.fillText('Generated ' + d + '  ·  myforestconnect.online', 24, H - 14);
+
+    const a = document.createElement('a');
+    a.download = 'patch_' + (p.id || 'report') + '_report_card.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+}
+
+function rr(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y);
+    ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+    ctx.lineTo(x+w, y+h-r);
+    ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+    ctx.lineTo(x+r, y+h);
+    ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+    ctx.lineTo(x, y+r);
+    ctx.quadraticCurveTo(x, y, x+r, y);
+    ctx.closePath();
+}
+</script>
+
 </body>
 </html>
