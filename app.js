@@ -23,9 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
         zoom: INITIAL_ZOOM,
     });
 
-    // Expose map instance for additive features
-    window._mapInstance = map;
-
     const loadingIndicator = document.getElementById('loading-indicator');
     loadingIndicator.style.display = 'block';
 
@@ -49,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-        initializeTierFilters();
+initializeTierFilters();
         initializeConnectorLayer();
         resolvePatchLayerId();
         initializeHoverPopups();
@@ -178,10 +175,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Hide ALL connector-related style layers on init (catches casings, outlines, etc.)
         map.getStyle().layers.forEach(layer => {
             if (layer.id.toLowerCase().includes('connector'))
                 try { map.setLayoutProperty(layer.id, 'visibility', 'none'); } catch(e) {}
         });
+        const studioOutlineId = '';
 
         try {
             const styleDef  = map.getStyle();
@@ -201,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const corrColorExpr = ['match', ['get', 'connectivity'],
                     'High', '#00ffff', 'Moderate', '#ffff00', 'Low', '#ff3300', '#ffffff'];
 
+                // Neon glow — wide blurred halo, fully emissive (bypasses Standard lighting)
                 map.addLayer({
                     id: 'connector-glow', type: 'line',
                     source: 'corridor-outline-src', 'source-layer': srcLayer,
@@ -212,6 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         'line-opacity': 0.9, 'line-emissive-strength': 1
                     }
                 });
+                // Solid body — fully emissive
                 map.addLayer({
                     id: 'connector-solid', type: 'line',
                     source: 'corridor-outline-src', 'source-layer': srcLayer,
@@ -223,6 +224,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         'line-opacity': 1.0, 'line-emissive-strength': 1
                     }
                 });
+                // Move corridor layers to very top so they render above roads/buildings
+                // Re-hide after moveLayer in case it resets visibility
                 ['connector-glow', 'connector-solid'].forEach(id => {
                     if (map.getLayer(id)) {
                         map.moveLayer(id);
@@ -233,6 +236,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(err) {
             console.warn('Corridor outline setup failed:', err.message);
         }
+
+        // resolvedConnectorId stays permanently hidden — custom layers handle all rendering
 
         ['High', 'Moderate', 'Low'].forEach(level => {
             const btn = document.getElementById('conn-filter-' + level.toLowerCase());
@@ -505,11 +510,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     if(areaFilterControls) areaFilterControls.style.display = 'block';
                     if(statsSection) statsSection.style.display = 'block';
                     if(patchInfoContent) patchInfoContent.innerHTML = 'Select a patch on the map to see details.';
+                    // Reset corridor state — style switch destroys all programmatic sources/layers
                     resolvedConnectorId = null;
                     corridorVisible = false;
                     if (connAnimFrame) { cancelAnimationFrame(connAnimFrame); connAnimFrame = null; }
                     const levelPanel = document.getElementById('conn-level-toggles');
                     if (levelPanel) levelPanel.style.display = 'none';
+                    // Clone toggle button to remove stale event listeners before reinitialising
                     const oldBtn = document.getElementById('corridor-toggle-fab');
                     if (oldBtn) {
                         const newBtn = oldBtn.cloneNode(true);
@@ -518,6 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         delete newBtn.dataset.counted;
                         oldBtn.parentNode.replaceChild(newBtn, oldBtn);
                     }
+                    // Also clone level filter buttons to remove stale listeners
                     ['conn-filter-high','conn-filter-moderate','conn-filter-low'].forEach(id => {
                         const old = document.getElementById(id);
                         if (old) old.parentNode.replaceChild(old.cloneNode(true), old);
@@ -639,9 +647,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const el = document.getElementById('patch-info-content');
         if (!el) return;
         if (!properties) { el.innerHTML = 'No data for this patch.'; return; }
-
-        // Expose last clicked patch properties for report card feature
-        window._lastPatchProps = properties;
 
         const tier = properties[TIER_ATTRIBUTE];
         const conn = properties[CONNECTIVITY_ATTRIBUTE];
@@ -858,5 +863,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     initializeOnboarding();
-
 }); // End DOMContentLoaded
