@@ -1,4 +1,4 @@
-// features.js — myforestconnect enhanced report cards
+// features.js — myforestconnect retro report cards
 //
 // HOW TO USE:
 //   Add ONE line before <script src="config.js"> in each map HTML file:
@@ -9,7 +9,19 @@
 (function () {
     'use strict';
 
-    // ── Intercept mapboxgl.Map to capture instance + click data ───────────────
+    // ── Load Press Start 2P font (retro pixel font) ───────────────────────────
+    var _fontLoaded = false;
+    var _fontFace   = null;
+    (function () {
+        var link = document.createElement('link');
+        link.rel  = 'stylesheet';
+        link.href = 'https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap';
+        document.head.appendChild(link);
+        // Give it a moment to load, then mark ready
+        setTimeout(function () { _fontLoaded = true; }, 1500);
+    })();
+
+    // ── Intercept mapboxgl.Map ────────────────────────────────────────────────
     var _OrigMap = mapboxgl.Map;
     mapboxgl.Map = class extends _OrigMap {
         constructor(options) {
@@ -40,7 +52,7 @@
         }
     };
 
-    // ── Inject report card button whenever sidebar populates ──────────────────
+    // ── Inject report card button ─────────────────────────────────────────────
     function initReportCards() {
         var observer = new MutationObserver(function () {
             var content = document.getElementById('patch-info-content');
@@ -54,7 +66,7 @@
 
             var btn = document.createElement('button');
             btn.id = 'report-card-btn';
-            btn.textContent = '⬇ Download report card';
+            btn.textContent = '\u2b07 Download report card';
             btn.style.cssText =
                 'display:block;width:100%;margin-top:10px;padding:8px 10px;' +
                 'background:#2a8234;color:white;border:none;border-radius:4px;' +
@@ -64,17 +76,17 @@
             btn.addEventListener('mouseover', function () { btn.style.background = '#1e6b27'; });
             btn.addEventListener('mouseout',  function () { btn.style.background = '#2a8234'; });
             btn.addEventListener('click', function () {
-                btn.textContent = '⏳ Generating…';
+                btn.textContent = '\u23f3 Generating\u2026';
                 btn.disabled = true;
                 generateCard(
                     window._lastPatchProps,
                     window._lastPatchLngLat,
                     window._lastPatchGeometry
                 ).then(function () {
-                    btn.textContent = '⬇ Download report card';
+                    btn.textContent = '\u2b07 Download report card';
                     btn.disabled = false;
                 }).catch(function () {
-                    btn.textContent = '⬇ Download report card';
+                    btn.textContent = '\u2b07 Download report card';
                     btn.disabled = false;
                 });
             });
@@ -83,7 +95,7 @@
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    // ── Main card generator ───────────────────────────────────────────────────
+    // ── Card entry point ──────────────────────────────────────────────────────
     function generateCard(p, lngLat, geometry) {
         return new Promise(function (resolve) {
             var lat = lngLat ? lngLat.lat : null;
@@ -104,23 +116,21 @@
             fetch(url, { headers: { 'Accept-Language': 'en', 'User-Agent': 'myforestconnect.online' } })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
-                    var a    = data.address || {};
+                    var a = data.address || {};
                     var name = data.name ||
                         a.nature_reserve || a.forest || a.park ||
                         a.suburb || a.village || a.town ||
                         a.county || a.state_district || null;
-                    resolve(name || null);
+                    resolve(name ? name.toUpperCase() : null);
                 })
                 .catch(function () { resolve(null); });
         });
     }
 
     // ── Tier helpers ──────────────────────────────────────────────────────────
-    function displayName(tierInternal) {
-        var DISP = window.TIER_DISPLAY_NAMES || {};
-        return DISP[tierInternal] || tierInternal || 'Unknown';
+    function displayName(t) {
+        return (window.TIER_DISPLAY_NAMES || {})[t] || t || 'Unknown';
     }
-
     var TIER_ORDER = [
         'Tier 1 (Core Habitat)',
         'Tier 2 (Major Stepping Stones)',
@@ -129,391 +139,353 @@
         'Tier 5 (Isolated Fragments)',
         'Tier 6 (Isolated Micro Patches)'
     ];
-    var TIER_COLORS_FB = [
-        '#b1eaac','#8ad284','#5aaf64','#2a8234','#1e6b27','#0a4c12'
+    // Published short names for the spectrum bar
+    var TIER_SHORT = [
+        'PRIMARY','ESTABLISHED','FUNCTIONAL',
+        'VULNERABLE','MARGINAL','REMNANT'
     ];
-    function tierIndex(t) { var i = TIER_ORDER.indexOf(t); return i >= 0 ? i : -1; }
-    function tierCol(i) {
-        var TC = window.TIER_COLORS || {};
-        return TC[TIER_ORDER[i]] || TIER_COLORS_FB[i] || '#2a8234';
-    }
+    var TIER_SEG_COLORS = [
+        '#c8f090','#a0d060','#70a030',
+        '#486820','#284010','#142008'
+    ];
+    function tIdx(t)  { var i = TIER_ORDER.indexOf(t); return i >= 0 ? i : -1; }
 
     // ── QR URL ────────────────────────────────────────────────────────────────
     function qrUrl(lat, lng) {
-        var mapUrl = 'https://myforestconnect.online';
+        var base = 'https://myforestconnect.online';
         if (lat && lng) {
-            var page = lng < 102.5 ? 'klang-valley-map.html' : 'kuantan-map.html';
-            mapUrl = 'https://myforestconnect.online/' + page +
+            var pg = lng < 102.5 ? 'klang-valley-map.html' : 'kuantan-map.html';
+            base = 'https://myforestconnect.online/' + pg +
                 '#15.00/' + lat.toFixed(5) + '/' + lng.toFixed(5);
         }
-        return 'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' +
-            encodeURIComponent(mapUrl) + '&bgcolor=ffffff&color=1a3d1a&margin=6';
+        return 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' +
+            encodeURIComponent(base) +
+            '&bgcolor=0f380f&color=9bbc0f&margin=6';
     }
 
     // ── Draw patch shape ──────────────────────────────────────────────────────
-    function drawShape(ctx, geometry, x, y, w, h, fillColor, strokeColor) {
+    function drawShape(ctx, geometry, x, y, w, h, fill, stroke) {
         if (!geometry || !geometry.coordinates) return;
-        var allPts = [];
-        var coords = geometry.coordinates;
+        var pts = [];
         if (geometry.type === 'Polygon') {
-            coords[0].forEach(function (c) { allPts.push(c); });
+            geometry.coordinates[0].forEach(function (c) { pts.push(c); });
         } else if (geometry.type === 'MultiPolygon') {
-            coords.forEach(function (poly) { poly[0].forEach(function (c) { allPts.push(c); }); });
+            geometry.coordinates.forEach(function (p) {
+                p[0].forEach(function (c) { pts.push(c); });
+            });
         }
-        if (!allPts.length) return;
-
-        var minX = allPts[0][0], maxX = allPts[0][0];
-        var minY = allPts[0][1], maxY = allPts[0][1];
-        allPts.forEach(function (c) {
-            if (c[0] < minX) minX = c[0]; if (c[0] > maxX) maxX = c[0];
-            if (c[1] < minY) minY = c[1]; if (c[1] > maxY) maxY = c[1];
+        if (!pts.length) return;
+        var x0=pts[0][0],x1=pts[0][0],y0=pts[0][1],y1=pts[0][1];
+        pts.forEach(function (c) {
+            if(c[0]<x0)x0=c[0]; if(c[0]>x1)x1=c[0];
+            if(c[1]<y0)y0=c[1]; if(c[1]>y1)y1=c[1];
         });
-        var rangeX = maxX - minX || 0.0001;
-        var rangeY = maxY - minY || 0.0001;
-        var scale  = Math.min(w / rangeX, h / rangeY) * 0.85;
-        var offX   = x + w / 2 - (minX + rangeX / 2) * scale;
-        var offY   = y + h / 2 + (minY + rangeY / 2) * scale;
-
-        function project(c) { return [c[0] * scale + offX, -c[1] * scale + offY]; }
-
-        function drawRing(ring) {
-            var pt = project(ring[0]);
-            ctx.moveTo(pt[0], pt[1]);
-            for (var i = 1; i < ring.length; i++) { pt = project(ring[i]); ctx.lineTo(pt[0], pt[1]); }
+        var rx=x1-x0||0.0001, ry=y1-y0||0.0001;
+        var sc=Math.min(w/rx, h/ry)*0.85;
+        var ox=x+w/2-(x0+rx/2)*sc, oy=y+h/2+(y0+ry/2)*sc;
+        function proj(c){ return [c[0]*sc+ox, -c[1]*sc+oy]; }
+        function ring(pts2) {
+            var p0=proj(pts2[0]); ctx.moveTo(p0[0],p0[1]);
+            for(var i=1;i<pts2.length;i++){var pi=proj(pts2[i]);ctx.lineTo(pi[0],pi[1]);}
             ctx.closePath();
         }
-
-        ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,0.15)';
-        ctx.shadowBlur = 6; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
         ctx.beginPath();
-        if (geometry.type === 'Polygon') { drawRing(coords[0]); }
-        else { coords.forEach(function (poly) { drawRing(poly[0]); }); }
-        ctx.fillStyle = fillColor; ctx.fill();
-        ctx.restore();
-
+        if(geometry.type==='Polygon'){ ring(geometry.coordinates[0]); }
+        else { geometry.coordinates.forEach(function(p){ring(p[0]);}); }
+        ctx.fillStyle=fill; ctx.fill();
         ctx.beginPath();
-        if (geometry.type === 'Polygon') { drawRing(coords[0]); }
-        else { coords.forEach(function (poly) { drawRing(poly[0]); }); }
-        ctx.strokeStyle = strokeColor; ctx.lineWidth = 1.5; ctx.stroke();
+        if(geometry.type==='Polygon'){ ring(geometry.coordinates[0]); }
+        else { geometry.coordinates.forEach(function(p){ring(p[0]);}); }
+        ctx.strokeStyle=stroke; ctx.lineWidth=2; ctx.stroke();
     }
 
-    // ── Render ────────────────────────────────────────────────────────────────
+    // ── Pixel corner decoration ────────────────────────────────────────────────
+    function pixelCorners(ctx, x, y, w, h, size, color) {
+        ctx.fillStyle = color;
+        [[x,y],[x+w-size,y],[x,y+h-size],[x+w-size,y+h-size]].forEach(function (c) {
+            ctx.fillRect(c[0], c[1], size, size);
+        });
+    }
+
+    // ── Main render ───────────────────────────────────────────────────────────
     function renderCard(p, lat, lng, geometry, placeName) {
-        var TC = window.TIER_COLORS || {};
-        var CC = { High:'#52b788', Moderate:'#f7ce46', Low:'#e07c1f', Barrier:'#6b3fa0', 'No Data':'#aaa' };
+        var GB_DARK   = '#0f380f';
+        var GB_MED    = '#306230';
+        var GB_LIGHT  = '#8bac0f';
+        var GB_BRIGHT = '#9bbc0f';
+        var GB_WHITE  = '#e0f8d0';
 
-        var tierInternal = p.Tier || '';
-        var tierLabel    = displayName(tierInternal);
-        var tierColor    = TC[tierInternal] || '#2a8234';
-        var tIdx         = tierIndex(tierInternal);
-        var conn         = p.connectivity || 'No Data';
-        var connColor    = CC[conn] || '#aaa';
-        var connText     = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#fff';
+        var tierInt  = p.Tier || '';
+        var tierLbl  = displayName(tierInt).toUpperCase();
+        var ti       = tIdx(tierInt);
+        var conn     = (p.connectivity || 'No Data').toUpperCase();
+        // Connectivity display colours (retro palette)
+        var connClr  = conn==='HIGH' ? '#9bbc0f' : conn==='MODERATE' ? '#8bac0f' :
+                       conn==='LOW'  ? '#306230' : conn==='BARRIER'  ? '#0f380f' : '#306230';
+        var connBdr  = conn==='HIGH' ? GB_BRIGHT : GB_LIGHT;
 
-        // ── Canvas setup ──────────────────────────────────────────────────────
-        // W=800, H=580, rendered at 2× for retina sharpness
-        var W = 800, H = 580, SC = 2;
-        var canvas = document.createElement('canvas');
-        canvas.width = W * SC; canvas.height = H * SC;
-        var ctx = canvas.getContext('2d');
-        ctx.scale(SC, SC);
-        var F = 'Arial, sans-serif';
+        // ── Canvas: 800×620 at 2× ─────────────────────────────────────────────
+        var W=800, H=620, SC=2;
+        var cv=document.createElement('canvas');
+        cv.width=W*SC; cv.height=H*SC;
+        var ctx=cv.getContext('2d');
+        ctx.scale(SC,SC);
 
-        // ── Layout constants ──────────────────────────────────────────────────
-        var PAD      = 24;   // outer padding
-        var HDR_H    = 80;   // header height
-        var BDGE_Y   = 96;   // badge row top
-        var BDGE_H   = 42;   // badge height
-        var BAR_Y    = 156;  // spectrum bar top
-        var BAR_H    = 22;
-        var CONT_Y   = 218;  // content area top (below bar + pointer label)
-        var FOOT_Y   = H - 40; // footer top
-        var LEFT_W   = 190;  // shape column width
-        var RIGHT_X  = PAD + LEFT_W + 14; // metrics column left
-        var RIGHT_W  = W - RIGHT_X - PAD;
+        // Use Press Start 2P if loaded, else fallback monospace
+        var F_BIG   = _fontLoaded ? '"Press Start 2P",monospace' : 'monospace';
+        var F_SMALL = _fontLoaded ? '"Press Start 2P",monospace' : 'monospace';
+
+        // ── Layout constants (must match Python preview exactly) ──────────────
+        var PAD     = 20;
+        var COL1_W  = 200;
+        var COL2_X  = PAD + COL1_W + 16;
+        var COL2_W  = W - COL2_X - PAD;
+        var HDR_H   = 70;
+        var PL_Y    = HDR_H + 8;
+        var BDGE_Y  = PL_Y + 30;
+        var SPEC_Y  = BDGE_Y + 60;   // spectrum bar
+        var CONT_Y  = SPEC_Y + 36;   // content area starts
+        var FOOT_Y  = H - 44;
+        var AVAIL_H = FOOT_Y - CONT_Y;
+        var SHAPE_H = 200;
+        var QR_Y    = CONT_Y + SHAPE_H + 8;
+        var QR_H    = FOOT_Y - QR_Y;
+        var QR_SZ   = Math.min(QR_H - 30, COL1_W - 20);
+        var mCOLS=2, mGAP=8;
+        var mW      = Math.floor((COL2_W - mGAP) / mCOLS);
+        var mH      = Math.floor((AVAIL_H - mGAP*2) / 3);
 
         // ── Background ────────────────────────────────────────────────────────
-        ctx.fillStyle = '#f5f3ee'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle=GB_DARK; ctx.fillRect(0,0,W,H);
 
-        // ── Left accent stripe ────────────────────────────────────────────────
-        ctx.fillStyle = tierColor; ctx.fillRect(0, 0, 7, H);
+        // Grid lines
+        ctx.strokeStyle=GB_MED; ctx.lineWidth=1;
+        for(var gx=0;gx<W;gx+=16){
+            ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,H);ctx.stroke();
+        }
+        for(var gy=0;gy<H;gy+=16){
+            ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke();
+        }
+
+        // ── Outer border ──────────────────────────────────────────────────────
+        ctx.strokeStyle=GB_BRIGHT; ctx.lineWidth=4;
+        ctx.strokeRect(2,2,W-4,H-4);
+        ctx.strokeStyle=GB_LIGHT; ctx.lineWidth=2;
+        ctx.strokeRect(7,7,W-14,H-14);
 
         // ── Header ────────────────────────────────────────────────────────────
-        ctx.fillStyle = '#1a3d1a'; ctx.fillRect(7, 0, W - 7, HDR_H);
-        ctx.fillStyle = 'rgba(255,255,255,0.04)';
-        for (var xi = 20; xi < W; xi += 18)
-            for (var yi = 6; yi < HDR_H; yi += 18)
-                circ(ctx, xi, yi, 2);
+        ctx.fillStyle=GB_MED; ctx.fillRect(4,4,W-8,HDR_H);
+        ctx.fillStyle=GB_BRIGHT; ctx.fillRect(4,HDR_H,W-8,3);
 
-        // Title
-        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px ' + F;
-        ctx.fillText('Forest Patch Report Card', PAD, 28);
-
-        // Subtitle / place name
-        if (placeName) {
-            // Truncate if too long
-            var maxPNW = W - PAD * 2 - 220;
-            ctx.font = '12px ' + F;
-            ctx.fillStyle = '#a5d6a7';
-            var pn = placeName;
-            while (ctx.measureText(pn).width > maxPNW && pn.length > 6)
-                pn = pn.slice(0, -1);
-            if (pn !== placeName) pn += '…';
-            ctx.fillText(pn, PAD, 48);
-            ctx.fillStyle = 'rgba(255,255,255,0.35)';
-            ctx.font = '10px ' + F;
-            ctx.fillText('Nearest named area', PAD, 64);
-        } else {
-            ctx.font = '12px ' + F;
-            ctx.fillStyle = '#a5d6a7';
-            ctx.fillText('myforestconnect.online', PAD, 50);
+        ctx.fillStyle=GB_BRIGHT;
+        ctx.font='bold 12px '+F_BIG;
+        ctx.fillText('> FOREST PATCH REPORT CARD', PAD, 24);
+        ctx.fillStyle=GB_LIGHT;
+        ctx.font='9px '+F_SMALL;
+        ctx.fillText('MYFORESTCONNECT.ONLINE', PAD, 46);
+        if(p.id!=null){
+            ctx.fillStyle=GB_WHITE;
+            ctx.font='9px '+F_SMALL;
+            var idT='PATCH #'+p.id;
+            ctx.fillText(idT, W-PAD-ctx.measureText(idT).width, 46);
         }
 
-        // Patch ID — top right
-        if (p.id != null) {
-            ctx.font = '11px ' + F;
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            var idTxt = 'Patch #' + p.id;
-            ctx.fillText(idTxt, W - ctx.measureText(idTxt).width - PAD, 28);
-        }
-        // Website — bottom right of header
-        ctx.font = '10px ' + F; ctx.fillStyle = 'rgba(165,214,167,0.7)';
-        var site = 'myforestconnect.online';
-        ctx.fillText(site, W - ctx.measureText(site).width - PAD, 64);
+        // ── Place name strip ──────────────────────────────────────────────────
+        ctx.fillStyle=GB_DARK; ctx.fillRect(PAD,PL_Y,W-PAD*2,22);
+        ctx.strokeStyle=GB_LIGHT; ctx.lineWidth=1;
+        ctx.strokeRect(PAD,PL_Y,W-PAD*2,22);
+        ctx.fillStyle=GB_BRIGHT; ctx.font='bold 8px '+F_BIG;
+        var pname = placeName ? '[ '+placeName+' ]' : '[ LOCATION UNAVAILABLE ]';
+        // Truncate
+        while(ctx.measureText(pname).width > W-PAD*2-16 && pname.length>10)
+            pname=pname.slice(0,-2)+'...]';
+        ctx.fillText(pname, PAD+8, PL_Y+15);
 
         // ── Badge row ─────────────────────────────────────────────────────────
-        // 1. Tier badge
-        ctx.fillStyle = tierColor;
-        rrect(ctx, PAD, BDGE_Y, 240, BDGE_H, 6); ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.13)';
-        rrect(ctx, PAD + 1, BDGE_Y + 1, 238, 20, 5); ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 14px ' + F;
-        ctx.fillText(tierLabel, PAD + 14, BDGE_Y + 27);
+        // Tier
+        ctx.fillStyle=GB_MED; ctx.fillRect(PAD,BDGE_Y,290,38);
+        ctx.strokeStyle=GB_BRIGHT; ctx.lineWidth=2;
+        ctx.strokeRect(PAD,BDGE_Y,290,38);
+        ctx.fillStyle=GB_LIGHT; ctx.font='7px '+F_SMALL;
+        ctx.fillText('TIER:', PAD+8, BDGE_Y+12);
+        ctx.fillStyle=GB_BRIGHT; ctx.font='bold 9px '+F_BIG;
+        ctx.fillText(tierLbl, PAD+8, BDGE_Y+28);
 
-        // 2. Connectivity badge
-        var b2x = PAD + 252;
-        ctx.fillStyle = connColor;
-        rrect(ctx, b2x, BDGE_Y, 148, BDGE_H, 6); ctx.fill();
-        ctx.fillStyle = connText;
-        ctx.font = '10px ' + F; ctx.fillText('Connectivity', b2x + 14, BDGE_Y + 15);
-        ctx.font = 'bold 14px ' + F; ctx.fillText(conn, b2x + 14, BDGE_Y + 32);
+        // Connectivity
+        var CX=PAD+302;
+        ctx.fillStyle=connClr; ctx.fillRect(CX,BDGE_Y,170,38);
+        ctx.strokeStyle=connBdr; ctx.lineWidth=2;
+        ctx.strokeRect(CX,BDGE_Y,170,38);
+        ctx.fillStyle=GB_LIGHT; ctx.font='7px '+F_SMALL;
+        ctx.fillText('CONN:', CX+8, BDGE_Y+12);
+        ctx.fillStyle=GB_BRIGHT; ctx.font='bold 9px '+F_BIG;
+        ctx.fillText('[ '+conn+' ]', CX+8, BDGE_Y+28);
 
-        // 3. Coordinates badge
-        var b3x = b2x + 160;
-        if (lat && lng) {
-            ctx.fillStyle = '#2d6a4f';
-            rrect(ctx, b3x, BDGE_Y, W - b3x - PAD, BDGE_H, 6); ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.font = '10px ' + F; ctx.fillText('📍 Location', b3x + 14, BDGE_Y + 15);
-            ctx.font = 'bold 12px ' + F;
-            ctx.fillText(lat.toFixed(5) + '°N', b3x + 14, BDGE_Y + 31);
-            ctx.fillText(lng.toFixed(5) + '°E', b3x + 14 + 110, BDGE_Y + 31);
+        // GPS
+        var GX=CX+182;
+        ctx.fillStyle=GB_DARK; ctx.fillRect(GX,BDGE_Y,W-GX-PAD,38);
+        ctx.strokeStyle=GB_LIGHT; ctx.lineWidth=1;
+        ctx.strokeRect(GX,BDGE_Y,W-GX-PAD,38);
+        ctx.fillStyle=GB_LIGHT; ctx.font='7px '+F_SMALL;
+        ctx.fillText('GPS:', GX+8, BDGE_Y+12);
+        ctx.fillStyle=GB_WHITE; ctx.font='7px '+F_SMALL;
+        if(lat&&lng){
+            ctx.fillText(lat.toFixed(5)+'N  '+lng.toFixed(5)+'E', GX+8, BDGE_Y+28);
+        } else {
+            ctx.fillText('UNAVAILABLE', GX+8, BDGE_Y+28);
         }
 
         // ── Tier spectrum bar ─────────────────────────────────────────────────
-        var barW   = W - PAD * 2;
-        var segW   = barW / 6;
+        ctx.fillStyle=GB_LIGHT; ctx.font='7px '+F_SMALL;
+        ctx.fillText('QUALITY>>                              <<DEGRADED', PAD, SPEC_Y-2);
 
-        // Axis labels — above bar
-        ctx.font = '9px ' + F; ctx.fillStyle = '#aaa';
-        ctx.fillText('← Higher structural quality', PAD, BAR_Y - 5);
-        var rTxt = 'Lower structural quality →';
-        ctx.fillText(rTxt, PAD + barW - ctx.measureText(rTxt).width, BAR_Y - 5);
-
-        // Segments
-        for (var si = 0; si < 6; si++) {
-            var sx = PAD + si * segW;
-            var sc2 = tierCol(si);
-            if (si === 0) {
-                rrect(ctx, sx, BAR_Y, segW, BAR_H, 4); ctx.fillStyle = sc2; ctx.fill();
-                ctx.fillRect(sx + segW - 4, BAR_Y, 4, BAR_H);
-            } else if (si === 5) {
-                rrect(ctx, sx, BAR_Y, segW, BAR_H, 4); ctx.fillStyle = sc2; ctx.fill();
-                ctx.fillRect(sx, BAR_Y, 4, BAR_H);
-            } else {
-                ctx.fillStyle = sc2; ctx.fillRect(sx, BAR_Y, segW, BAR_H);
+        var segW=(W-PAD*2)/6;
+        for(var si=0;si<6;si++){
+            var sx=PAD+si*segW;
+            ctx.fillStyle=TIER_SEG_COLORS[si];
+            ctx.fillRect(sx, SPEC_Y, segW, 20);
+            if(si===ti){
+                ctx.strokeStyle=GB_BRIGHT; ctx.lineWidth=3;
+                ctx.strokeRect(sx+1, SPEC_Y+1, segW-2, 18);
             }
-            ctx.fillStyle = si < 2 ? '#1b4332' : '#fff';
-            ctx.font = 'bold 9px ' + F;
-            var tLbl = 'T' + (si + 1);
-            ctx.fillText(tLbl, sx + segW / 2 - ctx.measureText(tLbl).width / 2, BAR_Y + 14);
+            ctx.fillStyle=si<2?GB_DARK:GB_BRIGHT;
+            ctx.font='bold 7px '+F_BIG;
+            var tl='T'+(si+1);
+            ctx.fillText(tl, sx+segW/2-ctx.measureText(tl).width/2, SPEC_Y+13);
         }
-        ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1;
-        rrect(ctx, PAD, BAR_Y, barW, BAR_H, 4); ctx.stroke();
 
-        // Pointer triangle
-        if (tIdx >= 0) {
-            var mX = PAD + tIdx * segW + segW / 2;
-            ctx.fillStyle = tierColor;
+        // Pixel pointer
+        if(ti>=0){
+            var ptrX=PAD+ti*segW+segW/2;
+            ctx.fillStyle=GB_BRIGHT;
             ctx.beginPath();
-            ctx.moveTo(mX - 6, BAR_Y + BAR_H + 2);
-            ctx.lineTo(mX + 6, BAR_Y + BAR_H + 2);
-            ctx.lineTo(mX,     BAR_Y + BAR_H + 9);
+            ctx.moveTo(ptrX-6,SPEC_Y+22);
+            ctx.lineTo(ptrX+6,SPEC_Y+22);
+            ctx.lineTo(ptrX,  SPEC_Y+30);
             ctx.closePath(); ctx.fill();
-
-            // Short tier name below pointer
-            var shortName = tierLabel.indexOf('(') >= 0
-                ? tierLabel.split('(')[1].replace(')', '').trim()
-                : tierLabel;
-            ctx.font = 'bold 9px ' + F; ctx.fillStyle = tierColor;
-            var snW = ctx.measureText(shortName).width;
-            var snX = Math.max(PAD, Math.min(PAD + barW - snW, mX - snW / 2));
-            ctx.fillText(shortName, snX, BAR_Y + BAR_H + 20);
         }
 
-        // ── Content area ──────────────────────────────────────────────────────
-        // Left: shape panel
-        var SHAPE_H = 210;
-        ctx.fillStyle = 'rgba(0,0,0,0.04)';
-        rrect(ctx, PAD + 2, CONT_Y + 2, LEFT_W, SHAPE_H, 8); ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        rrect(ctx, PAD, CONT_Y, LEFT_W, SHAPE_H, 8); ctx.fill();
-        ctx.strokeStyle = '#e0dbd0'; ctx.lineWidth = 1;
-        rrect(ctx, PAD, CONT_Y, LEFT_W, SHAPE_H, 8); ctx.stroke();
+        // ── Left: shape panel ─────────────────────────────────────────────────
+        ctx.fillStyle=GB_DARK; ctx.fillRect(PAD,CONT_Y,COL1_W,SHAPE_H);
+        ctx.strokeStyle=GB_LIGHT; ctx.lineWidth=2;
+        ctx.strokeRect(PAD,CONT_Y,COL1_W,SHAPE_H);
+        pixelCorners(ctx,PAD,CONT_Y,COL1_W,SHAPE_H,8,GB_BRIGHT);
 
-        ctx.fillStyle = '#aaa'; ctx.font = 'bold 9px ' + F;
-        ctx.fillText('PATCH SHAPE', PAD + 10, CONT_Y + 16);
+        ctx.fillStyle=GB_LIGHT; ctx.font='7px '+F_SMALL;
+        ctx.fillText('[ PATCH SHAPE ]', PAD+12, CONT_Y+14);
 
-        if (geometry) {
+        if(geometry){
             drawShape(ctx, geometry,
-                PAD + 10, CONT_Y + 22, LEFT_W - 20, SHAPE_H - 32,
-                hexToRgba(tierColor, 0.3), tierColor);
+                PAD+10, CONT_Y+24, COL1_W-20, SHAPE_H-40,
+                GB_MED, GB_BRIGHT);
         } else {
-            ctx.fillStyle = '#ccc'; ctx.font = '11px ' + F;
-            ctx.fillText('Shape unavailable', PAD + 20, CONT_Y + SHAPE_H / 2);
+            ctx.fillStyle=GB_MED; ctx.font='7px '+F_SMALL;
+            ctx.fillText('SHAPE', PAD+60, CONT_Y+SHAPE_H/2-4);
+            ctx.fillText('UNAVAILABLE', PAD+36, CONT_Y+SHAPE_H/2+10);
         }
+        ctx.fillStyle=GB_LIGHT; ctx.font='6px '+F_SMALL;
+        ctx.fillText('PATCH GEOMETRY', PAD+22, CONT_Y+SHAPE_H-12);
 
-        // Left: QR code panel — sits below shape with gap
-        var QR_Y    = CONT_Y + SHAPE_H + 12;
-        var QR_SIZE = 70;
-        var QR_BOX  = QR_SIZE + 10;
-        // We draw the QR asynchronously — placeholder box for now
-        ctx.fillStyle = 'rgba(0,0,0,0.04)';
-        rrect(ctx, PAD + 2, QR_Y + 2, LEFT_W, QR_BOX + 24, 8); ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        rrect(ctx, PAD, QR_Y, LEFT_W, QR_BOX + 24, 8); ctx.fill();
-        ctx.strokeStyle = '#e0dbd0'; ctx.lineWidth = 1;
-        rrect(ctx, PAD, QR_Y, LEFT_W, QR_BOX + 24, 8); ctx.stroke();
+        // ── Left: QR panel ────────────────────────────────────────────────────
+        ctx.fillStyle=GB_DARK; ctx.fillRect(PAD,QR_Y,COL1_W,QR_H);
+        ctx.strokeStyle=GB_LIGHT; ctx.lineWidth=2;
+        ctx.strokeRect(PAD,QR_Y,COL1_W,QR_H);
+        pixelCorners(ctx,PAD,QR_Y,COL1_W,QR_H,8,GB_BRIGHT);
 
-        ctx.fillStyle = '#aaa'; ctx.font = 'bold 9px ' + F;
-        ctx.fillText('OPEN IN PLATFORM', PAD + 10, QR_Y + 14);
+        ctx.fillStyle=GB_LIGHT; ctx.font='7px '+F_SMALL;
+        ctx.fillText('[ SCAN ME ]', PAD+12, QR_Y+14);
 
-        // Right: metrics — 2 columns × 3 rows
-        var nv = function (v) { return v != null ? parseFloat(v) : null; };
-        var metrics = [
-            { label:'Total area',       value: nv(p.area)      != null ? nv(p.area).toFixed(2)      : '—', unit:'ha' },
-            { label:'Core area',        value: nv(p.core)      != null ? nv(p.core).toFixed(2)      : '—', unit:'ha' },
-            { label:'Contiguity index', value: nv(p.contig)    != null ? nv(p.contig).toFixed(3)    : '—', unit:'0–1' },
-            { label:'ENN distance',     value: nv(p.enn)       != null ? Math.round(nv(p.enn)) + '' : '—', unit:'m' },
-            { label:'Perim-area ratio', value: nv(p.para)      != null ? nv(p.para).toFixed(5)      : '—', unit:'' },
-            { label:'Mean flow',        value: nv(p.mean_flow) != null ? nv(p.mean_flow).toFixed(2) : '—', unit:'' }
+        // ── Right: metrics ────────────────────────────────────────────────────
+        ctx.fillStyle=GB_LIGHT; ctx.font='7px '+F_SMALL;
+        ctx.fillText('[ METRICS ]', COL2_X, CONT_Y-6);
+
+        var nv=function(v){return v!=null?parseFloat(v):null;};
+        var mets=[
+            {l:'TOTAL AREA',   v:nv(p.area)     !=null?nv(p.area).toFixed(2)     :'--', u:'HA'},
+            {l:'CORE AREA',    v:nv(p.core)     !=null?nv(p.core).toFixed(2)     :'--', u:'HA'},
+            {l:'CONTIGUITY',   v:nv(p.contig)   !=null?nv(p.contig).toFixed(3)   :'--', u:'0-1'},
+            {l:'ENN DIST',     v:nv(p.enn)      !=null?Math.round(nv(p.enn))+''  :'--', u:'M'},
+            {l:'PARA RATIO',   v:nv(p.para)     !=null?nv(p.para).toFixed(5)     :'--', u:''},
+            {l:'MEAN FLOW',    v:nv(p.mean_flow)!=null?nv(p.mean_flow).toFixed(2):'--', u:''}
         ];
 
-        var mCols = 2;
-        var mGap  = 10;
-        var mW    = (RIGHT_W - mGap) / mCols;
-        var mH    = 84;
+        mets.forEach(function(m,i){
+            var col=i%mCOLS, row=Math.floor(i/mCOLS);
+            var mx2=COL2_X+col*(mW+mGAP);
+            var my2=CONT_Y+row*(mH+mGAP);
 
-        ctx.fillStyle = '#aaa'; ctx.font = 'bold 9px ' + F;
-        ctx.fillText('STRUCTURAL METRICS', RIGHT_X, CONT_Y - 6);
-
-        metrics.forEach(function (m, i) {
-            var col = i % mCols, row = Math.floor(i / mCols);
-            var mx  = RIGHT_X + col * (mW + mGap);
-            var my  = CONT_Y + row * (mH + mGap);
-
-            // Shadow
-            ctx.fillStyle = 'rgba(0,0,0,0.05)';
-            rrect(ctx, mx + 2, my + 2, mW, mH, 6); ctx.fill();
-            // Card
-            ctx.fillStyle = '#ffffff';
-            rrect(ctx, mx, my, mW, mH, 6); ctx.fill();
-            ctx.strokeStyle = '#e8e4de'; ctx.lineWidth = 1;
-            rrect(ctx, mx, my, mW, mH, 6); ctx.stroke();
-            // Left accent
-            ctx.fillStyle = tierColor; ctx.fillRect(mx, my, 4, mH);
+            ctx.fillStyle=GB_DARK; ctx.fillRect(mx2,my2,mW,mH);
+            ctx.strokeStyle=GB_LIGHT; ctx.lineWidth=1;
+            ctx.strokeRect(mx2,my2,mW,mH);
+            pixelCorners(ctx,mx2,my2,mW,mH,6,GB_MED);
 
             // Label
-            ctx.fillStyle = '#aaa'; ctx.font = '9px ' + F;
-            ctx.fillText(m.label.toUpperCase(), mx + 12, my + 17);
-            // Value
-            ctx.fillStyle = '#1a3d1a'; ctx.font = 'bold 22px ' + F;
-            ctx.fillText(m.value, mx + 12, my + 52);
+            ctx.fillStyle=GB_LIGHT; ctx.font='6px '+F_SMALL;
+            ctx.fillText(m.l, mx2+8, my2+14);
+
+            // Value — auto-size to fit
+            var valFont=11;
+            ctx.font='bold '+valFont+'px '+F_BIG;
+            while(ctx.measureText(m.v).width>mW-16&&valFont>7){
+                valFont--;
+                ctx.font='bold '+valFont+'px '+F_BIG;
+            }
+            ctx.fillStyle=GB_BRIGHT;
+            ctx.fillText(m.v, mx2+8, my2+mH/2+4);
+
             // Unit
-            if (m.unit) {
-                ctx.fillStyle = '#bbb'; ctx.font = '11px ' + F;
-                ctx.fillText(m.unit, mx + 12, my + 70);
+            if(m.u){
+                ctx.fillStyle=GB_MED; ctx.font='6px '+F_SMALL;
+                ctx.fillText(m.u, mx2+8, my2+mH-10);
             }
         });
 
-        // ── Footer (drawn synchronously) ──────────────────────────────────────
-        function drawFooter() {
-            ctx.fillStyle = '#1a3d1a'; ctx.fillRect(0, FOOT_Y, W, H - FOOT_Y);
-            ctx.fillStyle = tierColor;  ctx.fillRect(0, FOOT_Y, 7, H - FOOT_Y);
-            ctx.fillStyle = '#ffffff'; ctx.font = '11px ' + F;
-            var d = new Date().toLocaleDateString('en-GB', {
-                day:'numeric', month:'long', year:'numeric'
-            });
-            ctx.fillText('Generated ' + d, 20, FOOT_Y + 24);
-            ctx.fillStyle = '#a5d6a7'; ctx.font = '10px ' + F;
-            var disc = 'For research and awareness purposes only  ·  myforestconnect.online';
-            ctx.fillText(disc, W - ctx.measureText(disc).width - PAD, FOOT_Y + 24);
-        }
+        // ── Footer ────────────────────────────────────────────────────────────
+        ctx.fillStyle=GB_MED; ctx.fillRect(0,FOOT_Y,W,H-FOOT_Y);
+        ctx.fillStyle=GB_BRIGHT; ctx.fillRect(0,FOOT_Y,W,3);
+        ctx.fillStyle=GB_BRIGHT; ctx.font='bold 7px '+F_BIG;
+        var dd=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}).toUpperCase();
+        ctx.fillText('> GENERATED '+dd, PAD, FOOT_Y+22);
+        ctx.fillStyle=GB_DARK; ctx.font='7px '+F_SMALL;
+        var dis='FOR RESEARCH ONLY';
+        ctx.fillText(dis, W-PAD-ctx.measureText(dis).width, FOOT_Y+22);
 
-        // ── Load QR then finalise ─────────────────────────────────────────────
-        var qrImg = new Image();
-        qrImg.crossOrigin = 'anonymous';
-        qrImg.onload = function () {
-            // Draw QR centred in the QR panel
-            var qrDrawX = PAD + (LEFT_W - QR_SIZE) / 2;
-            ctx.drawImage(qrImg, qrDrawX, QR_Y + 18, QR_SIZE, QR_SIZE);
-
-            ctx.fillStyle = '#bbb'; ctx.font = '9px ' + F;
-            var scanTxt = 'Scan to open in platform';
-            ctx.fillText(scanTxt,
-                PAD + (LEFT_W - ctx.measureText(scanTxt).width) / 2,
-                QR_Y + 18 + QR_SIZE + 12);
-
-            drawFooter();
-            download();
+        // ── Load QR, then download ─────────────────────────────────────────────
+        var qi=new Image(); qi.crossOrigin='anonymous';
+        qi.onload=function(){
+            var qx2=PAD+Math.floor((COL1_W-QR_SZ)/2);
+            var qy2=QR_Y+20;
+            ctx.drawImage(qi,qx2,qy2,QR_SZ,QR_SZ);
+            // "Scan" label below if it fits
+            var scanY=qy2+QR_SZ+8;
+            if(scanY+10<QR_Y+QR_H){
+                ctx.fillStyle=GB_LIGHT; ctx.font='6px '+F_SMALL;
+                var sc3='OPEN IN PLATFORM';
+                ctx.fillText(sc3, PAD+Math.floor((COL1_W-ctx.measureText(sc3).width)/2), scanY+8);
+            }
+            dl();
         };
-        qrImg.onerror = function () { drawFooter(); download(); };
-        qrImg.src = qrUrl(lat, lng);
+        qi.onerror=function(){ dl(); };
+        qi.src=qrUrl(lat,lng);
 
-        function download() {
-            var a = document.createElement('a');
-            a.download = 'patch_' + (p.id != null ? p.id : 'report') + '_report_card.png';
-            a.href = canvas.toDataURL('image/png', 1.0);
+        function dl(){
+            var a=document.createElement('a');
+            a.download='patch_'+(p.id!=null?p.id:'report')+'_report_card.png';
+            a.href=cv.toDataURL('image/png',1.0);
             a.click();
         }
     }
 
-    // ── Canvas helpers ────────────────────────────────────────────────────────
-    function rrect(ctx, x, y, w, h, r) {
-        ctx.beginPath();
-        ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
-        ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-        ctx.lineTo(x+w,y+h-r);
-        ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-        ctx.lineTo(x+r,y+h);
-        ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-        ctx.lineTo(x,y+r);
-        ctx.quadraticCurveTo(x,y,x+r,y);
-        ctx.closePath();
-    }
-    function circ(ctx, x, y, r) {
-        ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-    }
-    function hexToRgba(hex, alpha) {
-        var r = parseInt(hex.slice(1,3),16);
-        var g = parseInt(hex.slice(3,5),16);
-        var b = parseInt(hex.slice(5,7),16);
-        return 'rgba('+r+','+g+','+b+','+alpha+')';
+    // ── Pixel corner helper ────────────────────────────────────────────────────
+    function pixelCorners(ctx,x,y,w,h,size,color){
+        ctx.fillStyle=color;
+        [[x,y],[x+w-size,y],[x,y+h-size],[x+w-size,y+h-size]].forEach(function(c){
+            ctx.fillRect(c[0],c[1],size,size);
+        });
     }
 
     // ── Boot ──────────────────────────────────────────────────────────────────
-    if (document.readyState !== 'loading') { initReportCards(); }
-    else { document.addEventListener('DOMContentLoaded', initReportCards); }
+    if(document.readyState!=='loading'){initReportCards();}
+    else{document.addEventListener('DOMContentLoaded',initReportCards);}
 
 })();
