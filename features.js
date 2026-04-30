@@ -451,7 +451,7 @@
             }).toUpperCase();
             ctx.fillText('> GENERATED '+dd, PAD, FOOT_Y+22);
             ctx.fillStyle=GB_DARK; ctx.font=F(9);
-            var dis='FOR RESEARCH ONLY';
+            var dis='FOR REFERENCE ONLY';
             ctx.fillText(dis, W-PAD-ctx.measureText(dis).width, FOOT_Y+22);
         }
 
