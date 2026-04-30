@@ -1,4 +1,4 @@
-// features.js — myforestconnect retro report cards v3
+// features.js — myforestconnect retro report cards v4
 //
 // HOW TO USE:
 //   Add ONE line before <script src="config.js"> in each map HTML file:
@@ -10,26 +10,14 @@
     'use strict';
 
     // ── Load Press Start 2P font ──────────────────────────────────────────────
-    var _fontReady = false;
     (function () {
         var lnk = document.createElement('link');
-        lnk.rel  = 'preconnect';
-        lnk.href = 'https://fonts.googleapis.com';
+        lnk.rel  = 'stylesheet';
+        lnk.href = 'https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap';
         document.head.appendChild(lnk);
-        var lnk2 = document.createElement('link');
-        lnk2.rel  = 'stylesheet';
-        lnk2.href = 'https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap';
-        document.head.appendChild(lnk2);
-        // Allow up to 3s to load; fall back to monospace gracefully
-        setTimeout(function () { _fontReady = true; }, 3000);
-        if (document.fonts && document.fonts.ready) {
-            document.fonts.ready.then(function () { _fontReady = true; });
-        }
     })();
 
-    function F(size) {
-        return size + 'px "Press Start 2P", monospace';
-    }
+    function F(size) { return size + 'px "Press Start 2P",monospace'; }
 
     // ── Intercept mapboxgl.Map ────────────────────────────────────────────────
     var _OrigMap = mapboxgl.Map;
@@ -117,12 +105,13 @@
         });
     }
 
-    // ── Overpass API — fetch containing forest/reserve name ───────────────────
+    // ── Forest name: Overpass (3 steps) → Nominatim fallback ─────────────────
     function fetchForestName(lat, lng) {
         return new Promise(function (resolve) {
             if (!lat || !lng) { resolve(null); return; }
-            var query =
-                '[out:json][timeout:10];' +
+
+            // Step 1: containing polygon
+            var q1 = '[out:json][timeout:10];' +
                 'is_in(' + lat + ',' + lng + ')->.a;' +
                 '(' +
                 '  way(pivot.a)["landuse"="forest"];' +
@@ -131,50 +120,58 @@
                 '  relation(pivot.a)["leisure"="nature_reserve"];' +
                 '  way(pivot.a)["boundary"="protected_area"];' +
                 '  relation(pivot.a)["boundary"="protected_area"];' +
-                '  way(pivot.a)["landuse"="conservation"];' +
-                '  relation(pivot.a)["landuse"="conservation"];' +
-                ');' +
-                'out tags;';
+                ');out tags;';
 
-            var url = 'https://overpass-api.de/api/interpreter?data=' +
-                encodeURIComponent(query);
-
-            fetch(url)
-                .then(function (r) { return r.json(); })
+            overpass(q1)
                 .then(function (data) {
-                    if (!data.elements || !data.elements.length) {
-                        resolve(null); return;
-                    }
-                    // Prefer elements with a name tag; pick the first named one
-                    var named = data.elements.find(function (el) {
-                        return el.tags && el.tags.name;
-                    });
-                    if (named) {
-                        resolve(named.tags.name.toUpperCase());
-                    } else {
-                        resolve(null);
-                    }
+                    var n = extractName(data);
+                    if (n) { resolve(n); return Promise.resolve(null); }
+
+                    // Step 2: nearby within 2 km
+                    var q2 = '[out:json][timeout:10];(' +
+                        '  way["landuse"="forest"](around:2000,' + lat + ',' + lng + ');' +
+                        '  relation["landuse"="forest"](around:2000,' + lat + ',' + lng + ');' +
+                        '  way["leisure"="nature_reserve"](around:2000,' + lat + ',' + lng + ');' +
+                        '  relation["leisure"="nature_reserve"](around:2000,' + lat + ',' + lng + ');' +
+                        '  way["boundary"="protected_area"](around:2000,' + lat + ',' + lng + ');' +
+                        '  relation["boundary"="protected_area"](around:2000,' + lat + ',' + lng + ');' +
+                        ');out tags;';
+                    return overpass(q2);
+                })
+                .then(function (data) {
+                    if (!data) return Promise.resolve(null);
+                    var n = extractName(data);
+                    if (n) { resolve(n); return Promise.resolve(null); }
+
+                    // Step 3: Nominatim fallback
+                    var url = 'https://nominatim.openstreetmap.org/reverse?lat=' + lat +
+                        '&lon=' + lng + '&format=json&zoom=14&addressdetails=1';
+                    return fetch(url, {
+                        headers: { 'Accept-Language': 'en', 'User-Agent': 'myforestconnect.online' }
+                    }).then(function (r) { return r.json(); })
+                      .then(function (d) {
+                          var a = d.address || {};
+                          var nm = d.name || a.nature_reserve || a.forest ||
+                                   a.park || a.suburb || a.village || a.town || null;
+                          resolve(nm ? nm.toUpperCase() : null);
+                      });
                 })
                 .catch(function () { resolve(null); });
         });
     }
 
-    // ── Tier helpers ──────────────────────────────────────────────────────────
-    // Published display names (new names shown in UI)
-    var TIER_DISPLAY = {
-        'Tier 1 (Core Habitat)':              'Tier 1 (Primary forest)',
-        'Tier 2 (Major Stepping Stones)':     'Tier 2 (Established forest)',
-        'Tier 3 (Connected Fragments)':       'Tier 3 (Functional fragment)',
-        'Tier 4 (Vulnerable Edge Fragments)': 'Tier 4 (Vulnerable fragment)',
-        'Tier 5 (Isolated Fragments)':        'Tier 5 (Marginal fragment)',
-        'Tier 6 (Isolated Micro Patches)':    'Tier 6 (Remnant patch)'
-    };
-    function displayName(t) {
-        // Use platform TIER_DISPLAY_NAMES if available, else our local map
-        var d = (window.TIER_DISPLAY_NAMES || {})[t] || TIER_DISPLAY[t] || t || 'Unknown';
-        return d;
+    function overpass(q) {
+        return fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q))
+            .then(function (r) { return r.json(); })
+            .catch(function () { return null; });
+    }
+    function extractName(data) {
+        if (!data || !data.elements || !data.elements.length) return null;
+        var el = data.elements.find(function (e) { return e.tags && e.tags.name; });
+        return el ? el.tags.name.toUpperCase() : null;
     }
 
+    // ── Tier helpers ──────────────────────────────────────────────────────────
     var TIER_ORDER = [
         'Tier 1 (Core Habitat)',
         'Tier 2 (Major Stepping Stones)',
@@ -183,10 +180,22 @@
         'Tier 5 (Isolated Fragments)',
         'Tier 6 (Isolated Micro Patches)'
     ];
-    // 3-letter codes for spectrum bar segments
+    // Full published display names — used in full on the card
+    var TIER_PUBLISHED = {
+        'Tier 1 (Core Habitat)':              'TIER 1 / PRIMARY FOREST',
+        'Tier 2 (Major Stepping Stones)':     'TIER 2 / ESTABLISHED FOREST',
+        'Tier 3 (Connected Fragments)':       'TIER 3 / FUNCTIONAL FRAGMENT',
+        'Tier 4 (Vulnerable Edge Fragments)': 'TIER 4 / VULNERABLE FRAGMENT',
+        'Tier 5 (Isolated Fragments)':        'TIER 5 / MARGINAL FRAGMENT',
+        'Tier 6 (Isolated Micro Patches)':    'TIER 6 / REMNANT PATCH'
+    };
     var TIER_CODE = ['PRI','EST','FUN','VUL','MAR','REM'];
     var TIER_SEG  = ['#c8f090','#a0d060','#70a030','#486820','#284010','#142008'];
 
+    function displayName(t) {
+        return TIER_PUBLISHED[t] ||
+            ((window.TIER_DISPLAY_NAMES || {})[t] || t || 'UNKNOWN').toUpperCase();
+    }
     function tIdx(t) { var i = TIER_ORDER.indexOf(t); return i >= 0 ? i : -1; }
 
     // ── QR URL ────────────────────────────────────────────────────────────────
@@ -197,9 +206,8 @@
             base = 'https://myforestconnect.online/' + pg +
                 '#15.00/' + lat.toFixed(5) + '/' + lng.toFixed(5);
         }
-        return 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' +
-            encodeURIComponent(base) +
-            '&bgcolor=0f380f&color=9bbc0f&margin=8';
+        return 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' +
+            encodeURIComponent(base) + '&bgcolor=0f380f&color=9bbc0f&margin=8';
     }
 
     // ── Draw patch shape ──────────────────────────────────────────────────────
@@ -222,9 +230,9 @@
         var rx=x1-x0||0.0001, ry=y1-y0||0.0001;
         var sc=Math.min(w/rx,h/ry)*0.85;
         var ox=x+w/2-(x0+rx/2)*sc, oy=y+h/2+(y0+ry/2)*sc;
-        function proj(c){ return [c[0]*sc+ox,-c[1]*sc+oy]; }
+        function proj(c){return[c[0]*sc+ox,-c[1]*sc+oy];}
         function ring(pts2){
-            var p0=proj(pts2[0]); ctx.moveTo(p0[0],p0[1]);
+            var p0=proj(pts2[0]);ctx.moveTo(p0[0],p0[1]);
             for(var i=1;i<pts2.length;i++){var pi=proj(pts2[i]);ctx.lineTo(pi[0],pi[1]);}
             ctx.closePath();
         }
@@ -238,8 +246,8 @@
         ctx.strokeStyle=stroke; ctx.lineWidth=2; ctx.stroke();
     }
 
-    // ── Pixel corner decoration ────────────────────────────────────────────────
-    function pixCorners(ctx,x,y,w,h,sz,col){
+    // ── Pixel corners ─────────────────────────────────────────────────────────
+    function pxC(ctx,x,y,w,h,sz,col){
         ctx.fillStyle=col;
         [[x,y],[x+w-sz,y],[x,y+h-sz],[x+w-sz,y+h-sz]].forEach(function(c){
             ctx.fillRect(c[0],c[1],sz,sz);
@@ -248,41 +256,36 @@
 
     // ── Render card ───────────────────────────────────────────────────────────
     function renderCard(p, lat, lng, geometry, forestName) {
-
         var GB_DARK   = '#0f380f';
         var GB_MED    = '#306230';
         var GB_LIGHT  = '#8bac0f';
         var GB_BRIGHT = '#9bbc0f';
         var GB_WHITE  = '#e0f8d0';
 
-        var tierInt  = p.Tier || '';
-        var tierLbl  = displayName(tierInt).toUpperCase();
-        // Build short tier display: "T2 / ESTABLISHED FOREST"
-        var ti       = tIdx(tierInt);
-        var tierShort = ti >= 0
-            ? 'T'+(ti+1)+' / '+TIER_CODE[ti]+' FOREST'
-            : tierLbl;
-        var conn     = (p.connectivity || 'No Data').toUpperCase();
+        var tierInt = p.Tier || '';
+        var tierLbl = displayName(tierInt);
+        var ti      = tIdx(tierInt);
+        var conn    = (p.connectivity || 'No Data').toUpperCase();
 
-        // ── Canvas: 800×660 at 2× retina ─────────────────────────────────────
-        var W=800, H=660, SC=2;
+        // ── Canvas 800×700 @ 2× ───────────────────────────────────────────────
+        var W=800, H=700, SC=2;
         var cv=document.createElement('canvas');
         cv.width=W*SC; cv.height=H*SC;
         var ctx=cv.getContext('2d');
         ctx.scale(SC,SC);
 
-        // ── Layout constants (verified against Python preview) ────────────────
+        // ── Layout constants — verified in Python preview ─────────────────────
         var PAD=20, COL1_W=210;
         var COL2_X=PAD+COL1_W+14, COL2_W=W-COL2_X-PAD;
-        var HDR_H=80, PL_Y=HDR_H+8, BDGE_Y=PL_Y+30;
-        var SPEC_Y=BDGE_Y+56, CONT_Y=SPEC_Y+34;
-        var FOOT_Y=H-48, AVAIL_H=FOOT_Y-CONT_Y;
+        var HDR_H=84, PL_Y=HDR_H+8, BDGE_Y=PL_Y+32;
+        var SPEC_Y=BDGE_Y+62, CONT_Y=SPEC_Y+38;
+        var FOOT_Y=H-50, AVAIL=FOOT_Y-CONT_Y;
         var SHAPE_H=200, QR_Y=CONT_Y+SHAPE_H+10;
         var QR_H=FOOT_Y-QR_Y;
-        var QR_SZ=Math.min(QR_H-34, COL1_W-24);
+        var QR_SZ=Math.min(QR_H-36, COL1_W-24);
         var mCOLS=2, mGAP=10;
         var mW=Math.floor((COL2_W-mGAP)/mCOLS);
-        var mH=Math.floor((AVAIL_H-mGAP*2)/3);
+        var mH=Math.floor((AVAIL-mGAP*2)/3);
 
         // ── Background + grid ─────────────────────────────────────────────────
         ctx.fillStyle=GB_DARK; ctx.fillRect(0,0,W,H);
@@ -290,135 +293,123 @@
         for(var gx=0;gx<W;gx+=16){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,H);ctx.stroke();}
         for(var gy=0;gy<H;gy+=16){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke();}
 
-        // ── Outer border ──────────────────────────────────────────────────────
+        // Border
         ctx.strokeStyle=GB_BRIGHT;ctx.lineWidth=4;ctx.strokeRect(2,2,W-4,H-4);
         ctx.strokeStyle=GB_LIGHT; ctx.lineWidth=2;ctx.strokeRect(7,7,W-14,H-14);
 
         // ── Header ────────────────────────────────────────────────────────────
         ctx.fillStyle=GB_MED; ctx.fillRect(4,4,W-8,HDR_H);
         ctx.fillStyle=GB_BRIGHT; ctx.fillRect(4,HDR_H,W-8,3);
-        ctx.fillStyle=GB_BRIGHT; ctx.font=F(13);
-        ctx.fillText('> FOREST PATCH REPORT CARD',PAD,24);
-        ctx.fillStyle=GB_LIGHT; ctx.font=F(9);
-        ctx.fillText('MYFORESTCONNECT.ONLINE',PAD,48);
+        ctx.fillStyle=GB_BRIGHT; ctx.font=F(14);
+        ctx.fillText('> FOREST PATCH REPORT CARD',PAD,26);
+        ctx.fillStyle=GB_LIGHT; ctx.font=F(10);
+        ctx.fillText('MYFORESTCONNECT.ONLINE',PAD,54);
         if(p.id!=null){
-            ctx.fillStyle=GB_WHITE; ctx.font=F(9);
+            ctx.fillStyle=GB_WHITE; ctx.font=F(10);
             var idT='PATCH #'+p.id;
-            ctx.fillText(idT, W-PAD-ctx.measureText(idT).width, 48);
+            ctx.fillText(idT, W-PAD-ctx.measureText(idT).width, 54);
         }
 
         // ── Forest name strip ─────────────────────────────────────────────────
-        ctx.fillStyle=GB_DARK; ctx.fillRect(PAD,PL_Y,W-PAD*2,26);
+        ctx.fillStyle=GB_DARK; ctx.fillRect(PAD,PL_Y,W-PAD*2,28);
         ctx.strokeStyle=GB_LIGHT; ctx.lineWidth=1;
-        ctx.strokeRect(PAD,PL_Y,W-PAD*2,26);
-        ctx.fillStyle=GB_BRIGHT; ctx.font=F(9);
-        var pn = forestName ? '[ '+forestName+' ]' : '[ FOREST NAME UNAVAILABLE ]';
-        // Truncate if too wide
-        while(ctx.measureText(pn).width > W-PAD*2-20 && pn.length > 10)
+        ctx.strokeRect(PAD,PL_Y,W-PAD*2,28);
+        var pn = forestName ? '[ '+forestName+' ]' : '[ LOCATION DATA UNAVAILABLE ]';
+        ctx.fillStyle=GB_BRIGHT; ctx.font=F(10);
+        // Truncate to fit
+        while(ctx.measureText(pn).width > W-PAD*2-20 && pn.length>10)
             pn = pn.slice(0,-2)+'...]';
-        ctx.fillText(pn, PAD+8, PL_Y+18);
+        ctx.fillText(pn, PAD+10, PL_Y+19);
 
         // ── Badge row ─────────────────────────────────────────────────────────
-        // 1 — Tier: bright border, medium bg
-        ctx.fillStyle=GB_MED; ctx.fillRect(PAD,BDGE_Y,280,44);
+        // 1. Tier badge — auto-fit font size for full name
+        ctx.fillStyle=GB_MED; ctx.fillRect(PAD,BDGE_Y,310,50);
         ctx.strokeStyle=GB_BRIGHT; ctx.lineWidth=2;
-        ctx.strokeRect(PAD,BDGE_Y,280,44);
-        ctx.fillStyle=GB_LIGHT; ctx.font=F(8);
+        ctx.strokeRect(PAD,BDGE_Y,310,50);
+        ctx.fillStyle=GB_LIGHT; ctx.font=F(9);
         ctx.fillText('TIER', PAD+10, BDGE_Y+14);
-        ctx.fillStyle=GB_BRIGHT; ctx.font=F(10);
-        ctx.fillText(tierShort, PAD+10, BDGE_Y+32);
+        var tfs=10; ctx.font=F(tfs);
+        while(ctx.measureText(tierLbl).width > 290 && tfs > 7){ tfs--; ctx.font=F(tfs); }
+        ctx.fillStyle=GB_BRIGHT;
+        ctx.fillText(tierLbl, PAD+10, BDGE_Y+34);
 
-        // 2 — Connectivity: dark bg, bright text — avoids colour clash
-        var CX=PAD+292;
-        ctx.fillStyle=GB_DARK; ctx.fillRect(CX,BDGE_Y,164,44);
+        // 2. Connectivity badge
+        var CX=PAD+322;
+        ctx.fillStyle=GB_DARK; ctx.fillRect(CX,BDGE_Y,170,50);
         ctx.strokeStyle=GB_BRIGHT; ctx.lineWidth=2;
-        ctx.strokeRect(CX,BDGE_Y,164,44);
-        ctx.fillStyle=GB_LIGHT; ctx.font=F(8);
+        ctx.strokeRect(CX,BDGE_Y,170,50);
+        ctx.fillStyle=GB_LIGHT; ctx.font=F(9);
         ctx.fillText('CONNECTIVITY', CX+10, BDGE_Y+14);
-        ctx.fillStyle=GB_BRIGHT; ctx.font=F(10);
-        ctx.fillText('[ '+conn+' ]', CX+10, BDGE_Y+32);
+        ctx.fillStyle=GB_BRIGHT; ctx.font=F(11);
+        ctx.fillText('[ '+conn+' ]', CX+10, BDGE_Y+34);
 
-        // 3 — GPS: slightly lighter dark bg, white text
-        var GX=CX+176;
-        ctx.fillStyle='#1a4a1a'; ctx.fillRect(GX,BDGE_Y,W-GX-PAD,44);
+        // 3. GPS badge
+        var GX=CX+182;
+        ctx.fillStyle='#1a4a1a'; ctx.fillRect(GX,BDGE_Y,W-GX-PAD,50);
         ctx.strokeStyle=GB_LIGHT; ctx.lineWidth=1;
-        ctx.strokeRect(GX,BDGE_Y,W-GX-PAD,44);
-        ctx.fillStyle=GB_LIGHT; ctx.font=F(8);
+        ctx.strokeRect(GX,BDGE_Y,W-GX-PAD,50);
+        ctx.fillStyle=GB_LIGHT; ctx.font=F(9);
         ctx.fillText('LOCATION', GX+10, BDGE_Y+14);
-        ctx.fillStyle=GB_WHITE; ctx.font=F(8);
+        ctx.fillStyle=GB_WHITE; ctx.font=F(9);
         if(lat&&lng){
-            ctx.fillText(lat.toFixed(5)+'N', GX+10, BDGE_Y+30);
-            ctx.fillText(lng.toFixed(5)+'E', GX+10+Math.floor((W-GX-PAD)/2), BDGE_Y+30);
+            ctx.fillText(lat.toFixed(5)+'N', GX+10, BDGE_Y+32);
+            ctx.fillText(lng.toFixed(5)+'E', GX+10+Math.floor((W-GX-PAD)/2), BDGE_Y+32);
         } else {
-            ctx.fillText('UNAVAILABLE', GX+10, BDGE_Y+30);
+            ctx.fillText('UNAVAILABLE', GX+10, BDGE_Y+32);
         }
 
         // ── Tier spectrum bar ─────────────────────────────────────────────────
         var segW=Math.floor((W-PAD*2)/6);
         for(var si=0;si<6;si++){
             var sx=PAD+si*segW;
-            ctx.fillStyle=TIER_SEG[si];
-            ctx.fillRect(sx,SPEC_Y,segW,22);
+            ctx.fillStyle=TIER_SEG[si]; ctx.fillRect(sx,SPEC_Y,segW,24);
             if(si===ti){
                 ctx.strokeStyle=GB_BRIGHT; ctx.lineWidth=3;
-                ctx.strokeRect(sx+1,SPEC_Y+1,segW-2,20);
+                ctx.strokeRect(sx+1,SPEC_Y+1,segW-2,22);
             }
-            ctx.fillStyle=si<2?GB_DARK:GB_BRIGHT;
-            ctx.font=F(7);
+            ctx.fillStyle=si<2?GB_DARK:GB_BRIGHT; ctx.font=F(8);
             var tc=TIER_CODE[si];
-            ctx.fillText(tc, sx+segW/2-ctx.measureText(tc).width/2, SPEC_Y+14);
+            ctx.fillText(tc, sx+segW/2-ctx.measureText(tc).width/2, SPEC_Y+15);
         }
-        // Pixel triangle pointer under active tier
         if(ti>=0){
             var ptrX=PAD+ti*segW+segW/2;
             ctx.fillStyle=GB_BRIGHT;
             ctx.beginPath();
-            ctx.moveTo(ptrX-7,SPEC_Y+24);
-            ctx.lineTo(ptrX+7,SPEC_Y+24);
-            ctx.lineTo(ptrX,  SPEC_Y+33);
-            ctx.closePath(); ctx.fill();
+            ctx.moveTo(ptrX-8,SPEC_Y+26); ctx.lineTo(ptrX+8,SPEC_Y+26);
+            ctx.lineTo(ptrX,SPEC_Y+36); ctx.closePath(); ctx.fill();
         }
 
         // ── Left: shape panel ─────────────────────────────────────────────────
         ctx.fillStyle=GB_DARK; ctx.fillRect(PAD,CONT_Y,COL1_W,SHAPE_H);
         ctx.strokeStyle=GB_LIGHT; ctx.lineWidth=2;
         ctx.strokeRect(PAD,CONT_Y,COL1_W,SHAPE_H);
-        pixCorners(ctx,PAD,CONT_Y,COL1_W,SHAPE_H,8,GB_BRIGHT);
-        ctx.fillStyle=GB_LIGHT; ctx.font=F(8);
-        ctx.fillText('[ PATCH SHAPE ]',PAD+12,CONT_Y+16);
-
+        pxC(ctx,PAD,CONT_Y,COL1_W,SHAPE_H,8,GB_BRIGHT);
+        ctx.fillStyle=GB_LIGHT; ctx.font=F(9);
+        ctx.fillText('[ SHAPE ]',PAD+12,CONT_Y+18);
         if(geometry){
-            drawShape(ctx,geometry,
-                PAD+10,CONT_Y+26,COL1_W-20,SHAPE_H-42,
-                GB_MED, GB_BRIGHT);
+            drawShape(ctx,geometry,PAD+10,CONT_Y+28,COL1_W-20,SHAPE_H-40,GB_MED,GB_BRIGHT);
         } else {
-            ctx.fillStyle=GB_MED; ctx.font=F(8);
-            ctx.fillText('SHAPE', PAD+55, CONT_Y+SHAPE_H/2-8);
-            ctx.fillText('N/A',   PAD+68, CONT_Y+SHAPE_H/2+10);
+            ctx.fillStyle=GB_MED; ctx.font=F(9);
+            ctx.fillText('N/A',PAD+80,CONT_Y+SHAPE_H/2);
         }
-        ctx.fillStyle=GB_LIGHT; ctx.font=F(7);
-        ctx.fillText('PATCH GEOMETRY', PAD+14, CONT_Y+SHAPE_H-14);
 
         // ── Left: QR panel ────────────────────────────────────────────────────
         ctx.fillStyle=GB_DARK; ctx.fillRect(PAD,QR_Y,COL1_W,QR_H);
         ctx.strokeStyle=GB_LIGHT; ctx.lineWidth=2;
         ctx.strokeRect(PAD,QR_Y,COL1_W,QR_H);
-        pixCorners(ctx,PAD,QR_Y,COL1_W,QR_H,8,GB_BRIGHT);
-        ctx.fillStyle=GB_LIGHT; ctx.font=F(8);
-        ctx.fillText('[ SCAN ME ]',PAD+12,QR_Y+16);
+        pxC(ctx,PAD,QR_Y,COL1_W,QR_H,8,GB_BRIGHT);
+        ctx.fillStyle=GB_LIGHT; ctx.font=F(9);
+        ctx.fillText('[ SCAN ME ]',PAD+12,QR_Y+18);
 
-        // ── Right: metrics ────────────────────────────────────────────────────
-        ctx.fillStyle=GB_LIGHT; ctx.font=F(8);
-        ctx.fillText('[ METRICS ]',COL2_X,CONT_Y-8);
-
+        // ── Right: metric cards — no section title ────────────────────────────
         var nv=function(v){return v!=null?parseFloat(v):null;};
         var mets=[
-            {l:'TOTAL AREA',   v:nv(p.area)     !=null?nv(p.area).toFixed(2)     :'--', u:'HA'},
-            {l:'CORE AREA',    v:nv(p.core)     !=null?nv(p.core).toFixed(2)     :'--', u:'HA'},
-            {l:'CONTIGUITY',   v:nv(p.contig)   !=null?nv(p.contig).toFixed(3)   :'--', u:'0-1'},
-            {l:'ENN DIST',     v:nv(p.enn)      !=null?Math.round(nv(p.enn))+''  :'--', u:'M'},
-            {l:'PARA RATIO',   v:nv(p.para)     !=null?nv(p.para).toFixed(5)     :'--', u:''},
-            {l:'MEAN FLOW',    v:nv(p.mean_flow)!=null?nv(p.mean_flow).toFixed(2):'--', u:''}
+            {l:'TOTAL AREA',  v:nv(p.area)     !=null?nv(p.area).toFixed(2)     :'--', u:'HA'},
+            {l:'CORE AREA',   v:nv(p.core)     !=null?nv(p.core).toFixed(2)     :'--', u:'HA'},
+            {l:'CONTIGUITY',  v:nv(p.contig)   !=null?nv(p.contig).toFixed(3)   :'--', u:'0-1'},
+            {l:'ENN DIST',    v:nv(p.enn)      !=null?Math.round(nv(p.enn))+''  :'--', u:'M'},
+            {l:'PARA RATIO',  v:nv(p.para)     !=null?nv(p.para).toFixed(5)     :'--', u:''},
+            {l:'MEAN FLOW',   v:nv(p.mean_flow)!=null?nv(p.mean_flow).toFixed(2):'--', u:''}
         ];
 
         mets.forEach(function(m,i){
@@ -429,24 +420,23 @@
             ctx.fillStyle=GB_DARK; ctx.fillRect(mx,my,mW,mH);
             ctx.strokeStyle=GB_LIGHT; ctx.lineWidth=1;
             ctx.strokeRect(mx,my,mW,mH);
-            pixCorners(ctx,mx,my,mW,mH,6,GB_MED);
+            pxC(ctx,mx,my,mW,mH,6,GB_MED);
 
             // Label
-            ctx.fillStyle=GB_LIGHT; ctx.font=F(8);
+            ctx.fillStyle=GB_LIGHT; ctx.font=F(9);
             ctx.fillText(m.l, mx+10, my+18);
 
             // Value — auto-fit font size
-            var vfs=14;
-            ctx.font=F(vfs);
-            while(ctx.measureText(m.v).width>mW-20 && vfs>8){
+            var vfs=16; ctx.font=F(vfs);
+            while(ctx.measureText(m.v).width > mW-20 && vfs>9){
                 vfs--; ctx.font=F(vfs);
             }
             ctx.fillStyle=GB_BRIGHT;
-            ctx.fillText(m.v, mx+10, my+Math.floor(mH/2)+8);
+            ctx.fillText(m.v, mx+10, my+Math.floor(mH/2)+10);
 
-            // Unit
+            // Unit — bright white, large and readable
             if(m.u){
-                ctx.fillStyle=GB_MED; ctx.font=F(8);
+                ctx.fillStyle=GB_WHITE; ctx.font=F(11);
                 ctx.fillText(m.u, mx+10, my+mH-14);
             }
         });
@@ -455,25 +445,27 @@
         function drawFooter(){
             ctx.fillStyle=GB_MED; ctx.fillRect(0,FOOT_Y,W,H-FOOT_Y);
             ctx.fillStyle=GB_BRIGHT; ctx.fillRect(0,FOOT_Y,W,3);
-            ctx.fillStyle=GB_BRIGHT; ctx.font=F(8);
-            var dd=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}).toUpperCase();
+            ctx.fillStyle=GB_BRIGHT; ctx.font=F(9);
+            var dd=new Date().toLocaleDateString('en-GB',{
+                day:'numeric',month:'long',year:'numeric'
+            }).toUpperCase();
             ctx.fillText('> GENERATED '+dd, PAD, FOOT_Y+22);
-            ctx.fillStyle=GB_DARK; ctx.font=F(8);
+            ctx.fillStyle=GB_DARK; ctx.font=F(9);
             var dis='FOR RESEARCH ONLY';
             ctx.fillText(dis, W-PAD-ctx.measureText(dis).width, FOOT_Y+22);
         }
 
-        // ── Load QR then finalise ─────────────────────────────────────────────
+        // ── Load QR then download ─────────────────────────────────────────────
         var qi=new Image(); qi.crossOrigin='anonymous';
         qi.onload=function(){
             var qx=PAD+Math.floor((COL1_W-QR_SZ)/2);
-            var qy=QR_Y+22;
+            var qy=QR_Y+26;
             ctx.drawImage(qi,qx,qy,QR_SZ,QR_SZ);
-            var scanY=qy+QR_SZ+8;
-            if(scanY+14<QR_Y+QR_H){
-                ctx.fillStyle=GB_LIGHT; ctx.font=F(7);
+            var scY=qy+QR_SZ+8;
+            if(scY+14 < QR_Y+QR_H){
+                ctx.fillStyle=GB_LIGHT; ctx.font=F(8);
                 var st='OPEN IN PLATFORM';
-                ctx.fillText(st, PAD+Math.floor((COL1_W-ctx.measureText(st).width)/2), scanY+10);
+                ctx.fillText(st, PAD+Math.floor((COL1_W-ctx.measureText(st).width)/2), scY+10);
             }
             drawFooter(); dl();
         };
@@ -489,7 +481,7 @@
     }
 
     // ── Boot ──────────────────────────────────────────────────────────────────
-    if(document.readyState!=='loading'){initReportCards();}
-    else{document.addEventListener('DOMContentLoaded',initReportCards);}
+    if(document.readyState!=='loading'){ initReportCards(); }
+    else { document.addEventListener('DOMContentLoaded', initReportCards); }
 
 })();
