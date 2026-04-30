@@ -1,15 +1,10 @@
-// features.js — myforestconnect additive features
-// What-if scenario builder, fast hover tooltip, downloadable report cards.
+// features.js — myforestconnect additive features v2
+// Fast hover tooltip, What-if impact analyser, Downloadable report cards.
 //
 // HOW TO USE:
-//   In klang-valley-map.html and kuantan-map.html, add ONE line
-//   immediately before <script src="config.js">:
-//
+//   Add ONE line before <script src="config.js"> in each map HTML file:
 //       <script src="features.js"></script>
-//
-// Nothing else needs to change. Remove that line to revert completely.
-//
-// REQUIRES: Mapbox GL JS (already loaded), MapboxDraw, Turf.js (loaded below)
+//   Remove that line to revert completely. Nothing else needs to change.
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function () {
@@ -17,174 +12,171 @@
 
     // ── Load dependencies ─────────────────────────────────────────────────────
     function loadScript(src, cb) {
-        const s = document.createElement('script');
-        s.src = src; s.onload = cb; s.onerror = cb;
+        var s = document.createElement('script');
+        s.src = src; s.async = true;
+        s.onload = cb; s.onerror = cb;
         document.head.appendChild(s);
     }
     function loadCSS(href) {
-        const l = document.createElement('link');
+        var l = document.createElement('link');
         l.rel = 'stylesheet'; l.href = href;
         document.head.appendChild(l);
     }
 
     loadCSS('https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css');
-    loadScript('https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js', () => {
+    loadScript('https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js', function () {
         loadScript('https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js', onDepsReady);
     });
 
-    // ── Intercept mapboxgl.Map to capture the instance ────────────────────────
-    // Runs before app.js so we can grab the map when it's constructed.
-    const _OrigMap = mapboxgl.Map;
+    // ── Intercept mapboxgl.Map ────────────────────────────────────────────────
+    var _OrigMap = mapboxgl.Map;
     mapboxgl.Map = class extends _OrigMap {
         constructor(options) {
             super(options);
             window._mapInstance = this;
+            var self = this;
 
-            // Capture properties of the last clicked patch without modifying app.js
-            this.on('click', (e) => {
+            // Capture last clicked patch + coordinates
+            this.on('click', function (e) {
                 try {
-                    const style = this.getStyle();
+                    var style = self.getStyle();
                     if (!style) return;
-                    const pl = (style.layers || []).find(l =>
-                        l.type === 'fill' && (
+                    var pl = (style.layers || []).find(function (l) {
+                        return l.type === 'fill' && (
                             l.id.toLowerCase().includes('forest') ||
                             l.id.toLowerCase().includes('patch') ||
                             l.id.toLowerCase().includes('klang') ||
                             l.id.toLowerCase().includes('kuantan')
-                        )
-                    );
+                        );
+                    });
                     if (!pl) return;
-                    const feats = this.queryRenderedFeatures(e.point, { layers: [pl.id] });
-                    if (feats && feats.length) window._lastPatchProps = feats[0].properties;
-                } catch(_) {}
+                    var feats = self.queryRenderedFeatures(e.point, { layers: [pl.id] });
+                    if (feats && feats.length) {
+                        window._lastPatchProps  = feats[0].properties;
+                        window._lastPatchLngLat = e.lngLat;
+                    }
+                } catch (ex) {}
             });
 
-            this.on('load', () => {
-                if (window._depsReady) initFeatures(this);
-                else window._pendingMap = this;
+            this.on('load', function () {
+                if (window._depsReady) initFeatures(self);
+                else window._pendingMap = self;
             });
         }
     };
 
-    let _map = null;
-
     function onDepsReady() {
         window._depsReady = true;
-        if (window._pendingMap) {
-            initFeatures(window._pendingMap);
-            window._pendingMap = null;
-        } else if (window._mapInstance && window._mapInstance.loaded()) {
-            initFeatures(window._mapInstance);
-        }
+        var map = window._pendingMap || window._mapInstance;
+        if (map) { initFeatures(map); window._pendingMap = null; }
     }
 
     function initFeatures(map) {
-        _map = map;
         initFastTooltip(map);
         initWhatIf(map);
         initReportCards();
     }
 
-    // ── Helper: resolve patch fill layer id ───────────────────────────────────
+    // ── Tier display name ─────────────────────────────────────────────────────
+    function displayName(tierInternal) {
+        var DISP = window.TIER_DISPLAY_NAMES || {};
+        return DISP[tierInternal] || tierInternal || 'Unknown';
+    }
+
+    // ── Tier conservation weight ──────────────────────────────────────────────
+    var TIER_WEIGHT = {
+        'Tier 1 (Core Habitat)':              100,
+        'Tier 2 (Major Stepping Stones)':      70,
+        'Tier 3 (Connected Fragments)':        45,
+        'Tier 4 (Vulnerable Edge Fragments)':  25,
+        'Tier 5 (Isolated Fragments)':         10,
+        'Tier 6 (Isolated Micro Patches)':      3
+    };
+
+    // ── Resolve patch layer ───────────────────────────────────────────────────
     function getPatchLayer(map) {
         try {
-            const style = map.getStyle();
-            const found = (style.layers || []).find(l =>
-                l.type === 'fill' && (
+            var found = (map.getStyle().layers || []).find(function (l) {
+                return l.type === 'fill' && (
                     l.id.toLowerCase().includes('forest') ||
                     l.id.toLowerCase().includes('patch') ||
                     l.id.toLowerCase().includes('klang') ||
                     l.id.toLowerCase().includes('kuantan')
-                )
-            );
+                );
+            });
             return found ? found.id : null;
-        } catch(_) { return null; }
+        } catch (e) { return null; }
     }
 
     // ════════════════════════════════════════════════════════════════════════════
-    // 1. FAST HOVER TOOLTIP
+    // 1. FAST HOVER TOOLTIP — suppressed while drawing
     // ════════════════════════════════════════════════════════════════════════════
+    var _drawActive = false;
+
     function initFastTooltip(map) {
-        const tip = document.createElement('div');
+        var tip = document.createElement('div');
         tip.id = 'fast-tooltip';
-        tip.style.cssText = [
-            'position:fixed;pointer-events:none;display:none;z-index:500;',
-            'background:rgba(15,30,15,0.92);color:#dcedc8;',
-            'padding:7px 11px;border-radius:5px;font-size:12px;',
-            'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;',
-            'box-shadow:0 3px 12px rgba(0,0,0,0.35);max-width:240px;',
-            'border-left:3px solid #52b788;line-height:1.5;'
-        ].join('');
+        tip.style.cssText = 'position:fixed;pointer-events:none;display:none;z-index:500;' +
+            'background:rgba(15,30,15,0.93);color:#dcedc8;padding:7px 11px;border-radius:5px;' +
+            'font-size:12px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
+            'box-shadow:0 3px 12px rgba(0,0,0,0.35);max-width:240px;border-left:3px solid #52b788;line-height:1.5;';
         document.body.appendChild(tip);
 
-        const CC = {
-            High:'#52b788', Moderate:'#f7ce46',
-            Low:'#e07c1f', Barrier:'#6b3fa0', 'No Data':'#888'
-        };
+        var CC = { High:'#52b788', Moderate:'#f7ce46', Low:'#e07c1f', Barrier:'#6b3fa0', 'No Data':'#888' };
+        var patchLayerId = null;
 
-        let patchLayerId = null;
-
-        map.getCanvas().addEventListener('mousemove', (e) => {
+        map.getCanvas().addEventListener('mousemove', function (e) {
+            if (_drawActive) { tip.style.display = 'none'; return; }
             if (!patchLayerId) patchLayerId = getPatchLayer(map);
             if (!patchLayerId) { tip.style.display = 'none'; return; }
 
-            const rect = map.getCanvas().getBoundingClientRect();
-            const pt   = [e.clientX - rect.left, e.clientY - rect.top];
-            let feats  = [];
-            try { feats = map.queryRenderedFeatures(pt, { layers: [patchLayerId] }); } catch(_) {}
+            var rect = map.getCanvas().getBoundingClientRect();
+            var pt   = [e.clientX - rect.left, e.clientY - rect.top];
+            var feats = [];
+            try { feats = map.queryRenderedFeatures(pt, { layers: [patchLayerId] }); } catch (ex) {}
 
             if (!feats.length) { tip.style.display = 'none'; return; }
 
-            const p    = feats[0].properties;
-            const DISP = window.TIER_DISPLAY_NAMES || {};
-            const tier = DISP[p.Tier] || p.Tier || 'Forest patch';
-            const conn = p.connectivity || '';
-            const area = typeof p.area === 'number'
-                ? p.area.toFixed(1) + ' ha'
-                : (p.area ? parseFloat(p.area).toFixed(1) + ' ha' : '');
-            const cc   = CC[conn] || '#888';
-            const ct   = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#fff';
+            var p    = feats[0].properties;
+            var tier = displayName(p.Tier);
+            var conn = p.connectivity || '';
+            var area = p.area != null ? parseFloat(p.area).toFixed(1) + ' ha' : '';
+            var cc   = CC[conn] || '#888';
+            var ct   = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#fff';
 
             tip.innerHTML =
-                `<div style="font-weight:700;margin-bottom:3px;color:#c8e6c9">${tier}</div>` +
-                (conn
-                    ? `<div style="margin-bottom:2px"><span style="display:inline-block;padding:1px 7px;` +
-                      `border-radius:3px;background:${cc};color:${ct};font-size:11px;font-weight:700">${conn}</span></div>`
-                    : '') +
-                (area ? `<div style="font-size:11px;opacity:0.75;margin-top:2px">${area}</div>` : '') +
-                `<div style="font-size:10px;opacity:0.55;margin-top:3px;font-style:italic">Click for full details</div>`;
+                '<div style="font-weight:700;margin-bottom:3px;color:#c8e6c9">' + tier + '</div>' +
+                (conn ? '<div style="margin-bottom:2px"><span style="display:inline-block;padding:1px 7px;border-radius:3px;background:' + cc + ';color:' + ct + ';font-size:11px;font-weight:700">' + conn + '</span></div>' : '') +
+                (area ? '<div style="font-size:11px;opacity:0.75;margin-top:2px">' + area + '</div>' : '') +
+                '<div style="font-size:10px;opacity:0.55;margin-top:3px;font-style:italic">Click for full details</div>';
 
             tip.style.display = 'block';
             tip.style.left    = (e.clientX + 16) + 'px';
             tip.style.top     = (e.clientY - 10) + 'px';
         });
 
-        map.getCanvas().addEventListener('mouseleave', () => {
-            tip.style.display = 'none';
-        });
-
-        // Reset layer id on style change
-        map.on('style.load', () => { patchLayerId = null; });
+        map.getCanvas().addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+        map.on('style.load', function () { patchLayerId = null; });
     }
 
     // ════════════════════════════════════════════════════════════════════════════
-    // 2. WHAT-IF SCENARIO BUILDER
+    // 2. WHAT-IF IMPACT ANALYSER
     // ════════════════════════════════════════════════════════════════════════════
     function initWhatIf(map) {
         if (typeof MapboxDraw === 'undefined' || typeof turf === 'undefined') {
             console.warn('features.js: MapboxDraw or Turf not ready'); return;
         }
 
-        const draw = new MapboxDraw({
+        var draw = new MapboxDraw({
             displayControlsDefault: false,
             controls: { polygon: true, trash: true },
             styles: [
                 { id:'gl-draw-polygon-fill', type:'fill',
                   filter:['all',['==','$type','Polygon']],
-                  paint:{'fill-color':'#e07c1f','fill-opacity':0.15} },
+                  paint:{'fill-color':'#e07c1f','fill-opacity':0.12} },
                 { id:'gl-draw-polygon-stroke', type:'line',
                   filter:['all',['==','$type','Polygon']],
-                  paint:{'line-color':'#e07c1f','line-width':2,'line-dasharray':[3,2]} },
+                  paint:{'line-color':'#e07c1f','line-width':2,'line-dasharray':[4,2]} },
                 { id:'gl-draw-polygon-fill-active', type:'fill',
                   filter:['all',['==','$type','Polygon'],['==','active','true']],
                   paint:{'fill-color':'#e07c1f','fill-opacity':0.2} },
@@ -195,52 +187,46 @@
         });
         map.addControl(draw, 'top-right');
 
-        // Button in top bar
-        const topBar = document.getElementById('map-top-bar');
+        var topBar = document.getElementById('map-top-bar');
         if (!topBar) return;
 
-        const btn = document.createElement('button');
+        var btn = document.createElement('button');
         btn.id        = 'whatif-btn';
-        btn.innerHTML = '&#x2295;&nbsp;What-if?';
-        btn.title     = 'Draw a development zone to see which patches would be affected';
-        btn.style.cssText =
-            'background:#e07c1f;color:white;border:none;border-radius:5px;' +
+        btn.innerHTML = '&#x2295;&nbsp;Impact analyser';
+        btn.title     = 'Draw a zone to calculate its conservation impact';
+        btn.style.cssText = 'background:#e07c1f;color:white;border:none;border-radius:5px;' +
             'padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;' +
             'font-family:inherit;letter-spacing:0.02em;transition:background 0.15s;';
-        btn.addEventListener('mouseover', () => { if (!btn.classList.contains('active')) btn.style.background = '#b85f10'; });
-        btn.addEventListener('mouseout',  () => { if (!btn.classList.contains('active')) btn.style.background = '#e07c1f'; });
+        btn.addEventListener('mouseover', function () { if (!btn.classList.contains('active')) btn.style.background = '#b85f10'; });
+        btn.addEventListener('mouseout',  function () { if (!btn.classList.contains('active')) btn.style.background = '#e07c1f'; });
         topBar.appendChild(btn);
 
-        // Results panel
-        const panel = document.createElement('div');
+        var panel = document.createElement('div');
         panel.id = 'whatif-panel';
-        panel.style.cssText =
-            'display:none;position:absolute;bottom:40px;right:12px;z-index:20;' +
-            'background:rgba(255,255,255,0.97);border-radius:8px;padding:14px 16px;' +
-            'max-width:280px;box-shadow:0 4px 20px rgba(0,0,0,0.2);' +
+        panel.style.cssText = 'display:none;position:absolute;bottom:40px;right:12px;z-index:20;' +
+            'background:rgba(255,255,255,0.97);border-radius:10px;padding:16px 18px;' +
+            'width:300px;box-shadow:0 6px 24px rgba(0,0,0,0.18);' +
             'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
-            'font-size:13px;color:#212529;max-height:360px;overflow-y:auto;';
+            'font-size:13px;color:#212529;max-height:420px;overflow-y:auto;';
         document.getElementById('map-container').appendChild(panel);
 
-        let active = false;
-
-        btn.addEventListener('click', () => {
-            active = !active;
-            if (active) {
-                btn.innerHTML = '&#x2715;&nbsp;Exit what-if';
+        btn.addEventListener('click', function () {
+            _drawActive = !_drawActive;
+            if (_drawActive) {
+                btn.innerHTML = '&#x2715;&nbsp;Exit analyser';
                 btn.style.background = '#b85f10';
                 btn.classList.add('active');
                 panel.style.display = 'none';
                 draw.changeMode('draw_polygon');
                 showHint();
             } else {
-                exitWhatIf();
+                exitAnalyser();
             }
         });
 
-        function exitWhatIf() {
-            active = false;
-            btn.innerHTML = '&#x2295;&nbsp;What-if?';
+        function exitAnalyser() {
+            _drawActive = false;
+            btn.innerHTML = '&#x2295;&nbsp;Impact analyser';
             btn.style.background = '#e07c1f';
             btn.classList.remove('active');
             panel.style.display = 'none';
@@ -251,252 +237,346 @@
 
         function showHint() {
             removeHint();
-            const h = document.createElement('div');
+            var h = document.createElement('div');
             h.id = 'whatif-hint';
-            h.style.cssText =
-                'position:absolute;top:60px;left:50%;transform:translateX(-50%);' +
-                'background:rgba(224,124,31,0.95);color:white;padding:8px 16px;' +
+            h.style.cssText = 'position:absolute;top:60px;left:50%;transform:translateX(-50%);' +
+                'background:rgba(224,124,31,0.95);color:white;padding:8px 18px;' +
                 'border-radius:5px;font-size:12px;font-weight:600;z-index:100;' +
-                'font-family:inherit;pointer-events:none;white-space:nowrap;';
-            h.textContent = 'Click to draw a development zone — double-click to finish';
+                'font-family:inherit;pointer-events:none;white-space:nowrap;' +
+                'box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+            h.textContent = 'Draw a development zone — double-click to finish';
             document.getElementById('map-container').appendChild(h);
         }
-        function removeHint() { const h = document.getElementById('whatif-hint'); if (h) h.remove(); }
+        function removeHint() { var h = document.getElementById('whatif-hint'); if (h) h.remove(); }
+
+        function scoreColor(s) {
+            if (s < 20) return '#2d6a4f';
+            if (s < 40) return '#52b788';
+            if (s < 60) return '#f7ce46';
+            if (s < 80) return '#e07c1f';
+            return '#c0392b';
+        }
+        function scoreLabel(s) {
+            if (s < 20) return 'Very low';
+            if (s < 40) return 'Low';
+            if (s < 60) return 'Moderate';
+            if (s < 80) return 'High';
+            return 'Critical';
+        }
+
+        function statCard(label, value, unit) {
+            return '<div style="background:#f8f9fa;border-radius:6px;padding:8px 6px;text-align:center">' +
+                '<div style="font-size:18px;font-weight:700;color:#1a3d1a">' + value + '</div>' +
+                '<div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:0.04em;line-height:1.3">' +
+                label + (unit ? ' (' + unit + ')' : '') + '</div></div>';
+        }
 
         function analyse() {
             removeHint();
             clearHL();
-            const plId = getPatchLayer(map);
-            if (!plId) {
-                panel.innerHTML = '<strong>Zoom in further</strong> to see patches, then try again.';
-                panel.style.display = 'block'; return;
-            }
-            let rendered = [];
-            try { rendered = map.queryRenderedFeatures({ layers: [plId] }); } catch(_) {}
+            var plId = getPatchLayer(map);
+            if (!plId) { showMsg('<strong>Zoom in further</strong> to see patches, then try again.'); return; }
+
+            var rendered = [];
+            try { rendered = map.queryRenderedFeatures({ layers: [plId] }); } catch (ex) {}
             if (!rendered.length) {
-                panel.innerHTML = '<p style="color:#888;font-style:italic">Zoom in until patches are visible, then redraw.</p>';
-                panel.style.display = 'block'; return;
+                showMsg('<p style="color:#888;font-style:italic">Zoom in until patches are visible, then redraw.</p>');
+                return;
             }
 
-            const all  = draw.getAll();
-            const poly = all.features && all.features[0];
+            var all  = draw.getAll();
+            var poly = all.features && all.features[0];
             if (!poly) return;
 
-            const seen = new Set(); const features = [];
-            rendered.forEach(f => {
-                const id = f.properties.id != null ? f.properties.id : f.id;
+            var seen = new Set(); var features = [];
+            rendered.forEach(function (f) {
+                var id = f.properties.id != null ? f.properties.id : f.id;
                 if (!seen.has(id)) { seen.add(id); features.push(f); }
             });
 
-            const affected = features.filter(f => {
-                try { return turf.booleanIntersects(f, poly); } catch(_) { return false; }
+            var baselineScore = 0;
+            features.forEach(function (f) { baselineScore += (TIER_WEIGHT[f.properties.Tier] || 1); });
+
+            var affected = features.filter(function (f) {
+                try { return turf.booleanIntersects(f, poly); } catch (ex) { return false; }
             });
 
-            const DISP = window.TIER_DISPLAY_NAMES || {};
-            const counts = {}; let totalArea = 0, tier1 = 0;
-            affected.forEach(f => {
-                const p    = f.properties;
-                const tier = DISP[p.Tier] || p.Tier || 'Unknown';
-                counts[tier] = (counts[tier] || 0) + 1;
+            var impactScore = 0, totalArea = 0, totalCore = 0;
+            var tierCounts  = {};
+            affected.forEach(function (f) {
+                var p = f.properties;
+                impactScore += (TIER_WEIGHT[p.Tier] || 1);
                 if (p.area) totalArea += parseFloat(p.area) || 0;
-                if (p.Tier && p.Tier.includes('Tier 1')) tier1++;
+                if (p.core) totalCore += parseFloat(p.core) || 0;
+                var name = displayName(p.Tier);
+                tierCounts[name] = (tierCounts[name] || 0) + 1;
             });
 
-            let corr = 0;
-            ['connector-solid','connector-glow'].forEach(id => {
-                if (map.getLayer(id)) {
-                    let fc = [];
-                    try { fc = map.queryRenderedFeatures({ layers: [id] }); } catch(_) {}
-                    fc.forEach(f => { try { if (turf.booleanIntersects(f, poly)) corr++; } catch(_) {} });
-                }
+            var normScore = baselineScore > 0
+                ? Math.min(100, Math.round((impactScore / baselineScore) * 100 * 3)) : 0;
+
+            var corridors = 0;
+            ['connector-solid','connector-glow'].forEach(function (id) {
+                if (!map.getLayer(id)) return;
+                var fc = []; var seenC = new Set();
+                try { fc = map.queryRenderedFeatures({ layers: [id] }); } catch (ex) {}
+                fc.forEach(function (f) {
+                    var cid = f.id || JSON.stringify(f.properties);
+                    if (seenC.has(cid)) return;
+                    try { if (turf.booleanIntersects(f, poly)) { seenC.add(cid); corridors++; } } catch (ex) {}
+                });
             });
 
-            // Highlight affected patches
-            const affectedIds = affected.map(f => f.properties.id != null ? f.properties.id : f.id);
+            var zoneArea = 0;
+            try { zoneArea = turf.area(poly) / 10000; } catch (ex) {}
+
+            // Highlight
+            var affIds = affected.map(function (f) { return f.properties.id != null ? f.properties.id : f.id; });
             try {
-                const style  = map.getStyle();
-                const pLayer = (style.layers || []).find(l => l.id === plId);
+                var style  = map.getStyle();
+                var pLayer = (style.layers || []).find(function (l) { return l.id === plId; });
                 if (pLayer) {
-                    map.addLayer({
-                        id: 'whatif-hl', type: 'line',
+                    map.addLayer({ id:'whatif-hl', type:'fill',
                         source: pLayer.source, 'source-layer': pLayer['source-layer'],
-                        filter: ['in', ['get', 'id'], ['literal', affectedIds]],
-                        paint: { 'line-color': '#e07c1f', 'line-width': 2.5, 'line-opacity': 0.9 },
-                        slot: 'top'
-                    });
+                        filter: ['in',['get','id'],['literal', affIds]],
+                        paint: {'fill-color':'#e07c1f','fill-opacity':0.35}, slot:'top' });
+                    map.addLayer({ id:'whatif-hl-stroke', type:'line',
+                        source: pLayer.source, 'source-layer': pLayer['source-layer'],
+                        filter: ['in',['get','id'],['literal', affIds]],
+                        paint: {'line-color':'#e07c1f','line-width':2}, slot:'top' });
                 }
-            } catch(e) { console.warn('HL layer:', e.message); }
+            } catch (e) { console.warn('HL:', e.message); }
 
             if (!affected.length) {
-                panel.innerHTML =
-                    '<div style="font-weight:700;margin-bottom:8px;color:#1a3d1a">What-if analysis</div>' +
-                    '<p style="color:#555">No patches found in this zone. Try zooming in further.</p>';
-            } else {
-                const warn = tier1
-                    ? `<div style="background:#f8d7da;border:1px solid #f5c6cb;border-radius:4px;padding:7px 10px;margin-bottom:10px;font-size:12px;color:#721c24">` +
-                      `⚠ <strong>${tier1} Primary forest patch${tier1>1?'es':''}</strong> would be directly impacted.</div>`
-                    : '';
-                const rows = Object.entries(counts)
-                    .sort((a,b) => a[0].localeCompare(b[0]))
-                    .map(([t,c]) =>
-                        `<tr><td style="padding:2px 6px 2px 0;color:#555">${t}</td>` +
-                        `<td style="font-weight:700;color:#1a3d1a;text-align:right">${c}</td></tr>`
-                    ).join('');
-
-                panel.innerHTML =
-                    `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">` +
-                    `<strong style="color:#1a3d1a">What-if analysis</strong>` +
-                    `<span style="font-size:10px;color:#888;cursor:pointer" onclick="document.getElementById('whatif-panel').style.display='none'">✕</span></div>` +
-                    warn +
-                    `<div style="margin-bottom:8px"><strong>${affected.length}</strong> patch${affected.length!==1?'es':''} affected` +
-                    ` &nbsp;·&nbsp; <strong>${totalArea.toFixed(0)}</strong> ha total</div>` +
-                    `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px">${rows}</table>` +
-                    (corr > 0
-                        ? `<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:6px 10px;font-size:12px;color:#856404">` +
-                          `🔗 <strong>${corr}</strong> corridor segment${corr!==1?'s':''} would be severed.</div>`
-                        : `<div style="font-size:12px;color:#555">No active corridors pass through this zone.</div>`) +
-                    `<div style="margin-top:10px;font-size:10px;color:#999;font-style:italic">Based on currently visible patches. Zoom in for complete results.</div>`;
+                showMsg('<div style="font-weight:700;margin-bottom:6px;color:#1a3d1a">Conservation impact</div>' +
+                    '<p style="color:#555;font-size:12px">No patches intersect this zone at the current zoom level.</p>');
+                return;
             }
+
+            var sc = scoreColor(normScore);
+            var sl = scoreLabel(normScore);
+
+            var tierRows = Object.entries(tierCounts)
+                .sort(function (a,b) { return a[0].localeCompare(b[0]); })
+                .map(function (entry) {
+                    return '<div style="display:flex;justify-content:space-between;padding:3px 0;' +
+                        'border-bottom:1px solid #f0f0f0;font-size:12px">' +
+                        '<span style="color:#555">' + entry[0] + '</span>' +
+                        '<strong style="color:#1a3d1a">' + entry[1] + '</strong></div>';
+                }).join('');
+
+            panel.innerHTML =
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+                '<strong style="color:#1a3d1a;font-size:14px">Conservation impact</strong>' +
+                '<span style="font-size:11px;color:#aaa;cursor:pointer;padding:2px 6px" ' +
+                'onclick="document.getElementById(\'whatif-panel\').style.display=\'none\'">✕</span></div>' +
+
+                '<div style="margin-bottom:14px">' +
+                '<div style="display:flex;justify-content:space-between;margin-bottom:4px">' +
+                '<span style="font-size:11px;color:#666;font-weight:600">IMPACT SCORE</span>' +
+                '<span style="font-size:13px;font-weight:700;color:' + sc + '">' + normScore + ' / 100 — ' + sl + '</span></div>' +
+                '<div style="background:#e9ecef;border-radius:4px;height:10px;overflow:hidden">' +
+                '<div style="width:' + normScore + '%;height:100%;background:' + sc + ';border-radius:4px;transition:width 0.6s ease"></div></div>' +
+                '<div style="font-size:10px;color:#aaa;margin-top:3px;font-style:italic">Weighted by tier conservation value relative to visible landscape</div></div>' +
+
+                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px">' +
+                statCard('Patches', affected.length, '') +
+                statCard('Core area lost', totalCore.toFixed(1), 'ha') +
+                statCard('Corridors severed', corridors, '') +
+                '</div>' +
+
+                '<div style="font-size:11px;color:#666;margin-bottom:10px">Zone drawn: <strong>' + zoneArea.toFixed(1) + ' ha</strong></div>' +
+
+                '<div style="font-size:11px;font-weight:600;color:#666;margin-bottom:6px">BREAKDOWN BY TIER</div>' +
+                tierRows +
+
+                '<div style="margin-top:10px;font-size:10px;color:#bbb;font-style:italic">Based on currently visible patches. Zoom in for complete results.</div>';
+
             panel.style.display = 'block';
         }
 
+        function showMsg(html) { panel.innerHTML = html; panel.style.display = 'block'; }
+
         function clearHL() {
-            try { if (map.getLayer('whatif-hl')) map.removeLayer('whatif-hl'); } catch(_) {}
+            try { if (map.getLayer('whatif-hl'))        map.removeLayer('whatif-hl'); }        catch (ex) {}
+            try { if (map.getLayer('whatif-hl-stroke')) map.removeLayer('whatif-hl-stroke'); } catch (ex) {}
         }
 
         map.on('draw.create', analyse);
         map.on('draw.update', analyse);
-        map.on('draw.delete', () => { clearHL(); panel.style.display = 'none'; });
-        map.on('style.load',  () => { clearHL(); });
+        map.on('draw.delete', function () { clearHL(); panel.style.display = 'none'; });
+        map.on('style.load',  clearHL);
     }
 
     // ════════════════════════════════════════════════════════════════════════════
-    // 3. DOWNLOADABLE REPORT CARDS
+    // 3. REPORT CARDS — 2× resolution, coordinates, cleaner layout
     // ════════════════════════════════════════════════════════════════════════════
     function initReportCards() {
-        const observer = new MutationObserver(() => {
-            const content = document.getElementById('patch-info-content');
+        var observer = new MutationObserver(function () {
+            var content = document.getElementById('patch-info-content');
             if (!content) return;
             if (document.getElementById('report-card-btn')) return;
             if (!window._lastPatchProps) return;
-            const txt = content.textContent.trim();
-            if (txt === 'Select a patch on the map.' || txt === 'No data for this patch.') return;
+            var txt = content.textContent.trim();
+            if (!txt || txt === 'Select a patch on the map.' || txt === 'No data for this patch.') return;
 
-            const btn = document.createElement('button');
+            var btn = document.createElement('button');
             btn.id = 'report-card-btn';
             btn.textContent = '⬇ Download report card';
-            btn.style.cssText =
-                'display:block;width:100%;margin-top:10px;padding:7px 10px;' +
+            btn.style.cssText = 'display:block;width:100%;margin-top:10px;padding:8px 10px;' +
                 'background:#2a8234;color:white;border:none;border-radius:4px;' +
                 'font-size:12px;font-weight:600;cursor:pointer;' +
-                'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
-                'transition:background 0.15s;';
-            btn.addEventListener('mouseover', () => btn.style.background = '#1e6b27');
-            btn.addEventListener('mouseout',  () => btn.style.background = '#2a8234');
-            btn.addEventListener('click', () => generateCard(window._lastPatchProps));
+                'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;transition:background 0.15s;';
+            btn.addEventListener('mouseover', function () { btn.style.background = '#1e6b27'; });
+            btn.addEventListener('mouseout',  function () { btn.style.background = '#2a8234'; });
+            btn.addEventListener('click', function () {
+                generateCard(window._lastPatchProps, window._lastPatchLngLat);
+            });
             content.appendChild(btn);
         });
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    function generateCard(p) {
+    function generateCard(p, lngLat) {
         if (!p) return;
-        const DISP = window.TIER_DISPLAY_NAMES || {};
-        const TC   = window.TIER_COLORS || {};
-        const CC   = { High:'#52b788', Moderate:'#f7ce46', Low:'#e07c1f', Barrier:'#6b3fa0', 'No Data':'#888' };
 
-        const tierLabel = DISP[p.Tier] || p.Tier || 'Unknown tier';
-        const tierColor = TC[p.Tier]   || '#2a8234';
-        const conn      = p.connectivity || 'No Data';
-        const connColor = CC[conn] || '#888';
-        const connText  = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#ffffff';
+        var TC = window.TIER_COLORS || {};
+        var CC = { High:'#52b788', Moderate:'#f7ce46', Low:'#e07c1f', Barrier:'#6b3fa0', 'No Data':'#aaa' };
 
-        const W = 640, H = 380;
-        const canvas = document.createElement('canvas');
-        canvas.width = W; canvas.height = H;
-        const ctx = canvas.getContext('2d');
+        var tierLabel = displayName(p.Tier);
+        var tierColor = TC[p.Tier] || '#2a8234';
+        var conn      = p.connectivity || 'No Data';
+        var connColor = CC[conn] || '#aaa';
+        var connText  = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#ffffff';
+        var lat = lngLat ? lngLat.lat.toFixed(5) : null;
+        var lng = lngLat ? lngLat.lng.toFixed(5) : null;
+
+        var W = 720, H = 460, SC = 2;
+        var canvas = document.createElement('canvas');
+        canvas.width  = W * SC;
+        canvas.height = H * SC;
+        var ctx = canvas.getContext('2d');
+        ctx.scale(SC, SC);
+
+        var F = 'Arial, sans-serif';
 
         // Background
         ctx.fillStyle = '#f5f3ee'; ctx.fillRect(0, 0, W, H);
-        // Header
-        ctx.fillStyle = '#1a3d1a'; ctx.fillRect(0, 0, W, 72);
         // Left stripe
-        ctx.fillStyle = tierColor; ctx.fillRect(0, 0, 8, H);
-        // Header text
+        ctx.fillStyle = tierColor; ctx.fillRect(0, 0, 7, H);
+        // Header
+        ctx.fillStyle = '#1a3d1a'; ctx.fillRect(7, 0, W - 7, 80);
+        // Dot texture in header
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        for (var xi = 20; xi < W; xi += 18)
+            for (var yi = 6; yi < 80; yi += 18)
+                circ(ctx, xi, yi, 2);
+
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 17px Arial, sans-serif';
-        ctx.fillText('Forest Patch Report Card', 24, 28);
-        ctx.font = '12px Arial, sans-serif';
+        ctx.font = 'bold 19px ' + F;
+        ctx.fillText('Forest Patch Report Card', 24, 30);
+        ctx.font = '13px ' + F;
         ctx.fillStyle = '#a5d6a7';
         ctx.fillText('myforestconnect.online', 24, 52);
+
         if (p.id != null) {
+            var idTxt = 'Patch #' + p.id;
+            ctx.font = 'bold 12px ' + F;
             ctx.fillStyle = '#c8e6c9';
-            ctx.font = '11px Arial, sans-serif';
-            ctx.fillText('Patch ID: ' + p.id, W - 130, 36);
+            ctx.fillText(idTxt, W - ctx.measureText(idTxt).width - 18, 30);
         }
+
         // Tier badge
         ctx.fillStyle = tierColor;
-        rrect(ctx, 24, 88, 300, 38, 5); ctx.fill();
+        rrect(ctx, 24, 96, 310, 42, 6); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        rrect(ctx, 25, 97, 308, 20, 5); ctx.fill();
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 14px Arial, sans-serif';
-        ctx.fillText(tierLabel, 36, 112);
+        ctx.font = 'bold 15px ' + F;
+        ctx.fillText(tierLabel, 38, 122);
+
         // Connectivity badge
         ctx.fillStyle = connColor;
-        rrect(ctx, 336, 88, 150, 38, 5); ctx.fill();
+        rrect(ctx, 346, 96, 155, 42, 6); ctx.fill();
         ctx.fillStyle = connText;
-        ctx.font = 'bold 12px Arial, sans-serif';
-        ctx.fillText('Connectivity: ' + conn, 348, 112);
+        ctx.font = '11px ' + F; ctx.fillText('Connectivity', 360, 113);
+        ctx.font = 'bold 15px ' + F; ctx.fillText(conn, 360, 130);
 
-        // Metric cards
-        const n = p => p != null ? parseFloat(p) : null;
-        const metrics = [
-            { label:'Total area',         value: n(p.area)      != null ? n(p.area).toFixed(2) + ' ha' : '—' },
-            { label:'Core area',          value: n(p.core)      != null ? n(p.core).toFixed(2) + ' ha' : '—' },
-            { label:'Contiguity index',   value: n(p.contig)    != null ? n(p.contig).toFixed(3)        : '—' },
-            { label:'ENN distance',       value: n(p.enn)       != null ? Math.round(n(p.enn)) + ' m'  : '—' },
-            { label:'Perim-area ratio',   value: n(p.para)      != null ? n(p.para).toFixed(5)          : '—' },
-            { label:'Mean flow',          value: n(p.mean_flow) != null ? n(p.mean_flow).toFixed(2)     : '—' },
-        ];
-        const colW = (W - 48 - 20) / 3;
-        metrics.forEach((m, i) => {
-            const col = i % 3, row = Math.floor(i / 3);
-            const x = 24 + col * (colW + 10), y = 148 + row * 72;
+        // Coordinates badge
+        if (lat && lng) {
+            ctx.fillStyle = '#2d6a4f';
+            rrect(ctx, 513, 96, 183, 42, 6); ctx.fill();
             ctx.fillStyle = '#ffffff';
-            rrect(ctx, x, y, colW, 62, 5); ctx.fill();
-            ctx.strokeStyle = '#e0dbd0'; ctx.lineWidth = 1;
-            rrect(ctx, x, y, colW, 62, 5); ctx.stroke();
-            ctx.fillStyle = '#2a8234'; ctx.fillRect(x, y, 4, 62);
-            ctx.fillStyle = '#888';
-            ctx.font = '10px Arial, sans-serif';
-            ctx.fillText(m.label, x + 12, y + 20);
-            ctx.fillStyle = '#1a3d1a';
-            ctx.font = 'bold 15px Arial, sans-serif';
-            ctx.fillText(m.value, x + 12, y + 46);
-        });
-        // Footer
-        ctx.fillStyle = '#2a8234'; ctx.fillRect(0, H - 36, W, 36);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '11px Arial, sans-serif';
-        const d = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
-        ctx.fillText('Generated ' + d + '  ·  myforestconnect.online', 24, H - 14);
+            ctx.font = '11px ' + F; ctx.fillText('Location', 527, 113);
+            ctx.font = 'bold 12px ' + F;
+            ctx.fillText(lat + '\u00b0N,  ' + lng + '\u00b0E', 527, 130);
+        }
 
-        const a = document.createElement('a');
+        // Divider + section label
+        ctx.strokeStyle = '#e0dbd0'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(24, 153); ctx.lineTo(W - 18, 153); ctx.stroke();
+        ctx.fillStyle = '#999'; ctx.font = 'bold 10px ' + F;
+        ctx.fillText('STRUCTURAL METRICS', 24, 170);
+
+        // Metric cards (2 rows × 3)
+        var nv = function (v) { return v != null ? parseFloat(v) : null; };
+        var metrics = [
+            { label:'Total area',       value: nv(p.area)      != null ? nv(p.area).toFixed(2)       : '\u2014', unit:'ha' },
+            { label:'Core area',        value: nv(p.core)      != null ? nv(p.core).toFixed(2)       : '\u2014', unit:'ha' },
+            { label:'Contiguity',       value: nv(p.contig)    != null ? nv(p.contig).toFixed(3)     : '\u2014', unit:'0\u20131' },
+            { label:'ENN distance',     value: nv(p.enn)       != null ? Math.round(nv(p.enn)) + ''  : '\u2014', unit:'m' },
+            { label:'Perim-area ratio', value: nv(p.para)      != null ? nv(p.para).toFixed(5)       : '\u2014', unit:'' },
+            { label:'Mean flow',        value: nv(p.mean_flow) != null ? nv(p.mean_flow).toFixed(2)  : '\u2014', unit:'' }
+        ];
+
+        var cW = (W - 48 - 16) / 3, cH = 80;
+        metrics.forEach(function (m, i) {
+            var col = i % 3, row = Math.floor(i / 3);
+            var x = 24 + col * (cW + 8), y = 180 + row * (cH + 8);
+            ctx.fillStyle = 'rgba(0,0,0,0.05)';
+            rrect(ctx, x+2, y+2, cW, cH, 6); ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            rrect(ctx, x, y, cW, cH, 6); ctx.fill();
+            ctx.strokeStyle = '#e8e4de'; ctx.lineWidth = 1;
+            rrect(ctx, x, y, cW, cH, 6); ctx.stroke();
+            ctx.fillStyle = tierColor; ctx.fillRect(x, y, 4, cH);
+            ctx.fillStyle = '#999'; ctx.font = '10px ' + F;
+            ctx.fillText(m.label.toUpperCase(), x + 12, y + 18);
+            ctx.fillStyle = '#1a3d1a'; ctx.font = 'bold 20px ' + F;
+            ctx.fillText(m.value, x + 12, y + 50);
+            if (m.unit) { ctx.fillStyle = '#bbb'; ctx.font = '11px ' + F; ctx.fillText(m.unit, x + 12, y + 68); }
+        });
+
+        // Footer
+        ctx.fillStyle = '#1a3d1a'; ctx.fillRect(0, H - 38, W, 38);
+        ctx.fillStyle = tierColor;  ctx.fillRect(0, H - 38, 7, 38);
+        ctx.fillStyle = '#ffffff'; ctx.font = '11px ' + F;
+        var d = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+        ctx.fillText('Generated ' + d, 20, H - 17);
+        ctx.fillStyle = '#a5d6a7'; ctx.font = '11px ' + F;
+        var site = 'myforestconnect.online';
+        ctx.fillText(site, W - ctx.measureText(site).width - 18, H - 17);
+
+        var a = document.createElement('a');
         a.download = 'patch_' + (p.id != null ? p.id : 'report') + '_report_card.png';
-        a.href = canvas.toDataURL('image/png');
+        a.href = canvas.toDataURL('image/png', 1.0);
         a.click();
     }
 
     function rrect(ctx, x, y, w, h, r) {
         ctx.beginPath();
-        ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
-        ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-        ctx.lineTo(x+w,y+h-r);
-        ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-        ctx.lineTo(x+r,y+h);
-        ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-        ctx.lineTo(x,y+r);
-        ctx.quadraticCurveTo(x,y,x+r,y);
+        ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y);
+        ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+        ctx.lineTo(x+w, y+h-r);
+        ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+        ctx.lineTo(x+r, y+h);
+        ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+        ctx.lineTo(x, y+r);
+        ctx.quadraticCurveTo(x, y, x+r, y);
         ctx.closePath();
+    }
+    function circ(ctx, x, y, r) {
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
     }
 
 })();
