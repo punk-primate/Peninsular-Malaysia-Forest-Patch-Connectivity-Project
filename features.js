@@ -16,7 +16,6 @@
             super(options);
             window._mapInstance = this;
             var self = this;
-
             this.on('click', function (e) {
                 try {
                     var style = self.getStyle();
@@ -51,8 +50,7 @@
             var txt = content.textContent.trim();
             if (!txt ||
                 txt === 'Select a patch on the map.' ||
-                txt === 'No data for this patch.' ||
-                txt === 'Select a patch on the map') return;
+                txt === 'No data for this patch.') return;
 
             var btn = document.createElement('button');
             btn.id = 'report-card-btn';
@@ -90,8 +88,6 @@
         return new Promise(function (resolve) {
             var lat = lngLat ? lngLat.lat : null;
             var lng = lngLat ? lngLat.lng : null;
-
-            // Fetch reverse geocode name then render
             fetchPlaceName(lat, lng).then(function (placeName) {
                 renderCard(p, lat, lng, geometry, placeName);
                 resolve();
@@ -99,7 +95,7 @@
         });
     }
 
-    // ── Reverse geocode via Nominatim ─────────────────────────────────────────
+    // ── Reverse geocode ───────────────────────────────────────────────────────
     function fetchPlaceName(lat, lng) {
         return new Promise(function (resolve) {
             if (!lat || !lng) { resolve(null); return; }
@@ -108,8 +104,7 @@
             fetch(url, { headers: { 'Accept-Language': 'en', 'User-Agent': 'myforestconnect.online' } })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
-                    // Prefer forest/nature_reserve/park name, fall back to suburb/village/county
-                    var a   = data.address || {};
+                    var a    = data.address || {};
                     var name = data.name ||
                         a.nature_reserve || a.forest || a.park ||
                         a.suburb || a.village || a.town ||
@@ -120,13 +115,12 @@
         });
     }
 
-    // ── Tier display helpers ──────────────────────────────────────────────────
+    // ── Tier helpers ──────────────────────────────────────────────────────────
     function displayName(tierInternal) {
         var DISP = window.TIER_DISPLAY_NAMES || {};
         return DISP[tierInternal] || tierInternal || 'Unknown';
     }
 
-    // Tier order for the spectrum bar (internal names)
     var TIER_ORDER = [
         'Tier 1 (Core Habitat)',
         'Tier 2 (Major Stepping Stones)',
@@ -135,363 +129,359 @@
         'Tier 5 (Isolated Fragments)',
         'Tier 6 (Isolated Micro Patches)'
     ];
-    var TIER_COLORS_DEFAULT = [
+    var TIER_COLORS_FB = [
         '#b1eaac','#8ad284','#5aaf64','#2a8234','#1e6b27','#0a4c12'
     ];
-
-    function tierIndex(tierInternal) {
-        var idx = TIER_ORDER.indexOf(tierInternal);
-        return idx >= 0 ? idx : -1;
+    function tierIndex(t) { var i = TIER_ORDER.indexOf(t); return i >= 0 ? i : -1; }
+    function tierCol(i) {
+        var TC = window.TIER_COLORS || {};
+        return TC[TIER_ORDER[i]] || TIER_COLORS_FB[i] || '#2a8234';
     }
 
-    // ── QR code URL ───────────────────────────────────────────────────────────
-    function qrUrl(lat, lng, zoom) {
-        var z = zoom || 15;
+    // ── QR URL ────────────────────────────────────────────────────────────────
+    function qrUrl(lat, lng) {
         var mapUrl = 'https://myforestconnect.online';
-        // Attempt to link to the specific map view with hash
         if (lat && lng) {
-            var isKV = lng < 102.5;
-            var page = isKV ? 'klang-valley-map.html' : 'kuantan-map.html';
+            var page = lng < 102.5 ? 'klang-valley-map.html' : 'kuantan-map.html';
             mapUrl = 'https://myforestconnect.online/' + page +
-                '#' + z.toFixed(2) + '/' + lat.toFixed(5) + '/' + lng.toFixed(5);
+                '#15.00/' + lat.toFixed(5) + '/' + lng.toFixed(5);
         }
-        return 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' +
-            encodeURIComponent(mapUrl) + '&bgcolor=f5f3ee&color=1a3d1a&margin=4';
+        return 'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' +
+            encodeURIComponent(mapUrl) + '&bgcolor=ffffff&color=1a3d1a&margin=6';
     }
 
-    // ── Draw patch shape from GeoJSON geometry ────────────────────────────────
+    // ── Draw patch shape ──────────────────────────────────────────────────────
     function drawShape(ctx, geometry, x, y, w, h, fillColor, strokeColor) {
         if (!geometry || !geometry.coordinates) return;
-
-        // Collect all ring points to find bounding box
         var allPts = [];
         var coords = geometry.coordinates;
-        // Handle Polygon and MultiPolygon
         if (geometry.type === 'Polygon') {
             coords[0].forEach(function (c) { allPts.push(c); });
         } else if (geometry.type === 'MultiPolygon') {
-            coords.forEach(function (poly) {
-                poly[0].forEach(function (c) { allPts.push(c); });
-            });
+            coords.forEach(function (poly) { poly[0].forEach(function (c) { allPts.push(c); }); });
         }
         if (!allPts.length) return;
 
         var minX = allPts[0][0], maxX = allPts[0][0];
         var minY = allPts[0][1], maxY = allPts[0][1];
         allPts.forEach(function (c) {
-            if (c[0] < minX) minX = c[0];
-            if (c[0] > maxX) maxX = c[0];
-            if (c[1] < minY) minY = c[1];
-            if (c[1] > maxY) maxY = c[1];
+            if (c[0] < minX) minX = c[0]; if (c[0] > maxX) maxX = c[0];
+            if (c[1] < minY) minY = c[1]; if (c[1] > maxY) maxY = c[1];
         });
-
         var rangeX = maxX - minX || 0.0001;
         var rangeY = maxY - minY || 0.0001;
-        var scale  = Math.min(w / rangeX, h / rangeY) * 0.88;
+        var scale  = Math.min(w / rangeX, h / rangeY) * 0.85;
         var offX   = x + w / 2 - (minX + rangeX / 2) * scale;
         var offY   = y + h / 2 + (minY + rangeY / 2) * scale;
 
-        function project(c) {
-            return [c[0] * scale + offX, -c[1] * scale + offY];
-        }
-
-        // Draw shadow
-        ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,0.18)';
-        ctx.shadowBlur  = 8;
-        ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
+        function project(c) { return [c[0] * scale + offX, -c[1] * scale + offY]; }
 
         function drawRing(ring) {
             var pt = project(ring[0]);
             ctx.moveTo(pt[0], pt[1]);
-            for (var i = 1; i < ring.length; i++) {
-                pt = project(ring[i]);
-                ctx.lineTo(pt[0], pt[1]);
-            }
+            for (var i = 1; i < ring.length; i++) { pt = project(ring[i]); ctx.lineTo(pt[0], pt[1]); }
             ctx.closePath();
         }
 
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.15)';
+        ctx.shadowBlur = 6; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
         ctx.beginPath();
-        if (geometry.type === 'Polygon') {
-            drawRing(coords[0]);
-        } else if (geometry.type === 'MultiPolygon') {
-            coords.forEach(function (poly) { drawRing(poly[0]); });
-        }
-        ctx.fillStyle = fillColor;
-        ctx.fill();
+        if (geometry.type === 'Polygon') { drawRing(coords[0]); }
+        else { coords.forEach(function (poly) { drawRing(poly[0]); }); }
+        ctx.fillStyle = fillColor; ctx.fill();
         ctx.restore();
 
         ctx.beginPath();
-        if (geometry.type === 'Polygon') {
-            drawRing(coords[0]);
-        } else if (geometry.type === 'MultiPolygon') {
-            coords.forEach(function (poly) { drawRing(poly[0]); });
-        }
-        ctx.strokeStyle = strokeColor;
-        ctx.lineWidth   = 1.5;
-        ctx.stroke();
+        if (geometry.type === 'Polygon') { drawRing(coords[0]); }
+        else { coords.forEach(function (poly) { drawRing(poly[0]); }); }
+        ctx.strokeStyle = strokeColor; ctx.lineWidth = 1.5; ctx.stroke();
     }
 
-    // ── Render the card ───────────────────────────────────────────────────────
+    // ── Render ────────────────────────────────────────────────────────────────
     function renderCard(p, lat, lng, geometry, placeName) {
-        var TC  = window.TIER_COLORS || {};
-        var CC  = { High:'#52b788', Moderate:'#f7ce46', Low:'#e07c1f', Barrier:'#6b3fa0', 'No Data':'#aaa' };
+        var TC = window.TIER_COLORS || {};
+        var CC = { High:'#52b788', Moderate:'#f7ce46', Low:'#e07c1f', Barrier:'#6b3fa0', 'No Data':'#aaa' };
 
         var tierInternal = p.Tier || '';
         var tierLabel    = displayName(tierInternal);
         var tierColor    = TC[tierInternal] || '#2a8234';
-        var tierIdx      = tierIndex(tierInternal);  // 0–5
+        var tIdx         = tierIndex(tierInternal);
         var conn         = p.connectivity || 'No Data';
         var connColor    = CC[conn] || '#aaa';
-        var connText     = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#ffffff';
+        var connText     = (conn === 'High' || conn === 'Moderate') ? '#1a1a1a' : '#fff';
 
-        var W = 800, H = 520, SC = 2;
+        // ── Canvas setup ──────────────────────────────────────────────────────
+        // W=800, H=580, rendered at 2× for retina sharpness
+        var W = 800, H = 580, SC = 2;
         var canvas = document.createElement('canvas');
-        canvas.width  = W * SC;
-        canvas.height = H * SC;
+        canvas.width = W * SC; canvas.height = H * SC;
         var ctx = canvas.getContext('2d');
         ctx.scale(SC, SC);
-
         var F = 'Arial, sans-serif';
 
+        // ── Layout constants ──────────────────────────────────────────────────
+        var PAD      = 24;   // outer padding
+        var HDR_H    = 80;   // header height
+        var BDGE_Y   = 96;   // badge row top
+        var BDGE_H   = 42;   // badge height
+        var BAR_Y    = 156;  // spectrum bar top
+        var BAR_H    = 22;
+        var CONT_Y   = 218;  // content area top (below bar + pointer label)
+        var FOOT_Y   = H - 40; // footer top
+        var LEFT_W   = 190;  // shape column width
+        var RIGHT_X  = PAD + LEFT_W + 14; // metrics column left
+        var RIGHT_W  = W - RIGHT_X - PAD;
+
         // ── Background ────────────────────────────────────────────────────────
-        ctx.fillStyle = '#f5f3ee';
-        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#f5f3ee'; ctx.fillRect(0, 0, W, H);
 
         // ── Left accent stripe ────────────────────────────────────────────────
-        ctx.fillStyle = tierColor;
-        ctx.fillRect(0, 0, 7, H);
+        ctx.fillStyle = tierColor; ctx.fillRect(0, 0, 7, H);
 
-        // ── Header band ───────────────────────────────────────────────────────
-        ctx.fillStyle = '#1a3d1a';
-        ctx.fillRect(7, 0, W - 7, 82);
-
-        // Header dot texture
+        // ── Header ────────────────────────────────────────────────────────────
+        ctx.fillStyle = '#1a3d1a'; ctx.fillRect(7, 0, W - 7, HDR_H);
         ctx.fillStyle = 'rgba(255,255,255,0.04)';
         for (var xi = 20; xi < W; xi += 18)
-            for (var yi = 6; yi < 82; yi += 18)
+            for (var yi = 6; yi < HDR_H; yi += 18)
                 circ(ctx, xi, yi, 2);
 
         // Title
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 19px ' + F;
-        ctx.fillText('Forest Patch Report Card', 24, 30);
-        ctx.font = '12px ' + F;
-        ctx.fillStyle = '#a5d6a7';
-        ctx.fillText('myforestconnect.online', 24, 52);
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px ' + F;
+        ctx.fillText('Forest Patch Report Card', PAD, 28);
 
-        // Place name in header (right side)
+        // Subtitle / place name
         if (placeName) {
-            ctx.font = 'bold 13px ' + F;
-            ctx.fillStyle = '#c8e6c9';
-            var pnW = ctx.measureText(placeName).width;
-            ctx.fillText(placeName, W - pnW - 20, 34);
-            ctx.font = '10px ' + F;
+            // Truncate if too long
+            var maxPNW = W - PAD * 2 - 220;
+            ctx.font = '12px ' + F;
             ctx.fillStyle = '#a5d6a7';
-            ctx.fillText('Nearest named area', W - ctx.measureText('Nearest named area').width - 20, 52);
+            var pn = placeName;
+            while (ctx.measureText(pn).width > maxPNW && pn.length > 6)
+                pn = pn.slice(0, -1);
+            if (pn !== placeName) pn += '…';
+            ctx.fillText(pn, PAD, 48);
+            ctx.fillStyle = 'rgba(255,255,255,0.35)';
+            ctx.font = '10px ' + F;
+            ctx.fillText('Nearest named area', PAD, 64);
+        } else {
+            ctx.font = '12px ' + F;
+            ctx.fillStyle = '#a5d6a7';
+            ctx.fillText('myforestconnect.online', PAD, 50);
         }
 
-        // Patch ID small tag
+        // Patch ID — top right
         if (p.id != null) {
-            var idTxt = 'Patch #' + p.id;
             ctx.font = '11px ' + F;
-            ctx.fillStyle = 'rgba(255,255,255,0.45)';
-            ctx.fillText(idTxt, 24, 70);
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            var idTxt = 'Patch #' + p.id;
+            ctx.fillText(idTxt, W - ctx.measureText(idTxt).width - PAD, 28);
         }
+        // Website — bottom right of header
+        ctx.font = '10px ' + F; ctx.fillStyle = 'rgba(165,214,167,0.7)';
+        var site = 'myforestconnect.online';
+        ctx.fillText(site, W - ctx.measureText(site).width - PAD, 64);
 
-        // ── Tier badge ────────────────────────────────────────────────────────
+        // ── Badge row ─────────────────────────────────────────────────────────
+        // 1. Tier badge
         ctx.fillStyle = tierColor;
-        rrect(ctx, 24, 98, 270, 42, 6); ctx.fill();
+        rrect(ctx, PAD, BDGE_Y, 240, BDGE_H, 6); ctx.fill();
         ctx.fillStyle = 'rgba(255,255,255,0.13)';
-        rrect(ctx, 25, 99, 268, 20, 5); ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 15px ' + F;
-        ctx.fillText(tierLabel, 38, 124);
+        rrect(ctx, PAD + 1, BDGE_Y + 1, 238, 20, 5); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 14px ' + F;
+        ctx.fillText(tierLabel, PAD + 14, BDGE_Y + 27);
 
-        // ── Connectivity badge ────────────────────────────────────────────────
+        // 2. Connectivity badge
+        var b2x = PAD + 252;
         ctx.fillStyle = connColor;
-        rrect(ctx, 306, 98, 148, 42, 6); ctx.fill();
+        rrect(ctx, b2x, BDGE_Y, 148, BDGE_H, 6); ctx.fill();
         ctx.fillStyle = connText;
-        ctx.font = '11px ' + F; ctx.fillText('Connectivity', 320, 114);
-        ctx.font = 'bold 15px ' + F; ctx.fillText(conn, 320, 132);
+        ctx.font = '10px ' + F; ctx.fillText('Connectivity', b2x + 14, BDGE_Y + 15);
+        ctx.font = 'bold 14px ' + F; ctx.fillText(conn, b2x + 14, BDGE_Y + 32);
 
-        // ── Coordinates badge ─────────────────────────────────────────────────
+        // 3. Coordinates badge
+        var b3x = b2x + 160;
         if (lat && lng) {
             ctx.fillStyle = '#2d6a4f';
-            rrect(ctx, 466, 98, 192, 42, 6); ctx.fill();
-            ctx.fillStyle = '#ffffff';
-            ctx.font = '11px ' + F; ctx.fillText('📍 Coordinates', 480, 114);
+            rrect(ctx, b3x, BDGE_Y, W - b3x - PAD, BDGE_H, 6); ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = '10px ' + F; ctx.fillText('📍 Location', b3x + 14, BDGE_Y + 15);
             ctx.font = 'bold 12px ' + F;
-            ctx.fillText(lat.toFixed(5) + '\u00b0N,  ' + lng.toFixed(5) + '\u00b0E', 480, 132);
+            ctx.fillText(lat.toFixed(5) + '°N', b3x + 14, BDGE_Y + 31);
+            ctx.fillText(lng.toFixed(5) + '°E', b3x + 14 + 110, BDGE_Y + 31);
         }
 
-        // ── TIER SPECTRUM BAR ─────────────────────────────────────────────────
-        var barX = 24, barY = 156, barW = W - 48, barH = 22;
-        var segW = barW / 6;
+        // ── Tier spectrum bar ─────────────────────────────────────────────────
+        var barW   = W - PAD * 2;
+        var segW   = barW / 6;
 
-        // Draw 6 tier segments
-        TIER_ORDER.forEach(function (tier, i) {
-            var segX = barX + i * segW;
-            var col  = (window.TIER_COLORS && window.TIER_COLORS[tier])
-                ? window.TIER_COLORS[tier] : TIER_COLORS_DEFAULT[i];
-            // Round left end of first, right end of last
-            if (i === 0) {
-                rrect(ctx, segX, barY, segW, barH, 4);
-                ctx.fillStyle = col; ctx.fill();
-                // Square off right side
-                ctx.fillRect(segX + segW - 4, barY, 4, barH);
-            } else if (i === 5) {
-                rrect(ctx, segX, barY, segW, barH, 4);
-                ctx.fillStyle = col; ctx.fill();
-                ctx.fillRect(segX, barY, 4, barH);
+        // Axis labels — above bar
+        ctx.font = '9px ' + F; ctx.fillStyle = '#aaa';
+        ctx.fillText('← Higher structural quality', PAD, BAR_Y - 5);
+        var rTxt = 'Lower structural quality →';
+        ctx.fillText(rTxt, PAD + barW - ctx.measureText(rTxt).width, BAR_Y - 5);
+
+        // Segments
+        for (var si = 0; si < 6; si++) {
+            var sx = PAD + si * segW;
+            var sc2 = tierCol(si);
+            if (si === 0) {
+                rrect(ctx, sx, BAR_Y, segW, BAR_H, 4); ctx.fillStyle = sc2; ctx.fill();
+                ctx.fillRect(sx + segW - 4, BAR_Y, 4, BAR_H);
+            } else if (si === 5) {
+                rrect(ctx, sx, BAR_Y, segW, BAR_H, 4); ctx.fillStyle = sc2; ctx.fill();
+                ctx.fillRect(sx, BAR_Y, 4, BAR_H);
             } else {
-                ctx.fillStyle = col;
-                ctx.fillRect(segX, barY, segW, barH);
+                ctx.fillStyle = sc2; ctx.fillRect(sx, BAR_Y, segW, BAR_H);
             }
-            // Tier label inside segment
-            ctx.fillStyle = i < 2 ? '#1b4332' : '#ffffff';
+            ctx.fillStyle = si < 2 ? '#1b4332' : '#fff';
             ctx.font = 'bold 9px ' + F;
-            var lbl = 'T' + (i + 1);
-            ctx.fillText(lbl, segX + segW / 2 - ctx.measureText(lbl).width / 2, barY + 14);
-        });
+            var tLbl = 'T' + (si + 1);
+            ctx.fillText(tLbl, sx + segW / 2 - ctx.measureText(tLbl).width / 2, BAR_Y + 14);
+        }
+        ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1;
+        rrect(ctx, PAD, BAR_Y, barW, BAR_H, 4); ctx.stroke();
 
-        // Bar frame
-        ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1;
-        rrect(ctx, barX, barY, barW, barH, 4); ctx.stroke();
-
-        // Current tier marker — triangle pointer below bar
-        if (tierIdx >= 0) {
-            var markerX = barX + tierIdx * segW + segW / 2;
+        // Pointer triangle
+        if (tIdx >= 0) {
+            var mX = PAD + tIdx * segW + segW / 2;
             ctx.fillStyle = tierColor;
             ctx.beginPath();
-            ctx.moveTo(markerX - 7, barY + barH + 2);
-            ctx.lineTo(markerX + 7, barY + barH + 2);
-            ctx.lineTo(markerX, barY + barH + 11);
+            ctx.moveTo(mX - 6, BAR_Y + BAR_H + 2);
+            ctx.lineTo(mX + 6, BAR_Y + BAR_H + 2);
+            ctx.lineTo(mX,     BAR_Y + BAR_H + 9);
             ctx.closePath(); ctx.fill();
 
-            // Label below pointer
-            ctx.font = 'bold 10px ' + F;
-            ctx.fillStyle = tierColor;
-            var shortName = tierLabel.split('(')[1] ? tierLabel.split('(')[1].replace(')', '') : tierLabel;
-            var lblW = ctx.measureText(shortName).width;
-            ctx.fillText(shortName, Math.max(barX, Math.min(barX + barW - lblW, markerX - lblW / 2)), barY + barH + 24);
+            // Short tier name below pointer
+            var shortName = tierLabel.indexOf('(') >= 0
+                ? tierLabel.split('(')[1].replace(')', '').trim()
+                : tierLabel;
+            ctx.font = 'bold 9px ' + F; ctx.fillStyle = tierColor;
+            var snW = ctx.measureText(shortName).width;
+            var snX = Math.max(PAD, Math.min(PAD + barW - snW, mX - snW / 2));
+            ctx.fillText(shortName, snX, BAR_Y + BAR_H + 20);
         }
 
-        // Axis labels
-        ctx.font = '9px ' + F; ctx.fillStyle = '#999';
-        ctx.fillText('Higher structural quality', barX, barY - 4);
-        var rTxt = 'Lower structural quality';
-        ctx.fillText(rTxt, barX + barW - ctx.measureText(rTxt).width, barY - 4);
-
-        // ── LEFT COLUMN: patch shape ──────────────────────────────────────────
-        var shapeX = 24, shapeY = 210, shapeW = 200, shapeH = 200;
-
-        // Shape card background
+        // ── Content area ──────────────────────────────────────────────────────
+        // Left: shape panel
+        var SHAPE_H = 210;
         ctx.fillStyle = 'rgba(0,0,0,0.04)';
-        rrect(ctx, shapeX + 2, shapeY + 2, shapeW, shapeH, 8); ctx.fill();
+        rrect(ctx, PAD + 2, CONT_Y + 2, LEFT_W, SHAPE_H, 8); ctx.fill();
         ctx.fillStyle = '#ffffff';
-        rrect(ctx, shapeX, shapeY, shapeW, shapeH, 8); ctx.fill();
+        rrect(ctx, PAD, CONT_Y, LEFT_W, SHAPE_H, 8); ctx.fill();
         ctx.strokeStyle = '#e0dbd0'; ctx.lineWidth = 1;
-        rrect(ctx, shapeX, shapeY, shapeW, shapeH, 8); ctx.stroke();
+        rrect(ctx, PAD, CONT_Y, LEFT_W, SHAPE_H, 8); ctx.stroke();
 
-        // Section label
-        ctx.fillStyle = '#999'; ctx.font = 'bold 9px ' + F;
-        ctx.fillText('PATCH SHAPE', shapeX + 8, shapeY + 16);
+        ctx.fillStyle = '#aaa'; ctx.font = 'bold 9px ' + F;
+        ctx.fillText('PATCH SHAPE', PAD + 10, CONT_Y + 16);
 
         if (geometry) {
-            var shapeAlpha = tierColor;
             drawShape(ctx, geometry,
-                shapeX + 10, shapeY + 22, shapeW - 20, shapeH - 32,
-                hexToRgba(tierColor, 0.35), tierColor);
+                PAD + 10, CONT_Y + 22, LEFT_W - 20, SHAPE_H - 32,
+                hexToRgba(tierColor, 0.3), tierColor);
         } else {
             ctx.fillStyle = '#ccc'; ctx.font = '11px ' + F;
-            ctx.fillText('Shape unavailable', shapeX + 20, shapeY + shapeH / 2);
+            ctx.fillText('Shape unavailable', PAD + 20, CONT_Y + SHAPE_H / 2);
         }
 
-        // ── RIGHT COLUMN: metric cards ────────────────────────────────────────
-        var nv   = function (v) { return v != null ? parseFloat(v) : null; };
+        // Left: QR code panel — sits below shape with gap
+        var QR_Y    = CONT_Y + SHAPE_H + 12;
+        var QR_SIZE = 70;
+        var QR_BOX  = QR_SIZE + 10;
+        // We draw the QR asynchronously — placeholder box for now
+        ctx.fillStyle = 'rgba(0,0,0,0.04)';
+        rrect(ctx, PAD + 2, QR_Y + 2, LEFT_W, QR_BOX + 24, 8); ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        rrect(ctx, PAD, QR_Y, LEFT_W, QR_BOX + 24, 8); ctx.fill();
+        ctx.strokeStyle = '#e0dbd0'; ctx.lineWidth = 1;
+        rrect(ctx, PAD, QR_Y, LEFT_W, QR_BOX + 24, 8); ctx.stroke();
+
+        ctx.fillStyle = '#aaa'; ctx.font = 'bold 9px ' + F;
+        ctx.fillText('OPEN IN PLATFORM', PAD + 10, QR_Y + 14);
+
+        // Right: metrics — 2 columns × 3 rows
+        var nv = function (v) { return v != null ? parseFloat(v) : null; };
         var metrics = [
-            { label:'Total area',       value: nv(p.area)      != null ? nv(p.area).toFixed(2)      : '\u2014', unit:'ha' },
-            { label:'Core area',        value: nv(p.core)      != null ? nv(p.core).toFixed(2)      : '\u2014', unit:'ha' },
-            { label:'Contiguity',       value: nv(p.contig)    != null ? nv(p.contig).toFixed(3)    : '\u2014', unit:'0\u20131' },
-            { label:'ENN distance',     value: nv(p.enn)       != null ? Math.round(nv(p.enn)) + '' : '\u2014', unit:'m' },
-            { label:'Perim-area ratio', value: nv(p.para)      != null ? nv(p.para).toFixed(5)      : '\u2014', unit:'' },
-            { label:'Mean flow',        value: nv(p.mean_flow) != null ? nv(p.mean_flow).toFixed(2) : '\u2014', unit:'' }
+            { label:'Total area',       value: nv(p.area)      != null ? nv(p.area).toFixed(2)      : '—', unit:'ha' },
+            { label:'Core area',        value: nv(p.core)      != null ? nv(p.core).toFixed(2)      : '—', unit:'ha' },
+            { label:'Contiguity index', value: nv(p.contig)    != null ? nv(p.contig).toFixed(3)    : '—', unit:'0–1' },
+            { label:'ENN distance',     value: nv(p.enn)       != null ? Math.round(nv(p.enn)) + '' : '—', unit:'m' },
+            { label:'Perim-area ratio', value: nv(p.para)      != null ? nv(p.para).toFixed(5)      : '—', unit:'' },
+            { label:'Mean flow',        value: nv(p.mean_flow) != null ? nv(p.mean_flow).toFixed(2) : '—', unit:'' }
         ];
 
-        var mStartX = 238, mStartY = 210;
-        var mCols   = 3;
-        var mW      = (W - mStartX - 24 - (mCols - 1) * 8) / mCols;
-        var mH      = 58;
+        var mCols = 2;
+        var mGap  = 10;
+        var mW    = (RIGHT_W - mGap) / mCols;
+        var mH    = 84;
 
-        ctx.fillStyle = '#999'; ctx.font = 'bold 9px ' + F;
-        ctx.fillText('STRUCTURAL METRICS', mStartX, mStartY - 6);
+        ctx.fillStyle = '#aaa'; ctx.font = 'bold 9px ' + F;
+        ctx.fillText('STRUCTURAL METRICS', RIGHT_X, CONT_Y - 6);
 
         metrics.forEach(function (m, i) {
             var col = i % mCols, row = Math.floor(i / mCols);
-            var x   = mStartX + col * (mW + 8);
-            var y   = mStartY + row * (mH + 8);
+            var mx  = RIGHT_X + col * (mW + mGap);
+            var my  = CONT_Y + row * (mH + mGap);
 
-            ctx.fillStyle = 'rgba(0,0,0,0.04)';
-            rrect(ctx, x+2, y+2, mW, mH, 5); ctx.fill();
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.05)';
+            rrect(ctx, mx + 2, my + 2, mW, mH, 6); ctx.fill();
+            // Card
             ctx.fillStyle = '#ffffff';
-            rrect(ctx, x, y, mW, mH, 5); ctx.fill();
+            rrect(ctx, mx, my, mW, mH, 6); ctx.fill();
             ctx.strokeStyle = '#e8e4de'; ctx.lineWidth = 1;
-            rrect(ctx, x, y, mW, mH, 5); ctx.stroke();
+            rrect(ctx, mx, my, mW, mH, 6); ctx.stroke();
+            // Left accent
+            ctx.fillStyle = tierColor; ctx.fillRect(mx, my, 4, mH);
 
-            ctx.fillStyle = tierColor; ctx.fillRect(x, y, 4, mH);
-
-            ctx.fillStyle = '#999'; ctx.font = '9px ' + F;
-            ctx.fillText(m.label.toUpperCase(), x + 10, y + 15);
-
-            ctx.fillStyle = '#1a3d1a'; ctx.font = 'bold 17px ' + F;
-            ctx.fillText(m.value, x + 10, y + 40);
-
+            // Label
+            ctx.fillStyle = '#aaa'; ctx.font = '9px ' + F;
+            ctx.fillText(m.label.toUpperCase(), mx + 12, my + 17);
+            // Value
+            ctx.fillStyle = '#1a3d1a'; ctx.font = 'bold 22px ' + F;
+            ctx.fillText(m.value, mx + 12, my + 52);
+            // Unit
             if (m.unit) {
-                ctx.fillStyle = '#bbb'; ctx.font = '10px ' + F;
-                ctx.fillText(m.unit, x + 10, y + 52);
+                ctx.fillStyle = '#bbb'; ctx.font = '11px ' + F;
+                ctx.fillText(m.unit, mx + 12, my + 70);
             }
         });
 
-        // ── QR CODE ───────────────────────────────────────────────────────────
-        var qrX = 24, qrY = 428, qrSize = 60;
-        var qrSrc = qrUrl(lat, lng, 15);
-        var img   = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = function () {
-            // QR box
-            ctx.fillStyle = '#ffffff';
-            rrect(ctx, qrX, qrY, qrSize + 8, qrSize + 8, 4); ctx.fill();
-            ctx.strokeStyle = '#e0dbd0'; ctx.lineWidth = 1;
-            rrect(ctx, qrX, qrY, qrSize + 8, qrSize + 8, 4); ctx.stroke();
-            ctx.drawImage(img, qrX + 4, qrY + 4, qrSize, qrSize);
-
-            ctx.fillStyle = '#888'; ctx.font = '9px ' + F;
-            ctx.fillText('Scan to open in platform', qrX, qrY + qrSize + 18);
-
-            finishCard();
-        };
-        img.onerror = function () { finishCard(); };
-        img.src = qrSrc;
-
-        function finishCard() {
-            // ── Footer ────────────────────────────────────────────────────────
-            ctx.fillStyle = '#1a3d1a';
-            ctx.fillRect(0, H - 38, W, 38);
-            ctx.fillStyle = tierColor;
-            ctx.fillRect(0, H - 38, 7, 38);
-
+        // ── Footer (drawn synchronously) ──────────────────────────────────────
+        function drawFooter() {
+            ctx.fillStyle = '#1a3d1a'; ctx.fillRect(0, FOOT_Y, W, H - FOOT_Y);
+            ctx.fillStyle = tierColor;  ctx.fillRect(0, FOOT_Y, 7, H - FOOT_Y);
             ctx.fillStyle = '#ffffff'; ctx.font = '11px ' + F;
             var d = new Date().toLocaleDateString('en-GB', {
                 day:'numeric', month:'long', year:'numeric'
             });
-            ctx.fillText('Generated ' + d, 20, H - 17);
+            ctx.fillText('Generated ' + d, 20, FOOT_Y + 24);
+            ctx.fillStyle = '#a5d6a7'; ctx.font = '10px ' + F;
+            var disc = 'For research and awareness purposes only  ·  myforestconnect.online';
+            ctx.fillText(disc, W - ctx.measureText(disc).width - PAD, FOOT_Y + 24);
+        }
 
-            ctx.fillStyle = '#a5d6a7'; ctx.font = '11px ' + F;
-            var site = 'myforestconnect.online  ·  For research and awareness purposes only';
-            ctx.fillText(site, W - ctx.measureText(site).width - 18, H - 17);
+        // ── Load QR then finalise ─────────────────────────────────────────────
+        var qrImg = new Image();
+        qrImg.crossOrigin = 'anonymous';
+        qrImg.onload = function () {
+            // Draw QR centred in the QR panel
+            var qrDrawX = PAD + (LEFT_W - QR_SIZE) / 2;
+            ctx.drawImage(qrImg, qrDrawX, QR_Y + 18, QR_SIZE, QR_SIZE);
 
-            // ── Download ──────────────────────────────────────────────────────
+            ctx.fillStyle = '#bbb'; ctx.font = '9px ' + F;
+            var scanTxt = 'Scan to open in platform';
+            ctx.fillText(scanTxt,
+                PAD + (LEFT_W - ctx.measureText(scanTxt).width) / 2,
+                QR_Y + 18 + QR_SIZE + 12);
+
+            drawFooter();
+            download();
+        };
+        qrImg.onerror = function () { drawFooter(); download(); };
+        qrImg.src = qrUrl(lat, lng);
+
+        function download() {
             var a = document.createElement('a');
             a.download = 'patch_' + (p.id != null ? p.id : 'report') + '_report_card.png';
             a.href = canvas.toDataURL('image/png', 1.0);
@@ -519,30 +509,11 @@
         var r = parseInt(hex.slice(1,3),16);
         var g = parseInt(hex.slice(3,5),16);
         var b = parseInt(hex.slice(5,7),16);
-        return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
-    }
-
-    // ── QR URL builder ────────────────────────────────────────────────────────
-    function qrUrl(lat, lng, zoom) {
-        var mapUrl = 'https://myforestconnect.online';
-        if (lat && lng) {
-            var page = lng < 102.5 ? 'klang-valley-map.html' : 'kuantan-map.html';
-            mapUrl = 'https://myforestconnect.online/' + page +
-                '#' + zoom.toFixed(2) + '/' + lat.toFixed(5) + '/' + lng.toFixed(5);
-        }
-        return 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' +
-            encodeURIComponent(mapUrl) +
-            '&bgcolor=f5f3ee&color=1a3d1a&margin=4';
+        return 'rgba('+r+','+g+','+b+','+alpha+')';
     }
 
     // ── Boot ──────────────────────────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', function () {
-        initReportCards();
-    });
-
-    // Also init immediately in case DOMContentLoaded already fired
-    if (document.readyState !== 'loading') {
-        initReportCards();
-    }
+    if (document.readyState !== 'loading') { initReportCards(); }
+    else { document.addEventListener('DOMContentLoaded', initReportCards); }
 
 })();
