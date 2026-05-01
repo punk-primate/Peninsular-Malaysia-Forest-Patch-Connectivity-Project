@@ -170,17 +170,17 @@
         else if (geometry.type === 'MultiPolygon') { geometry.coordinates.forEach(function (p) { p[0].forEach(function (c) { pts.push(c); }); }); }
         if (!pts.length) return;
         var x0=pts[0][0],x1=pts[0][0],y0=pts[0][1],y1=pts[0][1];
-        pts.forEach(function (c) { if(c[0]<x0)x0=c[0]; if(c[0]>x1)x1=c[0]; if(c[1]<y0)y0=c[1]; if(c[1]>y1)y1=c[1]; });
-        var rx=x1-x0||0.0001, ry=y1-y0||0.0001, sc=Math.min(w/rx,h/ry)*0.85;
-        var ox=x+w/2-(x0+rx/2)*sc, oy=y+h/2+(y0+ry/2)*sc;
+        pts.forEach(function (c) { if(c[0]<x0)x0=c[0];if(c[0]>x1)x1=c[0];if(c[1]<y0)y0=c[1];if(c[1]>y1)y1=c[1]; });
+        var rx=x1-x0||0.0001,ry=y1-y0||0.0001,sc=Math.min(w/rx,h/ry)*0.85;
+        var ox=x+w/2-(x0+rx/2)*sc,oy=y+h/2+(y0+ry/2)*sc;
         function proj(c){return[c[0]*sc+ox,-c[1]*sc+oy];}
         function ring(pts2){var p0=proj(pts2[0]);ctx.moveTo(p0[0],p0[1]);for(var i=1;i<pts2.length;i++){var pi=proj(pts2[i]);ctx.lineTo(pi[0],pi[1]);}ctx.closePath();}
         ctx.beginPath();
         if(geometry.type==='Polygon'){ring(geometry.coordinates[0]);}else{geometry.coordinates.forEach(function(p){ring(p[0]);});}
-        ctx.fillStyle=fill; ctx.fill();
+        ctx.fillStyle=fill;ctx.fill();
         ctx.beginPath();
         if(geometry.type==='Polygon'){ring(geometry.coordinates[0]);}else{geometry.coordinates.forEach(function(p){ring(p[0]);});}
-        ctx.strokeStyle=stroke; ctx.lineWidth=2; ctx.stroke();
+        ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke();
     }
 
     function pxC(ctx,x,y,w,h,sz,col){
@@ -189,24 +189,26 @@
     }
 
     function renderCard(p, lat, lng, geometry, forestName) {
-        var D='#0f380f', M='#306230', L='#8bac0f', B='#9bbc0f', WH='#e0f8d0';
-        var tierInt=p.Tier||'', tierLbl=displayName(tierInt), ti=tIdx(tierInt);
+        var D='#0f380f',M='#306230',L='#8bac0f',B='#9bbc0f',WH='#e0f8d0';
+        var tierInt=p.Tier||'',tierLbl=displayName(tierInt),ti=tIdx(tierInt);
         var conn=(p.connectivity||'No Data').toUpperCase();
 
-        var W=800, H=700, SC=2;
+        // ── Canvas: 920x780 at 2x (larger canvas for bigger text) ─────────────
+        var W=920,H=780,SC=2;
         var cv=document.createElement('canvas');
-        cv.width=W*SC; cv.height=H*SC;
-        var ctx=cv.getContext('2d'); ctx.scale(SC,SC);
+        cv.width=W*SC;cv.height=H*SC;
+        var ctx=cv.getContext('2d');ctx.scale(SC,SC);
 
-        var PAD=20, C1W=210, C2X=PAD+C1W+14, C2W=W-C2X-PAD;
-        var HH=84, PLY=HH+8, BY=PLY+32, SPY=BY+62, CTY=SPY+38;
-        var FY=H-50, AV=FY-CTY, SHH=200, QY=CTY+SHH+10, QH=FY-QY;
-        var QS=Math.min(QH-36,C1W-24), mC=2, mG=10;
-        var mW=Math.floor((C2W-mG)/mC), mH=Math.floor((AV-mG*2)/3);
+        // ── Layout ────────────────────────────────────────────────────────────
+        var PAD=22,C1W=220,C2X=PAD+C1W+16,C2W=W-C2X-PAD;
+        var HH=96,PLY=HH+10,BY=PLY+38,SPY=BY+72,CTY=SPY+46;
+        var FY=H-56,AV=FY-CTY,SHH=210,QY=CTY+SHH+12,QH=FY-QY;
+        var QS=Math.min(QH-44,C1W-28),mC=2,mG=12;
+        var mW=Math.floor((C2W-mG)/mC),mH=Math.floor((AV-mG*2)/3);
 
         // background + grid
-        ctx.fillStyle=D; ctx.fillRect(0,0,W,H);
-        ctx.strokeStyle=M; ctx.lineWidth=1;
+        ctx.fillStyle=D;ctx.fillRect(0,0,W,H);
+        ctx.strokeStyle=M;ctx.lineWidth=1;
         for(var gx=0;gx<W;gx+=16){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,H);ctx.stroke();}
         for(var gy=0;gy<H;gy+=16){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke();}
 
@@ -217,68 +219,78 @@
         // header
         ctx.fillStyle=M;ctx.fillRect(4,4,W-8,HH);
         ctx.fillStyle=B;ctx.fillRect(4,HH,W-8,3);
-        ctx.fillStyle=B;ctx.font=F(14);ctx.fillText('> FOREST PATCH REPORT CARD',PAD,26);
-        ctx.fillStyle=L;ctx.font=F(10);ctx.fillText('MYFORESTCONNECT.ONLINE',PAD,54);
-        if(p.id!=null){ctx.fillStyle=WH;ctx.font=F(10);var idT='PATCH #'+p.id;ctx.fillText(idT,W-PAD-ctx.measureText(idT).width,54);}
+        ctx.fillStyle=B;ctx.font=F(16);ctx.fillText('> FOREST PATCH REPORT CARD',PAD,30);
+        ctx.fillStyle=L;ctx.font=F(11);ctx.fillText('MYFORESTCONNECT.ONLINE',PAD,62);
+        if(p.id!=null){
+            ctx.fillStyle=WH;ctx.font=F(11);
+            var idT='PATCH #'+p.id;
+            ctx.fillText(idT,W-PAD-ctx.measureText(idT).width,62);
+        }
 
         // forest name strip
-        ctx.fillStyle=D;ctx.fillRect(PAD,PLY,W-PAD*2,28);
-        ctx.strokeStyle=L;ctx.lineWidth=1;ctx.strokeRect(PAD,PLY,W-PAD*2,28);
+        ctx.fillStyle=D;ctx.fillRect(PAD,PLY,W-PAD*2,32);
+        ctx.strokeStyle=L;ctx.lineWidth=1;ctx.strokeRect(PAD,PLY,W-PAD*2,32);
         var pn=forestName?'[ '+forestName+' ]':'[ LOCATION DATA UNAVAILABLE ]';
-        ctx.fillStyle=B;ctx.font=F(10);
-        while(ctx.measureText(pn).width>W-PAD*2-20&&pn.length>10)pn=pn.slice(0,-2)+'...]';
-        ctx.fillText(pn,PAD+10,PLY+19);
+        ctx.fillStyle=B;ctx.font=F(11);
+        while(ctx.measureText(pn).width>W-PAD*2-24&&pn.length>10)pn=pn.slice(0,-2)+'...]';
+        ctx.fillText(pn,PAD+12,PLY+22);
 
-        // tier badge — full name, no redundant "TIER" label above it
-        ctx.fillStyle=M;ctx.fillRect(PAD,BY,310,50);
-        ctx.strokeStyle=B;ctx.lineWidth=2;ctx.strokeRect(PAD,BY,310,50);
-        var tfs=11;ctx.font=F(tfs);
-        while(ctx.measureText(tierLbl).width>290&&tfs>7){tfs--;ctx.font=F(tfs);}
-        ctx.fillStyle=B;ctx.fillText(tierLbl,PAD+10,BY+32);
+        // tier badge — full published name, no redundant label
+        ctx.fillStyle=M;ctx.fillRect(PAD,BY,330,58);
+        ctx.strokeStyle=B;ctx.lineWidth=2;ctx.strokeRect(PAD,BY,330,58);
+        var tfs=13;ctx.font=F(tfs);
+        while(ctx.measureText(tierLbl).width>310&&tfs>8){tfs--;ctx.font=F(tfs);}
+        ctx.fillStyle=B;ctx.fillText(tierLbl,PAD+12,BY+36);
 
         // connectivity badge
-        var CX=PAD+322;
-        ctx.fillStyle=D;ctx.fillRect(CX,BY,170,50);
-        ctx.strokeStyle=B;ctx.lineWidth=2;ctx.strokeRect(CX,BY,170,50);
-        ctx.fillStyle=L;ctx.font=F(9);ctx.fillText('CONNECTIVITY',CX+10,BY+16);
-        ctx.fillStyle=B;ctx.font=F(11);ctx.fillText('[ '+conn+' ]',CX+10,BY+36);
+        var CX=PAD+344;
+        ctx.fillStyle=D;ctx.fillRect(CX,BY,188,58);
+        ctx.strokeStyle=B;ctx.lineWidth=2;ctx.strokeRect(CX,BY,188,58);
+        ctx.fillStyle=L;ctx.font=F(10);ctx.fillText('CONNECTIVITY',CX+12,BY+20);
+        ctx.fillStyle=B;ctx.font=F(13);ctx.fillText('[ '+conn+' ]',CX+12,BY+44);
 
         // gps badge
-        var GX=CX+182;
-        ctx.fillStyle='#1a4a1a';ctx.fillRect(GX,BY,W-GX-PAD,50);
-        ctx.strokeStyle=L;ctx.lineWidth=1;ctx.strokeRect(GX,BY,W-GX-PAD,50);
-        ctx.fillStyle=L;ctx.font=F(9);ctx.fillText('LOCATION',GX+10,BY+16);
-        ctx.fillStyle=WH;ctx.font=F(9);
-        if(lat&&lng){ctx.fillText(lat.toFixed(5)+'N',GX+10,BY+34);ctx.fillText(lng.toFixed(5)+'E',GX+10+Math.floor((W-GX-PAD)/2),BY+34);}
-        else{ctx.fillText('UNAVAILABLE',GX+10,BY+34);}
+        var GX=CX+202;
+        ctx.fillStyle='#1a4a1a';ctx.fillRect(GX,BY,W-GX-PAD,58);
+        ctx.strokeStyle=L;ctx.lineWidth=1;ctx.strokeRect(GX,BY,W-GX-PAD,58);
+        ctx.fillStyle=L;ctx.font=F(10);ctx.fillText('LOCATION',GX+12,BY+20);
+        ctx.fillStyle=WH;ctx.font=F(10);
+        if(lat&&lng){
+            ctx.fillText(lat.toFixed(5)+'N',GX+12,BY+40);
+            ctx.fillText(lng.toFixed(5)+'E',GX+12+Math.floor((W-GX-PAD)/2),BY+40);
+        }else{ctx.fillText('UNAVAILABLE',GX+12,BY+40);}
 
         // spectrum bar
         var sW=Math.floor((W-PAD*2)/6);
         for(var si=0;si<6;si++){
             var sx=PAD+si*sW;
-            ctx.fillStyle=TIER_SEG[si];ctx.fillRect(sx,SPY,sW,24);
-            if(si===ti){ctx.strokeStyle=B;ctx.lineWidth=3;ctx.strokeRect(sx+1,SPY+1,sW-2,22);}
-            ctx.fillStyle=si<2?D:B;ctx.font=F(8);
-            var tc=TIER_CODE[si];ctx.fillText(tc,sx+sW/2-ctx.measureText(tc).width/2,SPY+15);
+            ctx.fillStyle=TIER_SEG[si];ctx.fillRect(sx,SPY,sW,26);
+            if(si===ti){ctx.strokeStyle=B;ctx.lineWidth=3;ctx.strokeRect(sx+1,SPY+1,sW-2,24);}
+            ctx.fillStyle=si<2?D:B;ctx.font=F(9);
+            var tc=TIER_CODE[si];
+            ctx.fillText(tc,sx+sW/2-ctx.measureText(tc).width/2,SPY+17);
         }
         if(ti>=0){
             var px=PAD+ti*sW+sW/2;
-            ctx.fillStyle=B;ctx.beginPath();ctx.moveTo(px-8,SPY+26);ctx.lineTo(px+8,SPY+26);ctx.lineTo(px,SPY+36);ctx.closePath();ctx.fill();
+            ctx.fillStyle=B;ctx.beginPath();
+            ctx.moveTo(px-9,SPY+28);ctx.lineTo(px+9,SPY+28);ctx.lineTo(px,SPY+40);
+            ctx.closePath();ctx.fill();
         }
 
         // shape panel
         ctx.fillStyle=D;ctx.fillRect(PAD,CTY,C1W,SHH);
         ctx.strokeStyle=L;ctx.lineWidth=2;ctx.strokeRect(PAD,CTY,C1W,SHH);
-        pxC(ctx,PAD,CTY,C1W,SHH,8,B);
-        ctx.fillStyle=L;ctx.font=F(9);ctx.fillText('[ SHAPE ]',PAD+12,CTY+18);
-        if(geometry){drawShape(ctx,geometry,PAD+10,CTY+28,C1W-20,SHH-40,M,B);}
-        else{ctx.fillStyle=M;ctx.font=F(9);ctx.fillText('N/A',PAD+80,CTY+SHH/2);}
+        pxC(ctx,PAD,CTY,C1W,SHH,9,B);
+        ctx.fillStyle=L;ctx.font=F(10);ctx.fillText('[ SHAPE ]',PAD+14,CTY+20);
+        if(geometry){drawShape(ctx,geometry,PAD+10,CTY+32,C1W-20,SHH-44,M,B);}
+        else{ctx.fillStyle=M;ctx.font=F(10);ctx.fillText('N/A',PAD+80,CTY+SHH/2);}
 
-        // QR panel
+        // QR panel — user's wording preserved
         ctx.fillStyle=D;ctx.fillRect(PAD,QY,C1W,QH);
         ctx.strokeStyle=L;ctx.lineWidth=2;ctx.strokeRect(PAD,QY,C1W,QH);
-        pxC(ctx,PAD,QY,C1W,QH,8,B);
-        ctx.fillStyle=L;ctx.font=F(9);ctx.fillText('[ SCAN ME ]',PAD+12,QY+18);
+        pxC(ctx,PAD,QY,C1W,QH,9,B);
+        ctx.fillStyle=L;ctx.font=F(10);ctx.fillText('[ SCAN TO VIEW',PAD+14,QY+20);
+        ctx.fillText('  ON PLATFORM ]',PAD+14,QY+36);
 
         // metric cards
         var nv=function(v){return v!=null?parseFloat(v):null;};
@@ -292,34 +304,37 @@
         ];
         mets.forEach(function(m,i){
             var col=i%mC,row=Math.floor(i/mC);
-            var mx=C2X+col*(mW+mG), my=CTY+row*(mH+mG);
+            var mx=C2X+col*(mW+mG),my=CTY+row*(mH+mG);
             ctx.fillStyle=D;ctx.fillRect(mx,my,mW,mH);
             ctx.strokeStyle=L;ctx.lineWidth=1;ctx.strokeRect(mx,my,mW,mH);
-            pxC(ctx,mx,my,mW,mH,6,M);
-            ctx.fillStyle=L;ctx.font=F(9);ctx.fillText(m.l,mx+10,my+18);
-            var vfs=16;ctx.font=F(vfs);
-            while(ctx.measureText(m.v).width>mW-20&&vfs>9){vfs--;ctx.font=F(vfs);}
-            ctx.fillStyle=B;ctx.fillText(m.v,mx+10,my+Math.floor(mH/2)+10);
-            if(m.u){ctx.fillStyle=WH;ctx.font=F(11);ctx.fillText(m.u,mx+10,my+mH-14);}
+            pxC(ctx,mx,my,mW,mH,7,M);
+            // label
+            ctx.fillStyle=L;ctx.font=F(11);ctx.fillText(m.l,mx+12,my+22);
+            // value — auto-fit
+            var vfs=20;ctx.font=F(vfs);
+            while(ctx.measureText(m.v).width>mW-24&&vfs>11){vfs--;ctx.font=F(vfs);}
+            ctx.fillStyle=B;ctx.fillText(m.v,mx+12,my+Math.floor(mH/2)+12);
+            // unit — bright white, clearly readable
+            if(m.u){ctx.fillStyle=WH;ctx.font=F(13);ctx.fillText(m.u,mx+12,my+mH-16);}
         });
 
+        // footer
         function drawFooter(){
             ctx.fillStyle=M;ctx.fillRect(0,FY,W,H-FY);
             ctx.fillStyle=B;ctx.fillRect(0,FY,W,3);
-            ctx.fillStyle=B;ctx.font=F(9);
+            ctx.fillStyle=B;ctx.font=F(10);
             var dd=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}).toUpperCase();
-            ctx.fillText('> GENERATED '+dd,PAD,FY+22);
-            ctx.fillStyle=D;ctx.font=F(9);
+            ctx.fillText('> GENERATED '+dd,PAD,FY+26);
+            ctx.fillStyle=D;ctx.font=F(10);
             var dis='FOR REFERENCE ONLY';
-            ctx.fillText(dis,W-PAD-ctx.measureText(dis).width,FY+22);
+            ctx.fillText(dis,W-PAD-ctx.measureText(dis).width,FY+26);
         }
 
+        // load QR then download
         var qi=new Image();qi.crossOrigin='anonymous';
         qi.onload=function(){
-            var qx=PAD+Math.floor((C1W-QS)/2),qy=QY+26;
+            var qx=PAD+Math.floor((C1W-QS)/2),qy=QY+44;
             ctx.drawImage(qi,qx,qy,QS,QS);
-            var scY=qy+QS+8;
-            if(scY+14<QY+QH){ctx.fillStyle=L;ctx.font=F(8);var st='OPEN IN PLATFORM';ctx.fillText(st,PAD+Math.floor((C1W-ctx.measureText(st).width)/2),scY+10);}
             drawFooter();dl();
         };
         qi.onerror=function(){drawFooter();dl();};
