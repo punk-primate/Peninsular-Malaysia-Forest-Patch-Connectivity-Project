@@ -1,9 +1,5 @@
-// features.js — myforestconnect retro report cards v4
-//
-// HOW TO USE:
-//   Add ONE line before <script src="config.js"> in each map HTML file:
+//   Add one line before <script src="config.js"> in each map HTML file:
 //       <script src="features.js"></script>
-//   Remove that line to revert completely.
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function () {
@@ -105,7 +101,7 @@
         });
     }
 
-    // ── Forest name: Overpass (3 steps) → Nominatim fallback ─────────────────
+    // ── Forest name ─────────────────
     function fetchForestName(lat, lng) {
         return new Promise(function (resolve) {
             if (!lat || !lng) { resolve(null); return; }
@@ -180,7 +176,7 @@
         'Tier 5 (Isolated Fragments)',
         'Tier 6 (Isolated Micro Patches)'
     ];
-    // Full published display names — used in full on the card
+    // Full published display names
     var TIER_PUBLISHED = {
         'Tier 1 (Core Habitat)':              'TIER 1 / PRIMARY FOREST',
         'Tier 2 (Major Stepping Stones)':     'TIER 2 / ESTABLISHED FOREST',
@@ -189,7 +185,7 @@
         'Tier 5 (Isolated Fragments)':        'TIER 5 / MARGINAL FRAGMENT',
         'Tier 6 (Isolated Micro Patches)':    'TIER 6 / REMNANT PATCH'
     };
-    var TIER_CODE = ['PRI','EST','FUN','VUL','MAR','REM'];
+    var TIER_CODE = ['TIER 1','TIER 2','TIER 3','TIER 4','TIER 5','TIER 6'];
     var TIER_SEG  = ['#c8f090','#a0d060','#70a030','#486820','#284010','#142008'];
 
     function displayName(t) {
@@ -399,7 +395,7 @@
         ctx.strokeRect(PAD,QR_Y,COL1_W,QR_H);
         pxC(ctx,PAD,QR_Y,COL1_W,QR_H,8,GB_BRIGHT);
         ctx.fillStyle=GB_LIGHT; ctx.font=F(9);
-        ctx.fillText('[ SCAN ME ]',PAD+12,QR_Y+18);
+        ctx.fillText('[ SCAN TO OPEN IN PLATFORM ]',PAD+12,QR_Y+18);
 
         // ── Right: metric cards — no section title ────────────────────────────
         var nv=function(v){return v!=null?parseFloat(v):null;};
