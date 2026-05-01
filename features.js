@@ -1,9 +1,6 @@
-// features.js — myforestconnect retro report cards
-//
-// HOW TO USE:
+
 //   Add one line before <script src="config.js"> in each map HTML file:
 //       <script src="features.js"></script>
-//   Remove that line to revert completely.
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function () {
@@ -148,8 +145,6 @@
     };
     var TIER_CODE = ['TIER 1','TIER 2','TIER 3','TIER 4','TIER 5','TIER 6'];
     var TIER_SEG  = ['#c8f090','#a0d060','#70a030','#486820','#284010','#142008'];
-    // Text colour per tier segment — T1,T2 dark; T3 dark (mid-green bg clashes with bright text);
-    // T4,T5,T6 bright (dark backgrounds)
     var TIER_TEXT = ['#0f380f','#0f380f','#0f380f','#9bbc0f','#9bbc0f','#9bbc0f'];
 
     function displayName(t) {
@@ -263,7 +258,7 @@
             ctx.fillText(lng.toFixed(5)+'E',GX+12+Math.floor((W-GX-PAD)/2),BY+46);
         }else{ctx.fillText('UNAVAILABLE',GX+12,BY+46);}
 
-        // spectrum bar — T3 (index 2) uses dark text to avoid clash with mid-green bg
+        // spectrum bar 
         var sW=Math.floor((W-PAD*2)/6);
         for(var si=0;si<6;si++){
             var sx=PAD+si*sW;
