@@ -194,19 +194,25 @@
         var tierInt=p.Tier||'',tierLbl=displayName(tierInt),ti=tIdx(tierInt);
         var conn=(p.connectivity||'No Data').toUpperCase();
 
-        // ── Canvas: 960x1020 at 2x ────────────────────────────────────────────
-        var W=960,H=1020,SC=2;
+        // ── Canvas: 960x900 at 2x — verified against Python preview ──────────
+        var W=960,H=900,SC=2;
         var cv=document.createElement('canvas');
         cv.width=W*SC;cv.height=H*SC;
         var ctx=cv.getContext('2d');ctx.scale(SC,SC);
 
-        // ── Layout — verified against Python preview ───────────────────────────
+        // ── Layout constants ──────────────────────────────────────────────────
         var PAD=22,C1W=230,C2X=PAD+C1W+16,C2W=W-C2X-PAD;
         var HH=100,PLY=HH+10,BY=PLY+40,SPY=BY+76,CTY=SPY+50;
-        var FY=H-58,AV=FY-CTY,SHH=210,QY=CTY+SHH+14,QH=FY-QY;
-        var QS=Math.min(QH-44,C1W-28);
-        var mCOLS=2,mGAP=12,mH=110;
-        var mW=Math.floor((C2W-mGAP)/mCOLS);
+        var FY=H-52,AV=FY-CTY;
+        // Left column: shape takes 40% of AV, QR gets the rest
+        var SHH=Math.floor(AV*0.40);
+        var QY=CTY+SHH+10,QH=FY-QY,QS=Math.min(QH-50,C1W-28);
+        // Right column: mH fills AV exactly across 5 rows + 2 labels
+        var mGAP=10,LBL_H=24,LBL_GAP=8;
+        var mCOLS=2,mW=Math.floor((C2W-mGAP)/mCOLS);
+        var mH=Math.floor((AV - 104) / 5);  // 104 = 4*mGAP + 2*LBL_H + 2*LBL_GAP
+        var STRUCT_Y=CTY;
+        var ECO_Y=STRUCT_Y+LBL_H+LBL_GAP+3*(mH+mGAP);
 
         // background + grid
         ctx.fillStyle=D;ctx.fillRect(0,0,W,H);
@@ -233,7 +239,7 @@
         while(ctx.measureText(pn).width>W-PAD*2-24&&pn.length>10)pn=pn.slice(0,-2)+'...]';
         ctx.fillText(pn,PAD+12,PLY+22);
 
-        // tier badge — no redundant label
+        // tier badge
         ctx.fillStyle=M;ctx.fillRect(PAD,BY,330,58);
         ctx.strokeStyle=B;ctx.lineWidth=2;ctx.strokeRect(PAD,BY,330,58);
         var tfs=13;ctx.font=F(tfs);
@@ -256,14 +262,14 @@
         if(lat&&lng){ctx.fillText(lat.toFixed(5)+'N',GX+12,BY+42);ctx.fillText(lng.toFixed(5)+'E',GX+12+Math.floor((W-GX-PAD)/2),BY+42);}
         else{ctx.fillText('UNAVAILABLE',GX+12,BY+42);}
 
-        // spectrum bar — T3 uses dark text
+        // spectrum bar
         var sW=Math.floor((W-PAD*2)/6);
         for(var si=0;si<6;si++){
             var sx=PAD+si*sW;
             ctx.fillStyle=TIER_SEG[si];ctx.fillRect(sx,SPY,sW,26);
             if(si===ti){ctx.strokeStyle=B;ctx.lineWidth=3;ctx.strokeRect(sx+1,SPY+1,sW-2,24);}
             ctx.fillStyle=TIER_TEXT[si];ctx.font=F(9);
-            var tc=TIER_CODE[si];ctx.fillText(tc,sx+sW/2-ctx.measureText(tc).width/2,SPY+17);
+            var tc=TIER_CODE[si];ctx.fillText(tc,sx+sW/2-ctx.measureText(tc).width/2,SPY+16);
         }
         if(ti>=0){
             var px=PAD+ti*sW+sW/2;
@@ -274,38 +280,37 @@
         ctx.fillStyle=D;ctx.fillRect(PAD,CTY,C1W,SHH);
         ctx.strokeStyle=L;ctx.lineWidth=2;ctx.strokeRect(PAD,CTY,C1W,SHH);
         pxC(ctx,PAD,CTY,C1W,SHH,9,B);
-        ctx.fillStyle=L;ctx.font=F(10);ctx.fillText('[ SHAPE ]',PAD+14,CTY+20);
-        if(geometry){drawShape(ctx,geometry,PAD+10,CTY+32,C1W-20,SHH-44,M,B);}
+        ctx.fillStyle=L;ctx.font=F(10);ctx.fillText('[ SHAPE ]',PAD+14,CTY+18);
+        if(geometry){drawShape(ctx,geometry,PAD+10,CTY+30,C1W-20,SHH-42,M,B);}
         else{ctx.fillStyle=M;ctx.font=F(10);ctx.fillText('N/A',PAD+80,CTY+SHH/2);}
 
         // QR panel
         ctx.fillStyle=D;ctx.fillRect(PAD,QY,C1W,QH);
         ctx.strokeStyle=L;ctx.lineWidth=2;ctx.strokeRect(PAD,QY,C1W,QH);
         pxC(ctx,PAD,QY,C1W,QH,9,B);
-        ctx.fillStyle=L;ctx.font=F(10);ctx.fillText('[ SCAN TO VIEW',PAD+14,QY+20);
-        ctx.fillText('  ON PLATFORM ]',PAD+14,QY+38);
+        ctx.fillStyle=L;ctx.font=F(10);ctx.fillText('[ SCAN TO VIEW',PAD+14,QY+18);
+        ctx.fillText('  ON PLATFORM ]',PAD+14,QY+34);
 
-        // ── Section label helper ──────────────────────────────────────────────
-        function sectionLabel(label, y) {
-            ctx.fillStyle=L;ctx.font=F(9);
-            ctx.fillText(label,C2X,y);
+        // section label helper
+        function secLabel(lbl,y){
+            ctx.fillStyle=L;ctx.font=F(9);ctx.fillText(lbl,C2X,y);
             ctx.strokeStyle=L;ctx.lineWidth=1;
             ctx.beginPath();ctx.moveTo(C2X,y+14);ctx.lineTo(W-PAD,y+14);ctx.stroke();
         }
 
-        // ── Metric card helper ────────────────────────────────────────────────
-        function metricCard(mx,my,lbl,val,unit){
+        // metric card helper
+        function metCard(mx,my,lbl,val,unit){
             ctx.fillStyle=D;ctx.fillRect(mx,my,mW,mH);
             ctx.strokeStyle=L;ctx.lineWidth=1;ctx.strokeRect(mx,my,mW,mH);
             pxC(ctx,mx,my,mW,mH,7,M);
-            ctx.fillStyle=L;ctx.font=F(11);ctx.fillText(lbl,mx+10,my+20);
+            ctx.fillStyle=L;ctx.font=F(11);ctx.fillText(lbl,mx+10,my+18);
             var vfs=18;ctx.font=F(vfs);
-            while(ctx.measureText(val).width>mW-24&&vfs>10){vfs--;ctx.font=F(vfs);}
+            while(ctx.measureText(val).width>mW-22&&vfs>10){vfs--;ctx.font=F(vfs);}
             ctx.fillStyle=B;ctx.fillText(val,mx+10,my+Math.floor(mH/2)+8);
             if(unit){ctx.fillStyle=WH;ctx.font=F(12);ctx.fillText(unit,mx+10,my+mH-14);}
         }
 
-        // ── Structural Metrics ────────────────────────────────────────────────
+        // structural metrics
         var nv=function(v){return v!=null?parseFloat(v):null;};
         var structMets=[
             {l:'TOTAL AREA', v:nv(p.area)     !=null?nv(p.area).toFixed(2)    :'--',u:'HA'},
@@ -315,44 +320,41 @@
             {l:'PARA RATIO', v:nv(p.para)     !=null?nv(p.para).toFixed(5)    :'--',u:''},
             {l:'MEAN FLOW',  v:nv(p.mean_flow)!=null?nv(p.mean_flow).toFixed(2):'--',u:''}
         ];
-
-        sectionLabel('STRUCTURAL METRICS', CTY);
+        secLabel('STRUCTURAL METRICS', STRUCT_Y);
         structMets.forEach(function(m,i){
             var col=i%mCOLS,row=Math.floor(i/mCOLS);
-            metricCard(C2X+col*(mW+mGAP), CTY+20+row*(mH+mGAP), m.l, m.v, m.u);
+            metCard(C2X+col*(mW+mGAP), STRUCT_Y+LBL_H+LBL_GAP+row*(mH+mGAP), m.l, m.v, m.u);
         });
 
-        // ── Ecological Characteristics ────────────────────────────────────────
-        var ecoStartY = CTY+20+3*(mH+mGAP)+mGAP;
+        // ecological characteristics
         var ecoMets=[
             {l:'CANOPY HEIGHT', v:nv(p.canopy_height_m)!=null?nv(p.canopy_height_m).toFixed(1):'--', u:'M'},
             {l:'ELEVATION',     v:nv(p.elevation_m)    !=null?nv(p.elevation_m).toFixed(1)    :'--', u:'M'},
             {l:'SLOPE',         v:nv(p.slope_deg)      !=null?nv(p.slope_deg).toFixed(2)      :'--', u:'\u00b0'},
             {l:'BIOMASS',       v:nv(p.biomass_mgha)   !=null?nv(p.biomass_mgha).toFixed(1)   :'--', u:'MG/HA'}
         ];
-
-        sectionLabel('ECOLOGICAL CHARACTERISTICS', ecoStartY);
+        secLabel('ECOLOGICAL CHARACTERISTICS', ECO_Y);
         ecoMets.forEach(function(m,i){
             var col=i%mCOLS,row=Math.floor(i/mCOLS);
-            metricCard(C2X+col*(mW+mGAP), ecoStartY+20+row*(mH+mGAP), m.l, m.v, m.u);
+            metCard(C2X+col*(mW+mGAP), ECO_Y+LBL_H+LBL_GAP+row*(mH+mGAP), m.l, m.v, m.u);
         });
 
-        // ── Footer ────────────────────────────────────────────────────────────
+        // footer
         function drawFooter(){
             ctx.fillStyle=M;ctx.fillRect(0,FY,W,H-FY);
             ctx.fillStyle=B;ctx.fillRect(0,FY,W,3);
             ctx.fillStyle=B;ctx.font=F(10);
             var dd=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}).toUpperCase();
-            ctx.fillText('> GENERATED '+dd,PAD,FY+26);
+            ctx.fillText('> GENERATED '+dd,PAD,FY+22);
             ctx.fillStyle=D;ctx.font=F(10);
             var dis='FOR REFERENCE ONLY';
-            ctx.fillText(dis,W-PAD-ctx.measureText(dis).width,FY+26);
+            ctx.fillText(dis,W-PAD-ctx.measureText(dis).width,FY+22);
         }
 
-        // ── Load QR then download ─────────────────────────────────────────────
+        // load QR then download
         var qi=new Image();qi.crossOrigin='anonymous';
         qi.onload=function(){
-            var qx=PAD+Math.floor((C1W-QS)/2),qy=QY+52;
+            var qx=PAD+Math.floor((C1W-QS)/2),qy=QY+50;
             ctx.drawImage(qi,qx,qy,QS,QS);
             var scY=qy+QS+8;
             if(scY+12<QY+QH){ctx.fillStyle=L;ctx.font=F(8);var st='OPEN IN PLATFORM';ctx.fillText(st,PAD+Math.floor((C1W-ctx.measureText(st).width)/2),scY+10);}
