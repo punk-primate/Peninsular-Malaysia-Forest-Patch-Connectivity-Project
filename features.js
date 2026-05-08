@@ -1,9 +1,6 @@
-// features.js — myforestconnect retro report cards
-//
-// HOW TO USE:
 //   Add one line before <script src="config.js"> in each map HTML file:
 //       <script src="features.js"></script>
-//   Remove that line to revert completely.
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function () {
@@ -376,10 +373,7 @@
 })();
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ROAD DRAWING TOOL — lazy initialised
-// Scripts and draw control only load when user clicks the FAB.
-// Draw control is removed when user closes/clears, so it never interferes
-// with normal map interaction.
+// ROAD DRAWING TOOL 
 // ═══════════════════════════════════════════════════════════════════════════
 (function () {
     'use strict';
@@ -390,10 +384,39 @@
 
     var scriptsLoaded = false;
     var drawInstance  = null;
-    var drawActive    = false;
     var mapRef        = null;
 
-    // ── Inject FAB button alongside corridor toggle ───────────────────────────
+    // ── Union-Find for connectivity component analysis ─────────────────────
+    function makeUF(ids) {
+        var parent = {}, rank = {};
+        ids.forEach(function (id) { parent[id] = id; rank[id] = 0; });
+        function find(x) {
+            if (parent[x] === undefined) { parent[x] = x; rank[x] = 0; }
+            if (parent[x] !== x) parent[x] = find(parent[x]);
+            return parent[x];
+        }
+        function union(a, b) {
+            var ra = find(a), rb = find(b);
+            if (ra === rb) return;
+            if (rank[ra] < rank[rb]) { parent[ra] = rb; }
+            else if (rank[ra] > rank[rb]) { parent[rb] = ra; }
+            else { parent[rb] = ra; rank[ra]++; }
+        }
+        function componentCount() {
+            var roots = new Set();
+            Object.keys(parent).forEach(function (id) { roots.add(find(id)); });
+            return roots.size;
+        }
+        return { find: find, union: union, componentCount: componentCount };
+    }
+
+    function countComponents(patchIds, edges) {
+        var uf = makeUF(patchIds);
+        edges.forEach(function (e) { uf.union(String(e[0]), String(e[1])); });
+        return uf.componentCount();
+    }
+
+    // ── Inject FAB ────────────────────────────────────────────────────────
     function injectFab() {
         var interval = setInterval(function () {
             var corridorBtn = document.getElementById('corridor-toggle-fab');
@@ -402,45 +425,28 @@
             clearInterval(interval);
 
             var btn = document.createElement('button');
-            btn.id        = 'road-draw-fab';
+            btn.id = 'road-draw-fab';
             btn.innerHTML = '&#9998; Draw road';
-            btn.title     = 'Draw a line to assess potential development impact';
-            // Copy corridor button's computed style properties manually
+            btn.title = 'Draw a line to assess potential development impact on forest connectivity';
             btn.style.cssText =
-                'display:block;margin-top:6px;padding:8px 14px;' +
-                'background:#8B1A1A;color:white;border:none;border-radius:4px;' +
-                'font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;' +
-                'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
+                'display:block;margin-top:6px;padding:8px 14px;background:#8B1A1A;color:white;' +
+                'border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;' +
+                'white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
                 'transition:background 0.15s;';
-            btn.addEventListener('mouseover', function () {
-                if (!drawActive) btn.style.background = '#6b1414';
-            });
-            btn.addEventListener('mouseout', function () {
-                if (!drawActive) btn.style.background = '#8B1A1A';
-            });
             btn.addEventListener('click', onFabClick);
             corridorBtn.parentNode.insertBefore(btn, corridorBtn.nextSibling);
         }, 400);
     }
 
-    // ── Get map reference ─────────────────────────────────────────────────────
     function getMap() {
-        if (mapRef) return mapRef;
-        if (window._mapInstance) { mapRef = window._mapInstance; return mapRef; }
-        return null;
+        if (!mapRef && window._mapInstance) mapRef = window._mapInstance;
+        return mapRef;
     }
 
-    // ── FAB click handler ─────────────────────────────────────────────────────
+    // ── FAB click ─────────────────────────────────────────────────────────
     function onFabClick() {
+        var map = getMap(); if (!map) return;
         var btn = document.getElementById('road-draw-fab');
-        var map = getMap();
-        if (!map) return;
-
-        if (drawActive) {
-            // Cancel or clear
-            cancelDraw(btn);
-            return;
-        }
 
         if (!scriptsLoaded) {
             btn.innerHTML = '&#9203; Loading&#8230;';
@@ -448,57 +454,49 @@
             loadDeps(function () {
                 scriptsLoaded = true;
                 btn.disabled  = false;
-                startDraw(btn, map);
+                startDraw(map);
             });
         } else {
-            startDraw(btn, map);
+            startDraw(map);
         }
     }
 
-    // ── Load CSS + JS dependencies ────────────────────────────────────────────
     function loadDeps(cb) {
-        // CSS
         if (!document.querySelector('link[href="' + DRAW_CSS + '"]')) {
-            var lnk  = document.createElement('link');
-            lnk.rel  = 'stylesheet';
-            lnk.href = DRAW_CSS;
+            var lnk = document.createElement('link');
+            lnk.rel = 'stylesheet'; lnk.href = DRAW_CSS;
             document.head.appendChild(lnk);
         }
-        // MapboxDraw JS
-        loadScript(DRAW_JS, function () {
-            // Turf JS
-            loadScript(TURF_JS, cb);
-        });
+        loadScript(DRAW_JS, function () { loadScript(TURF_JS, cb); });
     }
-
     function loadScript(src, cb) {
-        var s    = document.createElement('script');
-        s.src    = src;
+        var s = document.createElement('script');
+        s.src = src;
         s.onload = cb;
         s.onerror = function () { console.warn('Road tool: failed to load', src); cb(); };
         document.head.appendChild(s);
     }
 
-    // ── Start drawing ─────────────────────────────────────────────────────────
-    function startDraw(btn, map) {
-        if (!window.MapboxDraw) {
-            console.warn('Road tool: MapboxDraw not available');
-            return;
+    // ── Start / restart draw ──────────────────────────────────────────────
+    function startDraw(map) {
+        // Always cleanly remove any existing instance first
+        if (drawInstance) {
+            try { map.removeControl(drawInstance); } catch(e) {}
+            drawInstance = null;
         }
 
-        // Create fresh draw instance and add to map
         drawInstance = new MapboxDraw({
             displayControlsDefault: false,
             controls: {},
             styles: [
                 {
-                    id: 'road-draw-line',
+                    id: 'road-line',
                     type: 'line',
                     filter: ['all', ['==', '$type', 'LineString'], ['!=', 'mode', 'static']],
                     paint: { 'line-color': '#ff4444', 'line-width': 3, 'line-dasharray': [4, 2] }
                 },
                 {
-                    id: 'road-draw-vertex',
+                    id: 'road-vertex',
                     type: 'circle',
                     filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'vertex']],
                     paint: { 'circle-radius': 5, 'circle-color': '#ff4444', 'circle-stroke-width': 1, 'circle-stroke-color': '#fff' }
@@ -508,79 +506,68 @@
 
         map.addControl(drawInstance);
         drawInstance.changeMode('draw_line_string');
-        drawActive = true;
 
-        btn.innerHTML        = '&#10006; Cancel drawing';
-        btn.style.background = '#555';
+        var btn = document.getElementById('road-draw-fab');
+        if (btn) { btn.innerHTML = '&#10006; Cancel'; btn.style.background = '#555'; }
 
-        // Listen for line completion
-        map.once('draw.create', function (e) {
-            drawActive = false;
-            btn.innerHTML        = '&#9998; Redraw';
-            btn.style.background = '#8B1A1A';
+        // Bind draw.create — use named handler so we can remove/re-add cleanly
+        function onDrawCreate(e) {
+            map.off('draw.create', onDrawCreate);
+            if (btn) { btn.innerHTML = '&#9998; Redraw'; btn.style.background = '#8B1A1A'; }
             analyseRoad(e.features[0], map);
-        });
+        }
+        map.off('draw.create', onDrawCreate); // safety
+        map.on('draw.create', onDrawCreate);
 
-        showDrawingHint();
+        showHint();
+        openSidebar();
     }
 
-    // ── Cancel / clear draw ───────────────────────────────────────────────────
-    function cancelDraw(btn) {
+    function removeDraw() {
         var map = getMap();
         if (drawInstance && map) {
             try { map.removeControl(drawInstance); } catch(e) {}
             drawInstance = null;
         }
-        drawActive           = false;
-        btn.innerHTML        = '&#9998; Draw road';
-        btn.style.background = '#8B1A1A';
-        clearSidebar();
+        var btn = document.getElementById('road-draw-fab');
+        if (btn) { btn.innerHTML = '&#9998; Draw road'; btn.style.background = '#8B1A1A'; }
     }
 
-    function clearSidebar() {
-        var el = document.getElementById('patch-info-content');
-        if (el) el.innerHTML = 'Select a patch on the map to see details.';
-    }
-
-    // ── Hint while drawing ────────────────────────────────────────────────────
-    function showDrawingHint() {
-        var el = document.getElementById('patch-info-content');
-        if (!el) return;
+    function showHint() {
+        var el = document.getElementById('patch-info-content'); if (!el) return;
         el.innerHTML =
             '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' +
-            '<div style="background:#8B1A1A;color:#fff;padding:6px 10px;border-radius:3px;' +
-            'font-weight:700;margin-bottom:10px;font-size:0.82em">&#9998; DEVELOPMENT LINE TOOL</div>' +
-            '<p style="font-size:0.87em;line-height:1.5;margin:0 0 8px">' +
-            'Click on the map to draw a line simulating a road or development corridor. ' +
-            'Double-click to finish and see the analysis.</p>' +
-            '<p style="font-size:0.82em;color:#888;font-style:italic;margin:0">' +
-            'Results will appear here once the line is complete.</p></div>';
-        openSidebar();
+            '<div style="background:#8B1A1A;color:#fff;padding:6px 10px;border-radius:3px;font-weight:700;margin-bottom:10px;font-size:0.82em">&#9998; DEVELOPMENT LINE TOOL</div>' +
+            '<p style="font-size:0.87em;line-height:1.5;margin:0 0 8px">Click on the map to draw a line simulating a road or development. Double-click to finish.</p>' +
+            '<p style="font-size:0.82em;color:#888;font-style:italic;margin:0">Analysis will appear here once the line is complete.</p></div>';
     }
 
     function openSidebar() {
-        var sidebar = document.getElementById('sidebar');
-        if (sidebar && sidebar.classList.contains('collapsed'))
-            document.getElementById('toggle-sidebar-btn').click();
+        var sb = document.getElementById('sidebar');
+        if (sb && sb.classList.contains('collapsed')) document.getElementById('toggle-sidebar-btn').click();
         var panel = document.getElementById('info-panel-section');
         if (panel) setTimeout(function () { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80);
     }
 
-    // ── Analysis ──────────────────────────────────────────────────────────────
-    function analyseRoad(lineFeature, map) {
+    function resetSidebar() {
         var el = document.getElementById('patch-info-content');
-        if (!el) return;
-        el.innerHTML = '<div style="padding:6px;font-size:0.87em">Analysing&#8230;</div>';
+        if (el) el.innerHTML = 'Select a patch on the map to see details.';
+    }
+
+    // ── Main analysis ─────────────────────────────────────────────────────
+    function analyseRoad(lineFeature, map) {
+        var el = document.getElementById('patch-info-content'); if (!el) return;
+        el.innerHTML = '<div style="padding:8px;font-size:0.87em">Analysing&#8230;</div>';
 
         if (!window.turf) {
-            el.innerHTML = '<div style="padding:6px;color:red;font-size:0.87em">Analysis library failed to load. Please try again.</div>';
+            el.innerHTML = '<div style="padding:8px;color:red;font-size:0.87em">Analysis library failed to load.</div>';
             return;
         }
 
-        var lineGeoJSON = { type: 'Feature', geometry: lineFeature.geometry };
+        var lineGJ = { type: 'Feature', geometry: lineFeature.geometry };
 
-        // Query visible patches
-        var patchFeatures = [];
+        // ── Query visible patches ─────────────────────────────────────────
+        var patchFeats = [];
         try {
             var style = map.getStyle();
             var pl = (style.layers || []).find(function (l) {
@@ -591,58 +578,87 @@
                     l.id.toLowerCase().includes('kuantan')
                 );
             });
-            if (pl) patchFeatures = map.queryRenderedFeatures({ layers: [pl.id] });
+            if (pl) patchFeats = map.queryRenderedFeatures({ layers: [pl.id] });
         } catch(e) {}
 
-        // Query visible corridors
-        var corrFeatures = [];
-        try { corrFeatures = map.queryRenderedFeatures({ layers: ['connector-solid'] }); } catch(e) {}
+        // ── Query visible corridors ───────────────────────────────────────
+        var corrFeats = [];
+        try { corrFeats = map.queryRenderedFeatures({ layers: ['connector-solid'] }); } catch(e) {}
 
-        // Patches directly intersected
-        var intersectedPatches = [];
-        patchFeatures.forEach(function (f) {
-            try {
-                if (turf.booleanIntersects(lineGeoJSON, f)) intersectedPatches.push(f.properties);
-            } catch(e) {}
+        // ── Patches intersected ───────────────────────────────────────────
+        var hitPatches = [];
+        patchFeats.forEach(function (f) {
+            try { if (turf.booleanIntersects(lineGJ, f)) hitPatches.push(f.properties); } catch(e) {}
         });
 
-        // Corridors severed
-        var severedCorridors = [];
-        corrFeatures.forEach(function (f) {
+        // ── Corridors severed ─────────────────────────────────────────────
+        var severed = [];
+        corrFeats.forEach(function (f) {
             try {
-                var pts = turf.lineIntersect(lineGeoJSON, { type: 'Feature', geometry: f.geometry });
-                if (pts.features.length > 0) severedCorridors.push(f.properties);
+                var pts = turf.lineIntersect(lineGJ, { type: 'Feature', geometry: f.geometry });
+                if (pts.features.length > 0) severed.push(f.properties);
             } catch(e) {}
         });
+        var severedSet = {};
+        severed.forEach(function (p) { severedSet[p.id_from + '_' + p.id_to] = true; });
 
-        // Patches losing all corridor connections
-        var patchCorridorMap = {};
-        corrFeatures.forEach(function (f) {
+        // ── Carbon stock at risk ──────────────────────────────────────────
+        var totalCarbonMg = 0;
+        hitPatches.forEach(function (p) {
+            var bm   = parseFloat(p.biomass_mgha);
+            var area = parseFloat(p.area);
+            if (!isNaN(bm) && !isNaN(area)) totalCarbonMg += bm * area;
+        });
+        // biomass_mgha is Mg C / ha, area is in ha → product is Mg C
+        var carbonTonnes = Math.round(totalCarbonMg);
+
+        // ── Network bottleneck detection via union-find ───────────────────
+        // Build patch ID list and edge list from all visible corridors
+        var allPatchIds = new Set();
+        patchFeats.forEach(function (f) {
+            if (f.properties && f.properties.id != null)
+                allPatchIds.add(String(f.properties.id));
+        });
+        var allEdges = [];
+        corrFeats.forEach(function (f) {
+            var p = f.properties; if (!p) return;
+            allEdges.push([String(p.id_from), String(p.id_to)]);
+        });
+        var remainingEdges = allEdges.filter(function (e) {
+            return !severedSet[e[0] + '_' + e[1]] && !severedSet[e[1] + '_' + e[0]];
+        });
+
+        var idArr = Array.from(allPatchIds);
+        var componentsBefore = countComponents(idArr, allEdges);
+        var componentsAfter  = countComponents(idArr, remainingEdges);
+        var newComponents    = componentsAfter - componentsBefore;
+        var isBottleneck     = newComponents > 0;
+
+        // ── Patches losing all connections ────────────────────────────────
+        var patchCorrMap = {};
+        corrFeats.forEach(function (f) {
             var p = f.properties; if (!p) return;
             var key = p.id_from + '_' + p.id_to;
             [p.id_from, p.id_to].forEach(function (pid) {
                 if (pid == null) return;
-                if (!patchCorridorMap[pid]) patchCorridorMap[pid] = [];
-                patchCorridorMap[pid].push(key);
+                pid = String(pid);
+                if (!patchCorrMap[pid]) patchCorrMap[pid] = [];
+                patchCorrMap[pid].push(key);
             });
         });
-        var severedKeys = {};
-        severedCorridors.forEach(function (p) { severedKeys[p.id_from + '_' + p.id_to] = true; });
-
-        var isolatedPatches = [];
-        Object.keys(patchCorridorMap).forEach(function (pid) {
-            var all = patchCorridorMap[pid];
-            var remaining = all.filter(function (k) { return !severedKeys[k]; });
+        var isolated = [];
+        Object.keys(patchCorrMap).forEach(function (pid) {
+            var remaining = patchCorrMap[pid].filter(function (k) { return !severedSet[k]; });
             if (remaining.length === 0) {
-                var pf = patchFeatures.find(function (f) {
-                    return String(f.properties && f.properties.id) === String(pid);
+                var pf = patchFeats.find(function (f) {
+                    return String(f.properties && f.properties.id) === pid;
                 });
-                if (pf) isolatedPatches.push(pf.properties);
+                if (pf) isolated.push(pf.properties);
             }
         });
 
-        // Helpers
-        var TIER_DISPLAY_MAP = {
+        // ── Tier / connectivity helpers ───────────────────────────────────
+        var TIER_MAP = {
             'Tier 1 (Core Habitat)':              'Primary forest',
             'Tier 2 (Major Stepping Stones)':     'Established forest',
             'Tier 3 (Connected Fragments)':       'Functional fragment',
@@ -650,113 +666,177 @@
             'Tier 5 (Isolated Fragments)':        'Marginal fragment',
             'Tier 6 (Isolated Micro Patches)':    'Remnant patch'
         };
-        function tierLabel(t) {
-            return (typeof TIER_DISPLAY_NAMES !== 'undefined' && TIER_DISPLAY_NAMES[t]) || TIER_DISPLAY_MAP[t] || t || 'Unknown';
+        function tLabel(t) {
+            return (typeof TIER_DISPLAY_NAMES !== 'undefined' && TIER_DISPLAY_NAMES[t]) || TIER_MAP[t] || t || 'Unknown';
         }
-        function countByTier(arr) {
+        function byTier(arr) {
             var c = {};
-            arr.forEach(function (p) { var t = p.Tier || p.tier || 'Unknown'; c[t] = (c[t] || 0) + 1; });
+            arr.forEach(function (p) { var t = p.Tier||p.tier||'Unknown'; c[t]=(c[t]||0)+1; });
             return c;
         }
-        function countByConn(arr) {
-            var c = { High: 0, Moderate: 0, Low: 0 };
-            arr.forEach(function (p) { if (c[p.connectivity] !== undefined) c[p.connectivity]++; });
+        function byConn(arr) {
+            var c = { High:0, Moderate:0, Low:0 };
+            arr.forEach(function (p) { if (c[p.connectivity]!==undefined) c[p.connectivity]++; });
             return c;
         }
+        var hitTiers  = byTier(hitPatches);
+        var isoTiers  = byTier(isolated);
+        var corrConns = byConn(severed);
+        var CONN_C = { High:'#00ffff', Moderate:'#ffff00', Low:'#ff3300' };
+        var CONN_T = { High:'#000',    Moderate:'#000',     Low:'#fff'   };
 
-        var patchTiers = countByTier(intersectedPatches);
-        var isolTiers  = countByTier(isolatedPatches);
-        var corrCounts = countByConn(severedCorridors);
-
-        var CONN_C = { High: '#00ffff', Moderate: '#ffff00', Low: '#ff3300' };
-        var CONN_T = { High: '#000',    Moderate: '#000',     Low: '#fff'   };
         function badge(txt, bg, fg) {
-            return '<span style="display:inline-block;padding:1px 8px;border-radius:3px;background:' +
-                   bg + ';color:' + fg + ';font-size:0.82em;font-weight:700;margin-right:4px">' + txt + '</span>';
+            return '<span style="display:inline-block;padding:2px 8px;border-radius:3px;background:' +
+                   bg+';color:'+fg+';font-size:0.82em;font-weight:700;margin-right:4px">'+txt+'</span>';
+        }
+        function sectionHdr(txt) {
+            return '<div style="font-weight:700;font-size:0.85em;margin:12px 0 4px;padding-bottom:3px;' +
+                   'border-bottom:1px solid #ddd">'+txt+'</div>';
         }
 
-        // ── Build HTML ────────────────────────────────────────────────────────
+        // ── Narrative ─────────────────────────────────────────────────────
+        function buildNarrative() {
+            var parts = [];
+
+            if (severed.length === 0 && hitPatches.length === 0) {
+                return '<p style="color:#888;font-style:italic">No patches or corridors were intersected by this line at the current zoom level.</p>';
+            }
+
+            // Carbon
+            if (carbonTonnes > 0) {
+                var severity = carbonTonnes > 10000 ? 'very high' : carbonTonnes > 1000 ? 'significant' : 'moderate';
+                parts.push('The line passes through forest patches containing an estimated <strong>' +
+                    carbonTonnes.toLocaleString() + ' Mg</strong> of aboveground carbon — a ' + severity +
+                    ' carbon stock that would be directly affected by development.');
+            }
+
+            // Bottleneck
+            if (isBottleneck) {
+                parts.push('&#9888; <strong>Network bottleneck detected.</strong> Removing the severed corridors would split the visible forest network into <strong>' +
+                    componentsAfter + ' disconnected components</strong> (currently ' + componentsBefore +
+                    '). This means entire groups of forest patches would lose all connectivity to one another — a structural fragmentation that cannot be offset by improving other corridors.');
+            } else if (severed.length > 0) {
+                parts.push('The severed corridors represent a reduction in network redundancy, but the visible forest patches would remain connected through alternative pathways. Connectivity would be weakened but not structurally broken at this scale.');
+            }
+
+            // High corridor severance
+            if (corrConns.High > 0) {
+                parts.push(corrConns.High + ' high-quality corridor' + (corrConns.High > 1 ? 's' : '') +
+                    ' would be severed. These represent the most functionally viable movement pathways in the landscape and are the hardest to replace.');
+            }
+
+            // Tier 1/2 patches
+            var highTierHit = (hitTiers['Tier 1 (Core Habitat)'] || 0) + (hitTiers['Tier 2 (Major Stepping Stones)'] || 0);
+            if (highTierHit > 0) {
+                parts.push('The line directly intersects <strong>' + highTierHit + '</strong> Primary or Established forest patch' +
+                    (highTierHit > 1 ? 'es' : '') + ' — structurally important habitat that, once fragmented, is unlikely to recover its ecological function within a human timescale.');
+            }
+
+            // Isolation
+            var highTierIso = (isoTiers['Tier 1 (Core Habitat)'] || 0) + (isoTiers['Tier 2 (Major Stepping Stones)'] || 0);
+            if (highTierIso > 0) {
+                parts.push('<strong>' + highTierIso + '</strong> Primary or Established forest patch' +
+                    (highTierIso > 1 ? 'es' : '') + ' would lose all visible corridor connections, becoming functionally isolated within the landscape.');
+            }
+
+            if (parts.length === 0) return '';
+            return parts.map(function (p) {
+                return '<p style="margin:0 0 8px;line-height:1.6">' + p + '</p>';
+            }).join('');
+        }
+
+        // ── Build HTML ────────────────────────────────────────────────────
         var s = '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;font-size:0.87em">';
 
-        s += '<div style="background:#8B1A1A;color:#fff;padding:6px 10px;border-radius:3px;' +
-             'font-weight:700;margin-bottom:10px;font-size:0.82em">&#9998; DEVELOPMENT LINE ANALYSIS</div>';
+        s += '<div style="background:#8B1A1A;color:#fff;padding:6px 10px;border-radius:3px;font-weight:700;margin-bottom:10px;font-size:0.82em">&#9998; DEVELOPMENT LINE ANALYSIS</div>';
 
         // Disclaimer
-        s += '<div style="background:#fff8e1;border:1px solid #f0c040;border-radius:4px;' +
-             'padding:8px 10px;margin-bottom:12px;font-size:0.81em;line-height:1.5;color:#5a4000">' +
-             '<strong>&#9888; Indicative only.</strong> Results are based on patches and corridors ' +
-             'visible in the current map view. This is not a formal environmental impact assessment ' +
-             'and must not be used for planning or regulatory purposes.</div>';
+        s += '<div style="background:#fff8e1;border:1px solid #f0c040;border-radius:4px;padding:7px 10px;' +
+             'margin-bottom:12px;font-size:0.80em;line-height:1.5;color:#5a4000">' +
+             '<strong>&#9888; Indicative only.</strong> Based on patches and corridors visible in the current viewport. ' +
+             'Not a formal environmental impact assessment.</div>';
+
+        // Narrative
+        var narrative = buildNarrative();
+        if (narrative) {
+            s += '<div style="margin-bottom:12px;color:inherit">' + narrative + '</div>';
+        }
+
+        // Carbon figure
+        if (carbonTonnes > 0) {
+            s += sectionHdr('Carbon stock at risk');
+            s += '<div style="font-size:1.1em;font-weight:700;color:#2a6b0a;margin-bottom:4px">' +
+                 carbonTonnes.toLocaleString() + ' Mg C</div>';
+            s += '<div style="font-size:0.80em;color:#666;margin-bottom:4px">Aboveground carbon across ' +
+                 hitPatches.length + ' directly intersected patch' + (hitPatches.length !== 1 ? 'es' : '') + '</div>';
+        }
+
+        // Bottleneck result
+        s += sectionHdr('Network integrity');
+        if (isBottleneck) {
+            s += '<div style="background:#fdecea;border:1px solid #f5c6cb;border-radius:4px;padding:6px 10px;' +
+                 'font-size:0.82em;line-height:1.5;color:#721c24;margin-bottom:4px">' +
+                 '<strong>Bottleneck detected:</strong> network splits into ' + componentsAfter +
+                 ' components (was ' + componentsBefore + ')</div>';
+        } else {
+            s += '<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:4px;padding:6px 10px;' +
+                 'font-size:0.82em;line-height:1.5;color:#1b5e20;margin-bottom:4px">' +
+                 'No structural split — patches remain connected through alternative pathways</div>';
+        }
 
         // Corridors severed
-        s += '<div style="font-weight:700;margin-bottom:4px">Potential corridors severed: <strong>' +
-             severedCorridors.length + '</strong></div>';
-        if (severedCorridors.length > 0) {
-            s += '<div style="margin-bottom:12px">';
+        s += sectionHdr('Corridors severed: ' + severed.length);
+        if (severed.length > 0) {
             ['High','Moderate','Low'].forEach(function (c) {
-                if (corrCounts[c] > 0) s += badge(corrCounts[c] + '\u00a0' + c, CONN_C[c], CONN_T[c]);
+                if (corrConns[c] > 0) s += badge(corrConns[c] + '\u00a0' + c, CONN_C[c], CONN_T[c]);
             });
-            s += '</div>';
-        } else {
-            s += '<p style="color:#888;font-style:italic;margin:0 0 12px">No visible corridors intersected.</p>';
+            s += '<br>';
         }
 
-        // Patches directly intersected
-        s += '<div style="font-weight:700;margin-bottom:4px">Forest patches directly intersected: <strong>' +
-             intersectedPatches.length + '</strong></div>';
-        if (intersectedPatches.length > 0) {
-            s += '<ul style="margin:0 0 12px;padding-left:16px;line-height:1.8">';
-            Object.keys(patchTiers).sort().forEach(function (t) {
-                s += '<li>' + patchTiers[t] + '\u00d7 ' + tierLabel(t) + '</li>';
+        // Patches intersected
+        if (hitPatches.length > 0) {
+            s += sectionHdr('Patches directly intersected: ' + hitPatches.length);
+            s += '<ul style="margin:2px 0 0;padding-left:16px;line-height:1.8">';
+            Object.keys(hitTiers).sort().forEach(function (t) {
+                s += '<li>' + hitTiers[t] + '\u00d7 ' + tLabel(t) + '</li>';
             });
             s += '</ul>';
-        } else {
-            s += '<p style="color:#888;font-style:italic;margin:0 0 12px">No visible patches directly intersected.</p>';
         }
 
-        // Patches losing all corridors
-        s += '<div style="font-weight:700;margin-bottom:4px">Patches losing all visible corridor connections: <strong>' +
-             isolatedPatches.length + '</strong></div>';
-        if (isolatedPatches.length > 0) {
-            s += '<ul style="margin:0 0 8px;padding-left:16px;line-height:1.8">';
-            Object.keys(isolTiers).sort().forEach(function (t) {
-                s += '<li>' + isolTiers[t] + '\u00d7 ' + tierLabel(t) + '</li>';
+        // Patches newly isolated
+        if (isolated.length > 0) {
+            s += sectionHdr('Patches losing all connections: ' + isolated.length);
+            s += '<ul style="margin:2px 0 0;padding-left:16px;line-height:1.8">';
+            Object.keys(isoTiers).sort().forEach(function (t) {
+                s += '<li>' + isoTiers[t] + '\u00d7 ' + tLabel(t) + '</li>';
             });
             s += '</ul>';
-            if (isolTiers['Tier 1 (Core Habitat)'] || isolTiers['Tier 2 (Major Stepping Stones)']) {
-                s += '<div style="background:#fdecea;border:1px solid #f5c6cb;border-radius:4px;' +
-                     'padding:6px 10px;font-size:0.82em;line-height:1.5;color:#721c24;margin-bottom:8px">' +
-                     '<strong>Note:</strong> One or more Primary or Established forest patches would lose ' +
-                     'all visible corridor connections, significantly increasing their functional isolation.</div>';
-            }
-        } else {
-            s += '<p style="color:#888;font-style:italic;margin:0 0 8px">No patches would lose all corridor connections.</p>';
         }
 
-        // Close button
-        s += '<button id="road-clear-btn" style="display:block;width:100%;margin-top:6px;padding:7px 10px;' +
-             'background:#555;color:white;border:none;border-radius:4px;font-size:12px;font-weight:600;' +
-             'cursor:pointer;font-family:inherit">&#215; Clear line &amp; close</button>';
-        s += '</div>';
+        // Buttons
+        s += '<div style="display:flex;gap:8px;margin-top:12px">';
+        s += '<button id="road-redraw-btn" style="flex:1;padding:7px 10px;background:#8B1A1A;color:white;' +
+             'border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">' +
+             '&#9998; Redraw</button>';
+        s += '<button id="road-clear-btn" style="flex:1;padding:7px 10px;background:#555;color:white;' +
+             'border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">' +
+             '&#215; Close</button>';
+        s += '</div></div>';
 
         el.innerHTML = s;
 
+        document.getElementById('road-redraw-btn').addEventListener('click', function () {
+            startDraw(map);
+        });
         document.getElementById('road-clear-btn').addEventListener('click', function () {
-            var map2 = getMap();
-            if (drawInstance && map2) {
-                try { map2.removeControl(drawInstance); } catch(e) {}
-                drawInstance = null;
-            }
-            drawActive = false;
-            var fab = document.getElementById('road-draw-fab');
-            if (fab) { fab.innerHTML = '&#9998; Draw road'; fab.style.background = '#8B1A1A'; }
-            clearSidebar();
+            removeDraw();
+            resetSidebar();
         });
 
         openSidebar();
     }
 
-    // ── Boot ─────────────────────────────────────────────────────────────────
+    // ── Boot ─────────────────────────────────────────────────────────────
     if (document.readyState !== 'loading') { injectFab(); }
     else { document.addEventListener('DOMContentLoaded', injectFab); }
 
