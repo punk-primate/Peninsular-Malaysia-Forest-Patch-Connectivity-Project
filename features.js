@@ -1,6 +1,9 @@
-
+// features.js — myforestconnect retro report cards
+//
+// HOW TO USE:
 //   Add one line before <script src="config.js"> in each map HTML file:
 //       <script src="features.js"></script>
+//   Remove that line to revert completely.
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function () {
@@ -191,18 +194,19 @@
         var tierInt=p.Tier||'',tierLbl=displayName(tierInt),ti=tIdx(tierInt);
         var conn=(p.connectivity||'No Data').toUpperCase();
 
-        // Canvas: 960x800 at 2x
-        var W=960,H=800,SC=2;
+        // ── Canvas: 960x1020 at 2x ────────────────────────────────────────────
+        var W=960,H=1020,SC=2;
         var cv=document.createElement('canvas');
         cv.width=W*SC;cv.height=H*SC;
         var ctx=cv.getContext('2d');ctx.scale(SC,SC);
 
-        // Layout
+        // ── Layout — verified against Python preview ───────────────────────────
         var PAD=22,C1W=230,C2X=PAD+C1W+16,C2W=W-C2X-PAD;
         var HH=100,PLY=HH+10,BY=PLY+40,SPY=BY+76,CTY=SPY+50;
-        var FY=H-58,AV=FY-CTY,SHH=216,QY=CTY+SHH+14,QH=FY-QY;
-        var QS=Math.min(QH-50,C1W-30),mC=2,mG=12;
-        var mW=Math.floor((C2W-mG)/mC),mH=Math.floor((AV-mG*2)/3);
+        var FY=H-58,AV=FY-CTY,SHH=210,QY=CTY+SHH+14,QH=FY-QY;
+        var QS=Math.min(QH-44,C1W-28);
+        var mCOLS=2,mGAP=12,mH=110;
+        var mW=Math.floor((C2W-mGAP)/mCOLS);
 
         // background + grid
         ctx.fillStyle=D;ctx.fillRect(0,0,W,H);
@@ -217,84 +221,93 @@
         // header
         ctx.fillStyle=M;ctx.fillRect(4,4,W-8,HH);
         ctx.fillStyle=B;ctx.fillRect(4,HH,W-8,3);
-        ctx.fillStyle=B;ctx.font=F(17);ctx.fillText('> FOREST PATCH REPORT CARD',PAD,32);
-        ctx.fillStyle=L;ctx.font=F(12);ctx.fillText('MYFORESTCONNECT.ONLINE',PAD,66);
-        if(p.id!=null){
-            ctx.fillStyle=WH;ctx.font=F(12);
-            var idT='PATCH #'+p.id;
-            ctx.fillText(idT,W-PAD-ctx.measureText(idT).width,66);
-        }
+        ctx.fillStyle=B;ctx.font=F(16);ctx.fillText('> FOREST PATCH REPORT CARD',PAD,30);
+        ctx.fillStyle=L;ctx.font=F(11);ctx.fillText('MYFORESTCONNECT.ONLINE',PAD,62);
+        if(p.id!=null){ctx.fillStyle=WH;ctx.font=F(11);var idT='PATCH #'+p.id;ctx.fillText(idT,W-PAD-ctx.measureText(idT).width,62);}
 
         // forest name strip
-        ctx.fillStyle=D;ctx.fillRect(PAD,PLY,W-PAD*2,34);
-        ctx.strokeStyle=L;ctx.lineWidth=1;ctx.strokeRect(PAD,PLY,W-PAD*2,34);
+        ctx.fillStyle=D;ctx.fillRect(PAD,PLY,W-PAD*2,32);
+        ctx.strokeStyle=L;ctx.lineWidth=1;ctx.strokeRect(PAD,PLY,W-PAD*2,32);
         var pn=forestName?'[ '+forestName+' ]':'[ LOCATION DATA UNAVAILABLE ]';
-        ctx.fillStyle=B;ctx.font=F(12);
-        while(ctx.measureText(pn).width>W-PAD*2-28&&pn.length>10)pn=pn.slice(0,-2)+'...]';
-        ctx.fillText(pn,PAD+12,PLY+24);
+        ctx.fillStyle=B;ctx.font=F(11);
+        while(ctx.measureText(pn).width>W-PAD*2-24&&pn.length>10)pn=pn.slice(0,-2)+'...]';
+        ctx.fillText(pn,PAD+12,PLY+22);
 
-        // tier badge — full published name, no redundant label
-        ctx.fillStyle=M;ctx.fillRect(PAD,BY,350,62);
-        ctx.strokeStyle=B;ctx.lineWidth=2;ctx.strokeRect(PAD,BY,350,62);
-        var tfs=14;ctx.font=F(tfs);
-        while(ctx.measureText(tierLbl).width>326&&tfs>8){tfs--;ctx.font=F(tfs);}
-        ctx.fillStyle=B;ctx.fillText(tierLbl,PAD+14,BY+40);
+        // tier badge — no redundant label
+        ctx.fillStyle=M;ctx.fillRect(PAD,BY,330,58);
+        ctx.strokeStyle=B;ctx.lineWidth=2;ctx.strokeRect(PAD,BY,330,58);
+        var tfs=13;ctx.font=F(tfs);
+        while(ctx.measureText(tierLbl).width>310&&tfs>8){tfs--;ctx.font=F(tfs);}
+        ctx.fillStyle=B;ctx.fillText(tierLbl,PAD+12,BY+38);
 
         // connectivity badge
-        var CX=PAD+366;
-        ctx.fillStyle=D;ctx.fillRect(CX,BY,200,62);
-        ctx.strokeStyle=B;ctx.lineWidth=2;ctx.strokeRect(CX,BY,200,62);
-        ctx.fillStyle=L;ctx.font=F(11);ctx.fillText('CONNECTIVITY',CX+12,BY+22);
-        ctx.fillStyle=B;ctx.font=F(14);ctx.fillText('[ '+conn+' ]',CX+12,BY+48);
+        var CX=PAD+344;
+        ctx.fillStyle=D;ctx.fillRect(CX,BY,188,58);
+        ctx.strokeStyle=B;ctx.lineWidth=2;ctx.strokeRect(CX,BY,188,58);
+        ctx.fillStyle=L;ctx.font=F(10);ctx.fillText('CONNECTIVITY',CX+12,BY+20);
+        ctx.fillStyle=B;ctx.font=F(13);ctx.fillText('[ '+conn+' ]',CX+12,BY+44);
 
         // gps badge
-        var GX=CX+214;
-        ctx.fillStyle='#1a4a1a';ctx.fillRect(GX,BY,W-GX-PAD,62);
-        ctx.strokeStyle=L;ctx.lineWidth=1;ctx.strokeRect(GX,BY,W-GX-PAD,62);
-        ctx.fillStyle=L;ctx.font=F(11);ctx.fillText('LOCATION',GX+12,BY+22);
-        ctx.fillStyle=WH;ctx.font=F(11);
-        if(lat&&lng){
-            ctx.fillText(lat.toFixed(5)+'N',GX+12,BY+46);
-            ctx.fillText(lng.toFixed(5)+'E',GX+12+Math.floor((W-GX-PAD)/2),BY+46);
-        }else{ctx.fillText('UNAVAILABLE',GX+12,BY+46);}
+        var GX=CX+202;
+        ctx.fillStyle='#1a4a1a';ctx.fillRect(GX,BY,W-GX-PAD,58);
+        ctx.strokeStyle=L;ctx.lineWidth=1;ctx.strokeRect(GX,BY,W-GX-PAD,58);
+        ctx.fillStyle=L;ctx.font=F(10);ctx.fillText('LOCATION',GX+12,BY+20);
+        ctx.fillStyle=WH;ctx.font=F(10);
+        if(lat&&lng){ctx.fillText(lat.toFixed(5)+'N',GX+12,BY+42);ctx.fillText(lng.toFixed(5)+'E',GX+12+Math.floor((W-GX-PAD)/2),BY+42);}
+        else{ctx.fillText('UNAVAILABLE',GX+12,BY+42);}
 
-        // spectrum bar 
+        // spectrum bar — T3 uses dark text
         var sW=Math.floor((W-PAD*2)/6);
         for(var si=0;si<6;si++){
             var sx=PAD+si*sW;
-            ctx.fillStyle=TIER_SEG[si];ctx.fillRect(sx,SPY,sW,28);
-            if(si===ti){ctx.strokeStyle=B;ctx.lineWidth=3;ctx.strokeRect(sx+1,SPY+1,sW-2,26);}
+            ctx.fillStyle=TIER_SEG[si];ctx.fillRect(sx,SPY,sW,26);
+            if(si===ti){ctx.strokeStyle=B;ctx.lineWidth=3;ctx.strokeRect(sx+1,SPY+1,sW-2,24);}
             ctx.fillStyle=TIER_TEXT[si];ctx.font=F(9);
-            var tc=TIER_CODE[si];
-            ctx.fillText(tc,sx+sW/2-ctx.measureText(tc).width/2,SPY+18);
+            var tc=TIER_CODE[si];ctx.fillText(tc,sx+sW/2-ctx.measureText(tc).width/2,SPY+17);
         }
         if(ti>=0){
             var px=PAD+ti*sW+sW/2;
-            ctx.fillStyle=B;ctx.beginPath();
-            ctx.moveTo(px-9,SPY+30);ctx.lineTo(px+9,SPY+30);ctx.lineTo(px,SPY+42);
-            ctx.closePath();ctx.fill();
+            ctx.fillStyle=B;ctx.beginPath();ctx.moveTo(px-9,SPY+28);ctx.lineTo(px+9,SPY+28);ctx.lineTo(px,SPY+40);ctx.closePath();ctx.fill();
         }
 
         // shape panel
         ctx.fillStyle=D;ctx.fillRect(PAD,CTY,C1W,SHH);
         ctx.strokeStyle=L;ctx.lineWidth=2;ctx.strokeRect(PAD,CTY,C1W,SHH);
         pxC(ctx,PAD,CTY,C1W,SHH,9,B);
-        ctx.fillStyle=L;ctx.font=F(11);ctx.fillText('[ SHAPE ]',PAD+14,CTY+22);
-        if(geometry){drawShape(ctx,geometry,PAD+10,CTY+34,C1W-20,SHH-46,M,B);}
-        else{ctx.fillStyle=M;ctx.font=F(11);ctx.fillText('N/A',PAD+80,CTY+SHH/2);}
+        ctx.fillStyle=L;ctx.font=F(10);ctx.fillText('[ SHAPE ]',PAD+14,CTY+20);
+        if(geometry){drawShape(ctx,geometry,PAD+10,CTY+32,C1W-20,SHH-44,M,B);}
+        else{ctx.fillStyle=M;ctx.font=F(10);ctx.fillText('N/A',PAD+80,CTY+SHH/2);}
 
-        // QR panel — user's wording on one line, auto-fit font size
+        // QR panel
         ctx.fillStyle=D;ctx.fillRect(PAD,QY,C1W,QH);
         ctx.strokeStyle=L;ctx.lineWidth=2;ctx.strokeRect(PAD,QY,C1W,QH);
         pxC(ctx,PAD,QY,C1W,QH,9,B);
-        var qrLbl='SCAN TO VIEW ON PLATFORM';
-        var qrLblF=11;ctx.font=F(qrLblF);
-        while(ctx.measureText(qrLbl).width>C1W-28&&qrLblF>7){qrLblF--;ctx.font=F(qrLblF);}
-        ctx.fillStyle=L;ctx.fillText(qrLbl,PAD+14,QY+22);
+        ctx.fillStyle=L;ctx.font=F(10);ctx.fillText('[ SCAN TO VIEW',PAD+14,QY+20);
+        ctx.fillText('  ON PLATFORM ]',PAD+14,QY+38);
 
-        // metric cards — larger label font
+        // ── Section label helper ──────────────────────────────────────────────
+        function sectionLabel(label, y) {
+            ctx.fillStyle=L;ctx.font=F(9);
+            ctx.fillText(label,C2X,y);
+            ctx.strokeStyle=L;ctx.lineWidth=1;
+            ctx.beginPath();ctx.moveTo(C2X,y+14);ctx.lineTo(W-PAD,y+14);ctx.stroke();
+        }
+
+        // ── Metric card helper ────────────────────────────────────────────────
+        function metricCard(mx,my,lbl,val,unit){
+            ctx.fillStyle=D;ctx.fillRect(mx,my,mW,mH);
+            ctx.strokeStyle=L;ctx.lineWidth=1;ctx.strokeRect(mx,my,mW,mH);
+            pxC(ctx,mx,my,mW,mH,7,M);
+            ctx.fillStyle=L;ctx.font=F(11);ctx.fillText(lbl,mx+10,my+20);
+            var vfs=18;ctx.font=F(vfs);
+            while(ctx.measureText(val).width>mW-24&&vfs>10){vfs--;ctx.font=F(vfs);}
+            ctx.fillStyle=B;ctx.fillText(val,mx+10,my+Math.floor(mH/2)+8);
+            if(unit){ctx.fillStyle=WH;ctx.font=F(12);ctx.fillText(unit,mx+10,my+mH-14);}
+        }
+
+        // ── Structural Metrics ────────────────────────────────────────────────
         var nv=function(v){return v!=null?parseFloat(v):null;};
-        var mets=[
+        var structMets=[
             {l:'TOTAL AREA', v:nv(p.area)     !=null?nv(p.area).toFixed(2)    :'--',u:'HA'},
             {l:'CORE AREA',  v:nv(p.core)     !=null?nv(p.core).toFixed(2)    :'--',u:'HA'},
             {l:'CONTIGUITY', v:nv(p.contig)   !=null?nv(p.contig).toFixed(3)  :'--',u:'0-1'},
@@ -302,39 +315,47 @@
             {l:'PARA RATIO', v:nv(p.para)     !=null?nv(p.para).toFixed(5)    :'--',u:''},
             {l:'MEAN FLOW',  v:nv(p.mean_flow)!=null?nv(p.mean_flow).toFixed(2):'--',u:''}
         ];
-        mets.forEach(function(m,i){
-            var col=i%mC,row=Math.floor(i/mC);
-            var mx=C2X+col*(mW+mG),my=CTY+row*(mH+mG);
-            ctx.fillStyle=D;ctx.fillRect(mx,my,mW,mH);
-            ctx.strokeStyle=L;ctx.lineWidth=1;ctx.strokeRect(mx,my,mW,mH);
-            pxC(ctx,mx,my,mW,mH,7,M);
-            // label — larger
-            ctx.fillStyle=L;ctx.font=F(13);ctx.fillText(m.l,mx+12,my+26);
-            // value — auto-fit from 22px down
-            var vfs=22;ctx.font=F(vfs);
-            while(ctx.measureText(m.v).width>mW-24&&vfs>11){vfs--;ctx.font=F(vfs);}
-            ctx.fillStyle=B;ctx.fillText(m.v,mx+12,my+Math.floor(mH/2)+14);
-            // unit — bright white, large
-            if(m.u){ctx.fillStyle=WH;ctx.font=F(14);ctx.fillText(m.u,mx+12,my+mH-16);}
+
+        sectionLabel('STRUCTURAL METRICS', CTY);
+        structMets.forEach(function(m,i){
+            var col=i%mCOLS,row=Math.floor(i/mCOLS);
+            metricCard(C2X+col*(mW+mGAP), CTY+20+row*(mH+mGAP), m.l, m.v, m.u);
         });
 
-        // footer
+        // ── Ecological Characteristics ────────────────────────────────────────
+        var ecoStartY = CTY+20+3*(mH+mGAP)+mGAP;
+        var ecoMets=[
+            {l:'CANOPY HEIGHT', v:nv(p.canopy_height_m)!=null?nv(p.canopy_height_m).toFixed(1):'--', u:'M'},
+            {l:'ELEVATION',     v:nv(p.elevation_m)    !=null?nv(p.elevation_m).toFixed(1)    :'--', u:'M'},
+            {l:'SLOPE',         v:nv(p.slope_deg)      !=null?nv(p.slope_deg).toFixed(2)      :'--', u:'\u00b0'},
+            {l:'BIOMASS',       v:nv(p.biomass_mgha)   !=null?nv(p.biomass_mgha).toFixed(1)   :'--', u:'MG/HA'}
+        ];
+
+        sectionLabel('ECOLOGICAL CHARACTERISTICS', ecoStartY);
+        ecoMets.forEach(function(m,i){
+            var col=i%mCOLS,row=Math.floor(i/mCOLS);
+            metricCard(C2X+col*(mW+mGAP), ecoStartY+20+row*(mH+mGAP), m.l, m.v, m.u);
+        });
+
+        // ── Footer ────────────────────────────────────────────────────────────
         function drawFooter(){
             ctx.fillStyle=M;ctx.fillRect(0,FY,W,H-FY);
             ctx.fillStyle=B;ctx.fillRect(0,FY,W,3);
-            ctx.fillStyle=B;ctx.font=F(11);
+            ctx.fillStyle=B;ctx.font=F(10);
             var dd=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}).toUpperCase();
-            ctx.fillText('> GENERATED '+dd,PAD,FY+28);
-            ctx.fillStyle=D;ctx.font=F(11);
+            ctx.fillText('> GENERATED '+dd,PAD,FY+26);
+            ctx.fillStyle=D;ctx.font=F(10);
             var dis='FOR REFERENCE ONLY';
-            ctx.fillText(dis,W-PAD-ctx.measureText(dis).width,FY+28);
+            ctx.fillText(dis,W-PAD-ctx.measureText(dis).width,FY+26);
         }
 
-        // load QR then download
+        // ── Load QR then download ─────────────────────────────────────────────
         var qi=new Image();qi.crossOrigin='anonymous';
         qi.onload=function(){
-            var qx=PAD+Math.floor((C1W-QS)/2),qy=QY+34;
+            var qx=PAD+Math.floor((C1W-QS)/2),qy=QY+52;
             ctx.drawImage(qi,qx,qy,QS,QS);
+            var scY=qy+QS+8;
+            if(scY+12<QY+QH){ctx.fillStyle=L;ctx.font=F(8);var st='OPEN IN PLATFORM';ctx.fillText(st,PAD+Math.floor((C1W-ctx.measureText(st).width)/2),scY+10);}
             drawFooter();dl();
         };
         qi.onerror=function(){drawFooter();dl();};
