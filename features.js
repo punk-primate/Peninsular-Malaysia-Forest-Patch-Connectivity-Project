@@ -1,6 +1,5 @@
 //   Add one line before <script src="config.js"> in each map HTML file:
 //       <script src="features.js"></script>
-
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function () {
@@ -191,7 +190,7 @@
         var tierInt=p.Tier||'',tierLbl=displayName(tierInt),ti=tIdx(tierInt);
         var conn=(p.connectivity||'No Data').toUpperCase();
 
-        // ── Canvas: 960x900 at 2x — verified against Python preview ──────────
+        // ── Canvas: 960x900 at 2x  -  verified against Python preview ──────────
         var W=960,H=900,SC=2;
         var cv=document.createElement('canvas');
         cv.width=W*SC;cv.height=H*SC;
@@ -373,7 +372,12 @@
 })();
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ROAD DRAWING TOOL 
+// ROAD DRAWING TOOL v2
+// Lazy-initialised  -  nothing loads until user clicks the FAB.
+// Analysis focuses on:
+//   1. Carbon stock at risk (biomass × area of intersected patches)
+//   2. Network bottleneck detection (union-find graph traversal)
+//   3. Qualitative impact narrative
 // ═══════════════════════════════════════════════════════════════════════════
 (function () {
     'use strict';
@@ -434,7 +438,10 @@
                 'white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
                 'transition:background 0.15s;';
             btn.addEventListener('click', onFabClick);
-            corridorBtn.parentNode.insertBefore(btn, corridorBtn.nextSibling);
+            // Insert after the corridor level toggles panel so it sits below the full corridor UI
+            var levelPanel = document.getElementById('conn-level-toggles');
+            var anchor = levelPanel || corridorBtn;
+            anchor.parentNode.insertBefore(btn, anchor.nextSibling);
         }, 400);
     }
 
@@ -510,7 +517,7 @@
         var btn = document.getElementById('road-draw-fab');
         if (btn) { btn.innerHTML = '&#10006; Cancel'; btn.style.background = '#555'; }
 
-        // Bind draw.create — use named handler so we can remove/re-add cleanly
+        // Bind draw.create  -  use named handler so we can remove/re-add cleanly
         function onDrawCreate(e) {
             map.off('draw.create', onDrawCreate);
             if (btn) { btn.innerHTML = '&#9998; Redraw'; btn.style.background = '#8B1A1A'; }
@@ -699,14 +706,26 @@
             var parts = [];
 
             if (severed.length === 0 && hitPatches.length === 0) {
-                return '<p style="color:#888;font-style:italic">No patches or corridors were intersected by this line at the current zoom level.</p>';
+                return '<p style="color:#888;font-style:italic">No patches or corridors were intersected by this line at the current zoom level. Try zooming in or redrawing.</p>';
+            }
+
+            // Always lead with fragmentation impact if any patches are hit
+            if (hitPatches.length > 0) {
+                var highTierHit = (hitTiers['Tier 1 (Core Habitat)'] || 0) + (hitTiers['Tier 2 (Major Stepping Stones)'] || 0);
+                if (highTierHit > 0) {
+                    parts.push('This line directly fragments <strong>' + highTierHit + '</strong> Primary or Established forest patch' +
+                        (highTierHit > 1 ? 'es' : '') + '. Bisecting a forest patch reduces its effective core area, increases edge exposure, and disrupts the interior habitat that arboreal wildlife such as gibbons depend on. Once fragmented, patches of this quality are unlikely to recover their ecological function within a human timescale.');
+                } else {
+                    parts.push('This line directly intersects <strong>' + hitPatches.length + '</strong> forest patch' +
+                        (hitPatches.length > 1 ? 'es' : '') + '. Even where no corridors are severed, bisecting a forest patch reduces its interior habitat, increases edge effects, and disrupts movement within the patch for resident wildlife.');
+                }
             }
 
             // Carbon
             if (carbonTonnes > 0) {
                 var severity = carbonTonnes > 10000 ? 'very high' : carbonTonnes > 1000 ? 'significant' : 'moderate';
-                parts.push('The line passes through forest patches containing an estimated <strong>' +
-                    carbonTonnes.toLocaleString() + ' Mg</strong> of aboveground carbon — a ' + severity +
+                parts.push('The intersected patches contain an estimated <strong>' +
+                    carbonTonnes.toLocaleString() + ' Mg</strong> of aboveground carbon, representing a ' + severity +
                     ' carbon stock that would be directly affected by development.');
             }
 
@@ -714,29 +733,24 @@
             if (isBottleneck) {
                 parts.push('&#9888; <strong>Network bottleneck detected.</strong> Removing the severed corridors would split the visible forest network into <strong>' +
                     componentsAfter + ' disconnected components</strong> (currently ' + componentsBefore +
-                    '). This means entire groups of forest patches would lose all connectivity to one another — a structural fragmentation that cannot be offset by improving other corridors.');
+                    '). Entire groups of forest patches would lose all connectivity to one another, a structural fragmentation that cannot be offset by improving other corridors.');
             } else if (severed.length > 0) {
-                parts.push('The severed corridors represent a reduction in network redundancy, but the visible forest patches would remain connected through alternative pathways. Connectivity would be weakened but not structurally broken at this scale.');
+                parts.push('The severed corridors reduce network redundancy, but the visible forest patches would remain connected through alternative pathways. Connectivity would be weakened but not structurally broken at this scale.');
+            } else if (hitPatches.length > 0) {
+                parts.push('No movement corridors are directly severed by this line, but the fragmentation of forest patches will reduce the quality of habitat available to wildlife and may impair movement within and between those patches over time.');
             }
 
             // High corridor severance
             if (corrConns.High > 0) {
                 parts.push(corrConns.High + ' high-quality corridor' + (corrConns.High > 1 ? 's' : '') +
-                    ' would be severed. These represent the most functionally viable movement pathways in the landscape and are the hardest to replace.');
+                    ' would be severed. These represent the most functionally viable movement pathways in the landscape and are the hardest to replace once lost.');
             }
 
-            // Tier 1/2 patches
-            var highTierHit = (hitTiers['Tier 1 (Core Habitat)'] || 0) + (hitTiers['Tier 2 (Major Stepping Stones)'] || 0);
-            if (highTierHit > 0) {
-                parts.push('The line directly intersects <strong>' + highTierHit + '</strong> Primary or Established forest patch' +
-                    (highTierHit > 1 ? 'es' : '') + ' — structurally important habitat that, once fragmented, is unlikely to recover its ecological function within a human timescale.');
-            }
-
-            // Isolation
+            // Isolation of high-value patches
             var highTierIso = (isoTiers['Tier 1 (Core Habitat)'] || 0) + (isoTiers['Tier 2 (Major Stepping Stones)'] || 0);
             if (highTierIso > 0) {
                 parts.push('<strong>' + highTierIso + '</strong> Primary or Established forest patch' +
-                    (highTierIso > 1 ? 'es' : '') + ' would lose all visible corridor connections, becoming functionally isolated within the landscape.');
+                    (highTierIso > 1 ? 'es' : '') + ' would lose all visible corridor connections, becoming functionally isolated within the landscape and effectively unreachable by wildlife moving through the matrix.');
             }
 
             if (parts.length === 0) return '';
@@ -781,7 +795,7 @@
         } else {
             s += '<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:4px;padding:6px 10px;' +
                  'font-size:0.82em;line-height:1.5;color:#1b5e20;margin-bottom:4px">' +
-                 'No structural split — patches remain connected through alternative pathways</div>';
+                 'No structural split  -  patches remain connected through alternative pathways</div>';
         }
 
         // Corridors severed
