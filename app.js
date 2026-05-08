@@ -626,7 +626,7 @@ initializeTierFilters();
             flow:    'Mean composite current flow, 0–300 scale. Higher = more central to the connectivity network.',
             canopy:  'Mean canopy height across the patch in metres, derived from the ETH Global Canopy Height Model (2020) at 10 m resolution.,
             elev:    'Mean elevation above sea level in metres, derived from the SRTM 30 m digital elevation model.',
-            slope:   'Mean terrain slope within the patch in degrees, derived from SRTM. Steeper terrain can influence edge permeability and movement costs for wildlife crossing the matrix.',
+            slope:   'Mean terrain slope within the patch in degrees, derived from SRTM. Steeper terrain can influence edge permeability and movement costs for wildlife.',
             biomass: 'Mean aboveground biomass in megagrams per hectare (Mg/ha), derived from the ESA CCI Biomass map (v6.0, 2022) at 100 m resolution. Higher values reflect greater forest maturity and carbon storage capacity.'
         };
 
