@@ -1,5 +1,9 @@
+// features.js — myforestconnect retro report cards
+//
+// HOW TO USE:
 //   Add one line before <script src="config.js"> in each map HTML file:
 //       <script src="features.js"></script>
+//   Remove that line to revert completely.
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function () {
@@ -289,9 +293,9 @@
 
         // section label helper
         function secLabel(lbl,y){
-            ctx.fillStyle=L;ctx.font=F(9);ctx.fillText(lbl,C2X,y);
-            ctx.strokeStyle=L;ctx.lineWidth=1;
-            ctx.beginPath();ctx.moveTo(C2X,y+14);ctx.lineTo(W-PAD,y+14);ctx.stroke();
+            ctx.fillStyle=WH;ctx.font=F(11);ctx.fillText(lbl,C2X,y);
+            ctx.strokeStyle=B;ctx.lineWidth=1;
+            ctx.beginPath();ctx.moveTo(C2X,y+16);ctx.lineTo(W-PAD,y+16);ctx.stroke();
         }
 
         // metric card helper
