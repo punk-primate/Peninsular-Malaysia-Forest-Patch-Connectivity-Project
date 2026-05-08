@@ -389,6 +389,7 @@
     var scriptsLoaded = false;
     var drawInstance  = null;
     var mapRef        = null;
+    var drawActive    = false;
 
     // ── Union-Find for connectivity component analysis ─────────────────────
     function makeUF(ids) {
@@ -432,10 +433,14 @@
             btn.id = 'road-draw-fab';
             btn.innerHTML = '&#9998; Draw road';
             btn.title = 'Draw a line to assess potential development impact on forest connectivity';
+            // Copy style from corridor button so sizing matches exactly
+            var corrStyle = window.getComputedStyle ? null : null; // resolved at runtime below
             btn.style.cssText =
-                'display:block;margin-top:6px;padding:8px 14px;background:#8B1A1A;color:white;' +
+                'display:block;width:100%;margin-top:6px;padding:8px 10px;' +
+                'background:#8B1A1A;color:white;' +
                 'border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;' +
-                'white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
+                'box-sizing:border-box;' +
+                'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
                 'transition:background 0.15s;';
             btn.addEventListener('click', onFabClick);
             // Insert after the corridor level toggles panel so it sits below the full corridor UI
@@ -454,6 +459,14 @@
     function onFabClick() {
         var map = getMap(); if (!map) return;
         var btn = document.getElementById('road-draw-fab');
+
+        // If currently drawing, cancel
+        if (drawActive) {
+            drawActive = false;
+            removeDraw();
+            resetSidebar();
+            return;
+        }
 
         if (!scriptsLoaded) {
             btn.innerHTML = '&#9203; Loading&#8230;';
@@ -520,11 +533,13 @@
         // Bind draw.create  -  use named handler so we can remove/re-add cleanly
         function onDrawCreate(e) {
             map.off('draw.create', onDrawCreate);
+            drawActive = false;
             if (btn) { btn.innerHTML = '&#9998; Redraw'; btn.style.background = '#8B1A1A'; }
             analyseRoad(e.features[0], map);
         }
         map.off('draw.create', onDrawCreate); // safety
         map.on('draw.create', onDrawCreate);
+        drawActive = true;
 
         showHint();
         openSidebar();
@@ -536,6 +551,7 @@
             try { map.removeControl(drawInstance); } catch(e) {}
             drawInstance = null;
         }
+        drawActive = false;
         var btn = document.getElementById('road-draw-fab');
         if (btn) { btn.innerHTML = '&#9998; Draw road'; btn.style.background = '#8B1A1A'; }
     }
@@ -714,7 +730,7 @@
                 var highTierHit = (hitTiers['Tier 1 (Core Habitat)'] || 0) + (hitTiers['Tier 2 (Major Stepping Stones)'] || 0);
                 if (highTierHit > 0) {
                     parts.push('This line directly fragments <strong>' + highTierHit + '</strong> Primary or Established forest patch' +
-                        (highTierHit > 1 ? 'es' : '') + '. Bisecting a forest patch reduces its effective core area, increases edge exposure, and disrupts the interior habitat that arboreal wildlife such as gibbons depend on. Once fragmented, patches of this quality are unlikely to recover their ecological function within a human timescale.');
+                        (highTierHit > 1 ? 'es' : '') + '. Bisecting a forest patch reduces its effective core area, increases edge exposure, and disrupts the interior habitat that arboreal wildlife depend on. Once fragmented, patches of this quality are unlikely to recover their ecological function within a human timescale.');
                 } else {
                     parts.push('This line directly intersects <strong>' + hitPatches.length + '</strong> forest patch' +
                         (hitPatches.length > 1 ? 'es' : '') + '. Even where no corridors are severed, bisecting a forest patch reduces its interior habitat, increases edge effects, and disrupts movement within the patch for resident wildlife.');
