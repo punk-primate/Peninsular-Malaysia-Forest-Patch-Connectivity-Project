@@ -445,7 +445,8 @@
             btn.style.border     = 'none';
             btn.style.cursor     = 'pointer';
             btn.style.boxSizing  = 'border-box';
-            btn.style.marginTop  = corridorBtn.style.marginTop || '0';
+            btn.style.marginTop  = '6px';
+            corridorBtn.style.marginTop = '4px';
             btn.style.background = '#8B1A1A';
             btn.style.color      = 'white';
             btn.addEventListener('click', onFabClick);
@@ -654,7 +655,12 @@
         if (!el) return;
         if (el.innerHTML !== _roadToolContent) {
             _roadToolRestoring = true;
-            el.innerHTML = _roadToolContent;
+            var _notice = '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;' +
+                'padding:6px 10px;margin-bottom:10px;font-size:0.82em;line-height:1.5;color:#856404;' +
+                'font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' +
+                '<strong>Development line tool is active.</strong> Close or clear the tool first, ' +
+                'then click the patch again to see its details.</div>';
+            el.innerHTML = _notice + _roadToolContent;
             // Re-bind the action buttons that were inside the restored HTML
             var redrawBtn = el.querySelector('#road-redraw-btn');
             var clearBtn  = el.querySelector('#road-clear-btn');
@@ -744,43 +750,27 @@
         severed.forEach(function (p) { severedSet[p.id_from + '_' + p.id_to] = true; });
 
         // ── Carbon stock at risk ──────────────────────────────────────────
-        var totalCarbonMg = 0;
+        // ESA CCI AGB is aboveground biomass in Mg dry matter / ha.
+        // Multiply by area (ha) to get total biomass (Mg dry matter).
+        // Apply IPCC Tier 1 conversion factor 0.47 to get carbon (Mg C).
+        var totalBiomassMg = 0;
         hitPatches.forEach(function (p) {
             var bm   = parseFloat(p.biomass_mgha);
             var area = parseFloat(p.area);
-            if (!isNaN(bm) && !isNaN(area)) totalCarbonMg += bm * area;
+            if (!isNaN(bm) && !isNaN(area)) totalBiomassMg += bm * area;
         });
-        // biomass_mgha is Mg C / ha, area is in ha → product is Mg C
-        var carbonTonnes = Math.round(totalCarbonMg);
+        var carbonTonnes = Math.round(totalBiomassMg * 0.47);
 
-        // Core area fragmentation estimate
-        // When a line bisects a patch it creates new edge on both sides,
-        // reducing core area disproportionately. Each fragment's core-to-area
-        // ratio will be lower than the original patch's ratio because smaller
-        // patches have more edge relative to their area.
-        // Estimate: assume bisection roughly halves the patch; each fragment
-        // retains (core/area)^1.5 of the original ratio applied to half the area.
-        // This is a conservative approximation  -  actual loss is often larger.
+        // Core area (current, pre-fragmentation)
+        // Accurate post-fragmentation core area cannot be calculated without
+        // the actual split geometry and edge buffer distance used in Fragstats.
+        // We report current core area and describe the expected qualitative change.
         var totalCurrentCoreHa = 0;
-        var totalEstimatedCoreHa = 0;
         hitPatches.forEach(function (p) {
-            var c    = parseFloat(p.core);
-            var area = parseFloat(p.area);
-            if (!isNaN(c) && !isNaN(area) && area > 0) {
-                totalCurrentCoreHa += c;
-                var ratio     = c / area;                        // current core fraction
-                var fragArea  = area / 2;                        // each fragment ~half
-                var fragRatio = Math.pow(ratio, 1.3);            // ratio degrades with size
-                var fragCore  = Math.max(0, fragArea * fragRatio);
-                totalEstimatedCoreHa += fragCore * 2;            // both fragments
-            }
+            var c = parseFloat(p.core);
+            if (!isNaN(c)) totalCurrentCoreHa += c;
         });
-        var totalCurrentCoreHa  = Math.round(totalCurrentCoreHa  * 10) / 10;
-        var totalEstimatedCoreHa = Math.round(totalEstimatedCoreHa * 10) / 10;
-        var coreHaLoss = Math.round((totalCurrentCoreHa - totalEstimatedCoreHa) * 10) / 10;
-        var corePctLoss = totalCurrentCoreHa > 0
-            ? Math.round((1 - totalEstimatedCoreHa / totalCurrentCoreHa) * 100)
-            : 0;
+        totalCurrentCoreHa = Math.round(totalCurrentCoreHa * 10) / 10;
 
         // Mean canopy height: intersected vs all visible patches
         var hitCanopySum = 0, hitCanopyN = 0, allCanopySum = 0, allCanopyN = 0;
@@ -898,15 +888,13 @@
                 }
             }
 
-            // Core area fragmentation
+            // Core area
             if (totalCurrentCoreHa > 0) {
-                parts.push('The intersected patches currently contain <strong>' + totalCurrentCoreHa.toFixed(1) +
-                    ' ha</strong> of core habitat. Bisection by a development corridor would create new edges on both sides of each fragment, reducing estimated core area to approximately <strong>' +
-                    totalEstimatedCoreHa.toFixed(1) + ' ha</strong> across the resulting fragments, a loss of around <strong>' +
-                    corePctLoss + '%</strong>. This estimate is conservative; actual core area loss is often greater depending on fragment shape and the width of the development corridor.');
+                parts.push('The intersected patches contain a combined core area of <strong>' +
+                    totalCurrentCoreHa.toFixed(1) + ' ha</strong>. Bisecting a patch creates new exposed edges on both sides of the development corridor. Core area loss is always disproportionate to area loss because smaller fragments retain significantly less interior per unit area. This directly reduces the quality of habitat available to species that require undisturbed forest away from edge effects.');
             }
 
-            // Canopy height
+                        // Canopy height
             if (canopyAboveAvg) {
                 parts.push('The affected patches have a mean canopy height of <strong>' + meanHitCanopy +
                     ' m</strong>, compared to a landscape mean of <strong>' + meanAllCanopy +
@@ -916,8 +904,8 @@
             // Carbon
             if (carbonTonnes > 0) {
                 var severity = carbonTonnes > 10000 ? 'very high' : carbonTonnes > 1000 ? 'significant' : 'moderate';
-                parts.push('The intersected patches contain an estimated <strong>' +
-                    carbonTonnes.toLocaleString() + ' Mg</strong> of aboveground carbon, representing a ' + severity +
+                parts.push('The intersected patches hold an estimated <strong>' +
+                    carbonTonnes.toLocaleString() + ' Mg C</strong> of carbon (derived from ESA CCI aboveground biomass using an IPCC Tier 1 factor of 0.47), representing a ' + severity +
                     ' carbon stock that would be directly affected by development.');
             }
 
@@ -968,21 +956,19 @@
             s += '<div style="margin-bottom:12px;color:inherit">' + narrative + '</div>';
         }
 
-        // Core area fragmentation
+        // Core area
         if (totalCurrentCoreHa > 0) {
-            s += sectionHdr('Estimated core habitat loss after fragmentation');
-            s += '<div style="display:flex;gap:16px;margin-bottom:4px">';
-            s += '<div><div style="font-size:0.78em;color:#666">Current</div>' +
-                 '<div style="font-size:1.05em;font-weight:700;color:#2a6b0a">' + totalCurrentCoreHa.toFixed(1) + ' ha</div></div>';
-            s += '<div><div style="font-size:0.78em;color:#666">Est. after bisection</div>' +
-                 '<div style="font-size:1.05em;font-weight:700;color:#8B1A1A">' + totalEstimatedCoreHa.toFixed(1) + ' ha</div></div>';
-            s += '<div><div style="font-size:0.78em;color:#666">Est. loss</div>' +
-                 '<div style="font-size:1.05em;font-weight:700;color:#8B1A1A">-' + corePctLoss + '%</div></div>';
-            s += '</div>';
-            s += '<div style="font-size:0.78em;color:#888;font-style:italic">Conservative estimate assuming bisection halves each patch. Actual loss may be greater.</div>';
+            s += sectionHdr('Core habitat at risk');
+            s += '<div style="font-size:1.1em;font-weight:700;color:#2a6b0a;margin-bottom:4px">' +
+                 totalCurrentCoreHa.toFixed(1) + ' ha</div>';
+            s += '<div style="font-size:0.80em;color:#666;margin-bottom:2px">Combined core area across ' +
+                 hitPatches.length + ' directly intersected patch' + (hitPatches.length !== 1 ? 'es' : '') + '.</div>';
+            s += '<div style="font-size:0.78em;color:#888;font-style:italic">' +
+                 'Bisection creates new edges on both sides of the corridor. Core area loss is disproportionate to area loss: ' +
+                 'smaller fragments retain significantly less interior per unit area.</div>';
         }
 
-        // Canopy height
+                // Canopy height
         if (meanHitCanopy !== null) {
             s += sectionHdr('Canopy height of affected patches');
             s += '<div style="font-size:1.1em;font-weight:700;color:#2a6b0a;margin-bottom:4px">' +
@@ -1001,8 +987,9 @@
             s += sectionHdr('Aboveground carbon at risk');
             s += '<div style="font-size:1.1em;font-weight:700;color:#2a6b0a;margin-bottom:4px">' +
                  carbonTonnes.toLocaleString() + ' Mg C</div>';
-            s += '<div style="font-size:0.80em;color:#666;margin-bottom:4px">Aboveground carbon across ' +
-                 hitPatches.length + ' directly intersected patch' + (hitPatches.length !== 1 ? 'es' : '') + '</div>';
+            s += '<div style="font-size:0.80em;color:#666;margin-bottom:2px">Derived from aboveground biomass across ' +
+                 hitPatches.length + ' directly intersected patch' + (hitPatches.length !== 1 ? 'es' : '') + '.</div>';
+            s += '<div style="font-size:0.78em;color:#888;font-style:italic">ESA CCI aboveground biomass converted to carbon using IPCC Tier 1 factor of 0.47.</div>';
         }
 
         // Bottleneck result
