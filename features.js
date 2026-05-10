@@ -1,5 +1,9 @@
+// features.js  -  myforestconnect retro report cards
+//
+// HOW TO USE:
 //   Add one line before <script src="config.js"> in each map HTML file:
 //       <script src="features.js"></script>
+//   Remove that line to revert completely.
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function () {
@@ -433,20 +437,20 @@
             btn.id = 'road-draw-fab';
             btn.innerHTML = '&#9998; Draw road';
             btn.title = 'Draw a line to assess potential development impact on forest connectivity';
-            // Copy style from corridor button so sizing matches exactly
-            var corrStyle = window.getComputedStyle ? null : null; // resolved at runtime below
-            btn.style.cssText =
-                'display:block;width:100%;margin-top:6px;padding:8px 10px;' +
-                'background:#8B1A1A;color:white;' +
-                'border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;' +
-                'box-sizing:border-box;' +
-                'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
-                'transition:background 0.15s;';
+            // Match corridor button style at runtime
+            btn.style.cssText = corridorBtn.style.cssText || '';
+            btn.style.background = '#8B1A1A';
+            btn.style.marginTop  = '6px';
             btn.addEventListener('click', onFabClick);
             // Insert after the corridor level toggles panel so it sits below the full corridor UI
             var levelPanel = document.getElementById('conn-level-toggles');
             var anchor = levelPanel || corridorBtn;
-            anchor.parentNode.insertBefore(btn, anchor.nextSibling);
+            // Wrap in a div so margin-top matches the corridor button's own spacing
+            var wrapper = document.createElement('div');
+            wrapper.id = 'road-draw-wrapper';
+            wrapper.style.cssText = 'margin-top:6px;';
+            wrapper.appendChild(btn);
+            anchor.parentNode.insertBefore(wrapper, anchor.nextSibling);
         }, 400);
     }
 
@@ -458,15 +462,13 @@
     // ── FAB click ─────────────────────────────────────────────────────────
     function onFabClick() {
         var map = getMap(); if (!map) return;
-        var btn = document.getElementById('road-draw-fab');
 
-        // If currently drawing, cancel
+        // If currently drawing, restart draw
         if (drawActive) {
-            drawActive = false;
-            removeDraw();
-            resetSidebar();
+            startDraw(map);
             return;
         }
+        var btn = document.getElementById('road-draw-fab');
 
         if (!scriptsLoaded) {
             btn.innerHTML = '&#9203; Loading&#8230;';
@@ -528,13 +530,16 @@
         drawInstance.changeMode('draw_line_string');
 
         var btn = document.getElementById('road-draw-fab');
-        if (btn) { btn.innerHTML = '&#10006; Cancel'; btn.style.background = '#555'; }
+        if (btn) {
+            btn.innerHTML = '&#9998; Drawing…';
+            btn.style.background = '#555';
+        }
 
         // Bind draw.create  -  use named handler so we can remove/re-add cleanly
         function onDrawCreate(e) {
             map.off('draw.create', onDrawCreate);
             drawActive = false;
-            if (btn) { btn.innerHTML = '&#9998; Redraw'; btn.style.background = '#8B1A1A'; }
+            showFabPair();
             analyseRoad(e.features[0], map);
         }
         map.off('draw.create', onDrawCreate); // safety
@@ -545,6 +550,56 @@
         openSidebar();
     }
 
+    function showFabPair() {
+        var wrapper = document.getElementById('road-draw-wrapper'); if (!wrapper) return;
+        wrapper.innerHTML = '';
+        wrapper.style.cssText = 'margin-top:6px;display:flex;gap:6px;';
+
+        var redrawBtn = document.createElement('button');
+        redrawBtn.id = 'road-redraw-fab';
+        redrawBtn.innerHTML = '&#9998; Redraw';
+        redrawBtn.style.cssText =
+            'flex:1;padding:8px 6px;background:#8B1A1A;color:white;border:none;border-radius:4px;' +
+            'font-size:12px;font-weight:600;cursor:pointer;box-sizing:border-box;' +
+            'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+        redrawBtn.addEventListener('click', function () {
+            restoreFab();
+            startDraw(getMap());
+        });
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.id = 'road-cancel-fab';
+        cancelBtn.innerHTML = '&#215; Cancel';
+        cancelBtn.style.cssText =
+            'flex:1;padding:8px 6px;background:#555;color:white;border:none;border-radius:4px;' +
+            'font-size:12px;font-weight:600;cursor:pointer;box-sizing:border-box;' +
+            'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+        cancelBtn.addEventListener('click', function () {
+            removeDraw();
+            resetSidebar();
+        });
+
+        wrapper.appendChild(redrawBtn);
+        wrapper.appendChild(cancelBtn);
+    }
+
+    function restoreFab() {
+        var wrapper = document.getElementById('road-draw-wrapper'); if (!wrapper) return;
+        wrapper.innerHTML = '';
+        wrapper.style.cssText = 'margin-top:6px;';
+        var btn = document.createElement('button');
+        btn.id = 'road-draw-fab';
+        btn.innerHTML = '&#9998; Draw road';
+        btn.style.cssText =
+            'display:block;width:100%;margin-top:0;padding:8px 10px;background:#8B1A1A;color:white;' +
+            'border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;' +
+            'box-sizing:border-box;' +
+            'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
+            'transition:background 0.15s;';
+        btn.addEventListener('click', onFabClick);
+        wrapper.appendChild(btn);
+    }
+
     function removeDraw() {
         var map = getMap();
         if (drawInstance && map) {
@@ -552,8 +607,7 @@
             drawInstance = null;
         }
         drawActive = false;
-        var btn = document.getElementById('road-draw-fab');
-        if (btn) { btn.innerHTML = '&#9998; Draw road'; btn.style.background = '#8B1A1A'; }
+        restoreFab();
     }
 
     function showHint() {
@@ -561,8 +615,16 @@
         el.innerHTML =
             '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' +
             '<div style="background:#8B1A1A;color:#fff;padding:6px 10px;border-radius:3px;font-weight:700;margin-bottom:10px;font-size:0.82em">&#9998; DEVELOPMENT LINE TOOL</div>' +
-            '<p style="font-size:0.87em;line-height:1.5;margin:0 0 8px">Click on the map to draw a line simulating a road or development. Double-click to finish.</p>' +
-            '<p style="font-size:0.82em;color:#888;font-style:italic;margin:0">Analysis will appear here once the line is complete.</p></div>';
+            '<p style="font-size:0.87em;line-height:1.5;margin:0 0 12px">Click on the map to draw a line simulating a road or development. Double-click to finish.</p>' +
+            '<div style="display:flex;gap:8px">' +
+            '<button id="road-hint-redraw" style="flex:1;padding:7px 10px;background:#8B1A1A;color:white;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">&#9998; Redraw</button>' +
+            '<button id="road-hint-cancel" style="flex:1;padding:7px 10px;background:#555;color:white;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">&#10006; Cancel</button>' +
+            '</div></div>';
+        var map2 = getMap();
+        var redrawBtn = document.getElementById('road-hint-redraw');
+        var cancelBtn = document.getElementById('road-hint-cancel');
+        if (redrawBtn && map2) redrawBtn.addEventListener('click', function () { startDraw(map2); });
+        if (cancelBtn) cancelBtn.addEventListener('click', function () { removeDraw(); resetSidebar(); });
     }
 
     function openSidebar() {
@@ -634,6 +696,28 @@
         });
         // biomass_mgha is Mg C / ha, area is in ha → product is Mg C
         var carbonTonnes = Math.round(totalCarbonMg);
+
+        // Core area at risk
+        var totalCoreHa = 0;
+        hitPatches.forEach(function (p) {
+            var c = parseFloat(p.core);
+            if (!isNaN(c)) totalCoreHa += c;
+        });
+        totalCoreHa = Math.round(totalCoreHa * 10) / 10;
+
+        // Mean canopy height: intersected vs all visible patches
+        var hitCanopySum = 0, hitCanopyN = 0, allCanopySum = 0, allCanopyN = 0;
+        hitPatches.forEach(function (p) {
+            var h = parseFloat(p.canopy_height_m);
+            if (!isNaN(h)) { hitCanopySum += h; hitCanopyN++; }
+        });
+        patchFeats.forEach(function (f) {
+            var h = parseFloat(f.properties.canopy_height_m);
+            if (!isNaN(h)) { allCanopySum += h; allCanopyN++; }
+        });
+        var meanHitCanopy = hitCanopyN > 0 ? Math.round(hitCanopySum / hitCanopyN * 10) / 10 : null;
+        var meanAllCanopy = allCanopyN > 0 ? Math.round(allCanopySum / allCanopyN * 10) / 10 : null;
+        var canopyAboveAvg = meanHitCanopy !== null && meanAllCanopy !== null && meanHitCanopy > meanAllCanopy;
 
         // ── Network bottleneck detection via union-find ───────────────────
         // Build patch ID list and edge list from all visible corridors
@@ -737,6 +821,19 @@
                 }
             }
 
+            // Core area
+            if (totalCoreHa > 0) {
+                parts.push('The intersected patches contain a combined core area of <strong>' +
+                    totalCoreHa.toFixed(1) + ' ha</strong>. Core area is the ecologically functional interior of a patch, buffered from edge disturbance and the most critical zone for wildlife occupancy. Development that bisects a patch reduces this interior and may push resident species below minimum viable habitat thresholds.');
+            }
+
+            // Canopy height
+            if (canopyAboveAvg) {
+                parts.push('The affected patches have a mean canopy height of <strong>' + meanHitCanopy +
+                    ' m</strong>, compared to a landscape mean of <strong>' + meanAllCanopy +
+                    ' m</strong>. This line disproportionately intersects taller, more structurally complex forest, which typically represents older growth with higher biodiversity value and lower potential for regeneration within decadal timeframes.');
+            }
+
             // Carbon
             if (carbonTonnes > 0) {
                 var severity = carbonTonnes > 10000 ? 'very high' : carbonTonnes > 1000 ? 'significant' : 'moderate';
@@ -792,9 +889,33 @@
             s += '<div style="margin-bottom:12px;color:inherit">' + narrative + '</div>';
         }
 
-        // Carbon figure
+        // Core area
+        if (totalCoreHa > 0) {
+            s += sectionHdr('Core habitat at risk');
+            s += '<div style="font-size:1.1em;font-weight:700;color:#2a6b0a;margin-bottom:4px">' +
+                 totalCoreHa.toFixed(1) + ' ha</div>';
+            s += '<div style="font-size:0.80em;color:#666;margin-bottom:4px">Combined core area across ' +
+                 hitPatches.length + ' directly intersected patch' + (hitPatches.length !== 1 ? 'es' : '') +
+                 '. Core area is the patch interior buffered from edge effects.</div>';
+        }
+
+        // Canopy height
+        if (meanHitCanopy !== null) {
+            s += sectionHdr('Canopy height of affected patches');
+            s += '<div style="font-size:1.1em;font-weight:700;color:#2a6b0a;margin-bottom:4px">' +
+                 meanHitCanopy + ' m mean';
+            if (meanAllCanopy !== null) {
+                var diff = Math.round((meanHitCanopy - meanAllCanopy) * 10) / 10;
+                var diffCol = diff > 0 ? '#721c24' : '#1b5e20';
+                s += ' <span style="font-size:0.82em;color:' + diffCol + '">' +
+                     (diff > 0 ? '(+' : '(') + diff + ' m vs landscape mean)</span>';
+            }
+            s += '</div>';
+        }
+
+        // Carbon
         if (carbonTonnes > 0) {
-            s += sectionHdr('Carbon stock at risk');
+            s += sectionHdr('Aboveground carbon at risk');
             s += '<div style="font-size:1.1em;font-weight:700;color:#2a6b0a;margin-bottom:4px">' +
                  carbonTonnes.toLocaleString() + ' Mg C</div>';
             s += '<div style="font-size:0.80em;color:#666;margin-bottom:4px">Aboveground carbon across ' +
