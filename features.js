@@ -433,22 +433,19 @@
             btn.id = 'road-draw-fab';
             btn.innerHTML = '&#9998; Draw road';
             btn.title = 'Draw a line to assess potential development impact on forest connectivity';
-            // Match corridor button height/padding exactly, override colour
-            var cs = window.getComputedStyle(corridorBtn);
-            btn.style.display    = 'block';
-            btn.style.width      = '100%';
-            btn.style.padding    = cs.padding;
-            btn.style.fontSize   = cs.fontSize;
-            btn.style.fontWeight = cs.fontWeight;
-            btn.style.fontFamily = cs.fontFamily;
-            btn.style.borderRadius = cs.borderRadius;
-            btn.style.border     = 'none';
-            btn.style.cursor     = 'pointer';
-            btn.style.boxSizing  = 'border-box';
-            btn.style.marginTop  = '6px';
-            corridorBtn.style.marginTop = '4px';
-            btn.style.background = '#8B1A1A';
-            btn.style.color      = 'white';
+            // Defer style copy to after first paint so computed styles are final
+            btn.style.cssText = 'display:block;width:100%;border:none;cursor:pointer;box-sizing:border-box;' +
+                'background:#8B1A1A;color:white;';
+            requestAnimationFrame(function () {
+                var cs = window.getComputedStyle(corridorBtn);
+                btn.style.padding      = cs.padding;
+                btn.style.fontSize     = cs.fontSize;
+                btn.style.fontWeight   = cs.fontWeight;
+                btn.style.fontFamily   = cs.fontFamily;
+                btn.style.borderRadius = cs.borderRadius;
+                btn.style.lineHeight   = cs.lineHeight;
+                btn.style.marginTop    = cs.marginTop || '6px';
+            });
             btn.addEventListener('click', onFabClick);
             // Insert after the corridor level toggles panel so it sits below the full corridor UI
             var levelPanel = document.getElementById('conn-level-toggles');
@@ -655,11 +652,11 @@
         if (!el) return;
         if (el.innerHTML !== _roadToolContent) {
             _roadToolRestoring = true;
-            var _notice = '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;' +
-                'padding:6px 10px;margin-bottom:10px;font-size:0.82em;line-height:1.5;color:#856404;' +
+            var _notice = '<div style="background:#fdecea;border:1px solid #f5c6cb;border-radius:4px;' +
+                'padding:8px 12px;margin-bottom:10px;font-size:0.84em;line-height:1.6;color:#721c24;' +
                 'font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' +
-                '<strong>Development line tool is active.</strong> Close or clear the tool first, ' +
-                'then click the patch again to see its details.</div>';
+                '<strong>Patch details are not available while the development line tool is active.</strong><br>' +
+                'Click <strong>Close</strong> below to exit the tool, then click the patch again.</div>';
             el.innerHTML = _notice + _roadToolContent;
             // Re-bind the action buttons that were inside the restored HTML
             var redrawBtn = el.querySelector('#road-redraw-btn');
