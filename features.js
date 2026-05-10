@@ -445,7 +445,7 @@
             btn.style.border     = 'none';
             btn.style.cursor     = 'pointer';
             btn.style.boxSizing  = 'border-box';
-            btn.style.marginTop  = '6px';
+            btn.style.marginTop  = corridorBtn.style.marginTop || '0';
             btn.style.background = '#8B1A1A';
             btn.style.color      = 'white';
             btn.addEventListener('click', onFabClick);
@@ -644,15 +644,27 @@
     // Guard: when road tool results are showing, prevent patch clicks from
     // overriding the sidebar. We watch patch-info-content for external changes
     // and restore our content if the tool is active.
-    var _roadToolContent = null;
-    var _roadToolGuard   = false;
+    var _roadToolContent  = null;
+    var _roadToolGuard    = false;
+    var _roadToolRestoring = false;   // re-entrancy guard
     var _contentObserver = new MutationObserver(function () {
         if (!_roadToolGuard || !_roadToolContent) return;
+        if (_roadToolRestoring) return;  // already restoring, skip
         var el = document.getElementById('patch-info-content');
         if (!el) return;
-        // If content changed to something other than our tool content, restore
         if (el.innerHTML !== _roadToolContent) {
+            _roadToolRestoring = true;
             el.innerHTML = _roadToolContent;
+            // Re-bind the action buttons that were inside the restored HTML
+            var redrawBtn = el.querySelector('#road-redraw-btn');
+            var clearBtn  = el.querySelector('#road-clear-btn');
+            if (redrawBtn) redrawBtn.addEventListener('click', function () {
+                deactivateGuard(); startDraw(getMap());
+            });
+            if (clearBtn) clearBtn.addEventListener('click', function () {
+                deactivateGuard(); removeDraw(); resetSidebar();
+            });
+            setTimeout(function () { _roadToolRestoring = false; }, 0);
         }
     });
     (function () {
@@ -672,8 +684,9 @@
         _roadToolGuard   = true;
     }
     function deactivateGuard() {
-        _roadToolGuard   = false;
-        _roadToolContent = null;
+        _roadToolGuard     = false;
+        _roadToolContent   = null;
+        _roadToolRestoring = false;
     }
 
     function resetSidebar() {
