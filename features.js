@@ -57,7 +57,7 @@
             btn.id = 'report-card-btn';
             btn.textContent = '\u2b07 Download report card';
             btn.style.cssText =
-                'display:block;width:100%;margin-top:10px;padding:8px 10px;' +
+                'display:block;width:100%;margin-top:0;padding:8px 10px;' +
                 'background:#2a8234;color:white;border:none;border-radius:4px;' +
                 'font-size:12px;font-weight:600;cursor:pointer;' +
                 'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
@@ -390,6 +390,7 @@
     var drawInstance  = null;
     var mapRef        = null;
     var drawActive    = false;
+    var _onDrawCreate = null;
 
     // ── Union-Find for connectivity component analysis ─────────────────────
     function makeUF(ids) {
@@ -436,7 +437,7 @@
             // Sync button appearance with corridor button after app.js has finished styling it
             // Set reasonable defaults immediately so button is usable on first render
             btn.style.cssText =
-                'display:block;width:100%;padding:8px 14px;margin-top:6px;' +
+                'display:block;width:100%;padding:8px 14px;margin-top:0;' +
                 'background:#8B1A1A;color:white;border:none;border-radius:4px;' +
                 'font-size:13px;font-weight:600;cursor:pointer;box-sizing:border-box;' +
                 'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
@@ -450,7 +451,6 @@
                 btn.style.fontFamily   = cs.fontFamily;
                 btn.style.borderRadius = cs.borderRadius;
                 btn.style.lineHeight   = cs.lineHeight;
-                btn.style.width        = cs.width;
             }, 800);
             btn.addEventListener('click', onFabClick);
             // Insert after the corridor level toggles panel so it sits below the full corridor UI
@@ -459,7 +459,7 @@
             // Wrap in a div so margin-top matches the corridor button's own spacing
             var wrapper = document.createElement('div');
             wrapper.id = 'road-draw-wrapper';
-            wrapper.style.cssText = 'margin-top:6px;';
+            wrapper.style.cssText = 'margin-top:-2px;';
             wrapper.appendChild(btn);
             anchor.parentNode.insertBefore(wrapper, anchor.nextSibling);
         }, 400);
@@ -546,15 +546,16 @@
             btn.style.background = '#555';
         }
 
-        // Bind draw.create  -  use named handler so we can remove/re-add cleanly
-        function onDrawCreate(e) {
-            map.off('draw.create', onDrawCreate);
+        // Module-level handler so map.off works across startDraw calls
+        if (_onDrawCreate) map.off('draw.create', _onDrawCreate);
+        _onDrawCreate = function (e) {
+            map.off('draw.create', _onDrawCreate);
+            _onDrawCreate = null;
             drawActive = false;
             showFabPair();
             analyseRoad(e.features[0], map);
-        }
-        map.off('draw.create', onDrawCreate); // safety
-        map.on('draw.create', onDrawCreate);
+        };
+        map.on('draw.create', _onDrawCreate);
         drawActive = true;
 
         showHint();
@@ -597,7 +598,7 @@
     function restoreFab() {
         var wrapper = document.getElementById('road-draw-wrapper'); if (!wrapper) return;
         wrapper.innerHTML = '';
-        wrapper.style.cssText = 'margin-top:6px;';
+        wrapper.style.cssText = 'margin-top:-2px;';
         var btn = document.createElement('button');
         btn.id = 'road-draw-fab';
         btn.innerHTML = '&#9998; Draw road';
@@ -741,15 +742,22 @@
             try { if (turf.booleanIntersects(lineGJ, f)) hitPatches.push(f.properties); } catch(e) {}
         });
 
-        // ── Corridors severed ─────────────────────────────────────────────
+        // ── Corridors severed with 50m buffer ────────────────────────────────────────
+        var lineBuffer = null;
+        try { lineBuffer = turf.buffer(lineGJ, 0.05, { units: 'kilometers' }); } catch(e) {}
+
         var severed = [];
         corrFeats.forEach(function (f) {
             try {
-                var pts = turf.lineIntersect(lineGJ, { type: 'Feature', geometry: f.geometry });
-                if (pts.features.length > 0) severed.push(f.properties);
+                var corrFeat = { type: 'Feature', geometry: f.geometry };
+                var hit = false;
+                var pts = turf.lineIntersect(lineGJ, corrFeat);
+                if (pts.features.length > 0) hit = true;
+                if (!hit && lineBuffer) hit = turf.booleanIntersects(lineBuffer, corrFeat);
+                if (hit) severed.push(f.properties);
             } catch(e) {}
         });
-        var severedSet = {};
+                var severedSet = {};
         severed.forEach(function (p) { severedSet[p.id_from + '_' + p.id_to] = true; });
 
         // ── Carbon stock at risk ──────────────────────────────────────────
