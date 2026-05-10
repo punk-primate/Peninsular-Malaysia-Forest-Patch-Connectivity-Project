@@ -433,13 +433,25 @@
             btn.id = 'road-draw-fab';
             btn.innerHTML = '&#9998; Draw road';
             btn.title = 'Draw a line to assess potential development impact on forest connectivity';
-            // Apply same classes as corridor button so CSS rules match
-            // Copy className so any stylesheet rules apply identically
-            if (corridorBtn.className) btn.className = corridorBtn.className;
-            // Override only colour; all sizing comes from the class
-            btn.style.background = '#8B1A1A';
-            btn.style.color      = 'white';
-            btn.style.marginTop  = '6px';
+            // Sync button appearance with corridor button after app.js has finished styling it
+            // Set reasonable defaults immediately so button is usable on first render
+            btn.style.cssText =
+                'display:block;width:100%;padding:8px 14px;margin-top:6px;' +
+                'background:#8B1A1A;color:white;border:none;border-radius:4px;' +
+                'font-size:13px;font-weight:600;cursor:pointer;box-sizing:border-box;' +
+                'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+            // After app.js has had time to apply its own inline styles to the
+            // corridor button, copy the exact computed sizing so both match
+            setTimeout(function () {
+                var cs = window.getComputedStyle(corridorBtn);
+                btn.style.padding      = cs.padding;
+                btn.style.fontSize     = cs.fontSize;
+                btn.style.fontWeight   = cs.fontWeight;
+                btn.style.fontFamily   = cs.fontFamily;
+                btn.style.borderRadius = cs.borderRadius;
+                btn.style.lineHeight   = cs.lineHeight;
+                btn.style.width        = cs.width;
+            }, 800);
             btn.addEventListener('click', onFabClick);
             // Insert after the corridor level toggles panel so it sits below the full corridor UI
             var levelPanel = document.getElementById('conn-level-toggles');
