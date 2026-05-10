@@ -433,10 +433,21 @@
             btn.id = 'road-draw-fab';
             btn.innerHTML = '&#9998; Draw road';
             btn.title = 'Draw a line to assess potential development impact on forest connectivity';
-            // Match corridor button style at runtime
-            btn.style.cssText = corridorBtn.style.cssText || '';
-            btn.style.background = '#8B1A1A';
+            // Match corridor button height/padding exactly, override colour
+            var cs = window.getComputedStyle(corridorBtn);
+            btn.style.display    = 'block';
+            btn.style.width      = '100%';
+            btn.style.padding    = cs.padding;
+            btn.style.fontSize   = cs.fontSize;
+            btn.style.fontWeight = cs.fontWeight;
+            btn.style.fontFamily = cs.fontFamily;
+            btn.style.borderRadius = cs.borderRadius;
+            btn.style.border     = 'none';
+            btn.style.cursor     = 'pointer';
+            btn.style.boxSizing  = 'border-box';
             btn.style.marginTop  = '6px';
+            btn.style.background = '#8B1A1A';
+            btn.style.color      = 'white';
             btn.addEventListener('click', onFabClick);
             // Insert after the corridor level toggles panel so it sits below the full corridor UI
             var levelPanel = document.getElementById('conn-level-toggles');
@@ -630,7 +641,43 @@
         if (panel) setTimeout(function () { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80);
     }
 
+    // Guard: when road tool results are showing, prevent patch clicks from
+    // overriding the sidebar. We watch patch-info-content for external changes
+    // and restore our content if the tool is active.
+    var _roadToolContent = null;
+    var _roadToolGuard   = false;
+    var _contentObserver = new MutationObserver(function () {
+        if (!_roadToolGuard || !_roadToolContent) return;
+        var el = document.getElementById('patch-info-content');
+        if (!el) return;
+        // If content changed to something other than our tool content, restore
+        if (el.innerHTML !== _roadToolContent) {
+            el.innerHTML = _roadToolContent;
+        }
+    });
+    (function () {
+        var el = document.getElementById('patch-info-content');
+        if (el) {
+            _contentObserver.observe(el, { childList: true, subtree: true, characterData: true });
+        } else {
+            document.addEventListener('DOMContentLoaded', function () {
+                var el2 = document.getElementById('patch-info-content');
+                if (el2) _contentObserver.observe(el2, { childList: true, subtree: true, characterData: true });
+            });
+        }
+    })();
+
+    function activateGuard(html) {
+        _roadToolContent = html;
+        _roadToolGuard   = true;
+    }
+    function deactivateGuard() {
+        _roadToolGuard   = false;
+        _roadToolContent = null;
+    }
+
     function resetSidebar() {
+        deactivateGuard();
         var el = document.getElementById('patch-info-content');
         if (el) el.innerHTML = 'Select a patch on the map to see details.';
     }
@@ -693,13 +740,34 @@
         // biomass_mgha is Mg C / ha, area is in ha → product is Mg C
         var carbonTonnes = Math.round(totalCarbonMg);
 
-        // Core area at risk
-        var totalCoreHa = 0;
+        // Core area fragmentation estimate
+        // When a line bisects a patch it creates new edge on both sides,
+        // reducing core area disproportionately. Each fragment's core-to-area
+        // ratio will be lower than the original patch's ratio because smaller
+        // patches have more edge relative to their area.
+        // Estimate: assume bisection roughly halves the patch; each fragment
+        // retains (core/area)^1.5 of the original ratio applied to half the area.
+        // This is a conservative approximation  -  actual loss is often larger.
+        var totalCurrentCoreHa = 0;
+        var totalEstimatedCoreHa = 0;
         hitPatches.forEach(function (p) {
-            var c = parseFloat(p.core);
-            if (!isNaN(c)) totalCoreHa += c;
+            var c    = parseFloat(p.core);
+            var area = parseFloat(p.area);
+            if (!isNaN(c) && !isNaN(area) && area > 0) {
+                totalCurrentCoreHa += c;
+                var ratio     = c / area;                        // current core fraction
+                var fragArea  = area / 2;                        // each fragment ~half
+                var fragRatio = Math.pow(ratio, 1.3);            // ratio degrades with size
+                var fragCore  = Math.max(0, fragArea * fragRatio);
+                totalEstimatedCoreHa += fragCore * 2;            // both fragments
+            }
         });
-        totalCoreHa = Math.round(totalCoreHa * 10) / 10;
+        var totalCurrentCoreHa  = Math.round(totalCurrentCoreHa  * 10) / 10;
+        var totalEstimatedCoreHa = Math.round(totalEstimatedCoreHa * 10) / 10;
+        var coreHaLoss = Math.round((totalCurrentCoreHa - totalEstimatedCoreHa) * 10) / 10;
+        var corePctLoss = totalCurrentCoreHa > 0
+            ? Math.round((1 - totalEstimatedCoreHa / totalCurrentCoreHa) * 100)
+            : 0;
 
         // Mean canopy height: intersected vs all visible patches
         var hitCanopySum = 0, hitCanopyN = 0, allCanopySum = 0, allCanopyN = 0;
@@ -817,10 +885,12 @@
                 }
             }
 
-            // Core area
-            if (totalCoreHa > 0) {
-                parts.push('The intersected patches contain a combined core area of <strong>' +
-                    totalCoreHa.toFixed(1) + ' ha</strong>. Core area is the ecologically functional interior of a patch, buffered from edge disturbance and the most critical zone for wildlife occupancy. Development that bisects a patch reduces this interior and may push resident species below minimum viable habitat thresholds.');
+            // Core area fragmentation
+            if (totalCurrentCoreHa > 0) {
+                parts.push('The intersected patches currently contain <strong>' + totalCurrentCoreHa.toFixed(1) +
+                    ' ha</strong> of core habitat. Bisection by a development corridor would create new edges on both sides of each fragment, reducing estimated core area to approximately <strong>' +
+                    totalEstimatedCoreHa.toFixed(1) + ' ha</strong> across the resulting fragments, a loss of around <strong>' +
+                    corePctLoss + '%</strong>. This estimate is conservative; actual core area loss is often greater depending on fragment shape and the width of the development corridor.');
             }
 
             // Canopy height
@@ -885,14 +955,18 @@
             s += '<div style="margin-bottom:12px;color:inherit">' + narrative + '</div>';
         }
 
-        // Core area
-        if (totalCoreHa > 0) {
-            s += sectionHdr('Core habitat at risk');
-            s += '<div style="font-size:1.1em;font-weight:700;color:#2a6b0a;margin-bottom:4px">' +
-                 totalCoreHa.toFixed(1) + ' ha</div>';
-            s += '<div style="font-size:0.80em;color:#666;margin-bottom:4px">Combined core area across ' +
-                 hitPatches.length + ' directly intersected patch' + (hitPatches.length !== 1 ? 'es' : '') +
-                 '. Core area is the patch interior buffered from edge effects.</div>';
+        // Core area fragmentation
+        if (totalCurrentCoreHa > 0) {
+            s += sectionHdr('Estimated core habitat loss after fragmentation');
+            s += '<div style="display:flex;gap:16px;margin-bottom:4px">';
+            s += '<div><div style="font-size:0.78em;color:#666">Current</div>' +
+                 '<div style="font-size:1.05em;font-weight:700;color:#2a6b0a">' + totalCurrentCoreHa.toFixed(1) + ' ha</div></div>';
+            s += '<div><div style="font-size:0.78em;color:#666">Est. after bisection</div>' +
+                 '<div style="font-size:1.05em;font-weight:700;color:#8B1A1A">' + totalEstimatedCoreHa.toFixed(1) + ' ha</div></div>';
+            s += '<div><div style="font-size:0.78em;color:#666">Est. loss</div>' +
+                 '<div style="font-size:1.05em;font-weight:700;color:#8B1A1A">-' + corePctLoss + '%</div></div>';
+            s += '</div>';
+            s += '<div style="font-size:0.78em;color:#888;font-style:italic">Conservative estimate assuming bisection halves each patch. Actual loss may be greater.</div>';
         }
 
         // Canopy height
@@ -971,11 +1045,14 @@
         s += '</div></div>';
 
         el.innerHTML = s;
+        activateGuard(s);
 
         document.getElementById('road-redraw-btn').addEventListener('click', function () {
+            deactivateGuard();
             startDraw(map);
         });
         document.getElementById('road-clear-btn').addEventListener('click', function () {
+            deactivateGuard();
             removeDraw();
             resetSidebar();
         });
