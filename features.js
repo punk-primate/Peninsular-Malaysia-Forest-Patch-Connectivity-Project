@@ -1,5 +1,6 @@
 //   Add one line before <script src="config.js"> in each map HTML file:
 //       <script src="features.js"></script>
+//   Remove that line to revert completely.
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function () {
@@ -797,85 +798,7 @@
         var meanAllCanopy = allCanopyN > 0 ? Math.round(allCanopySum / allCanopyN * 10) / 10 : null;
         var canopyAboveAvg = meanHitCanopy !== null && meanAllCanopy !== null && meanHitCanopy > meanAllCanopy;
 
-        // ── Species-area relationship (SAR) ──────────────────────────────────────
-        // retention = ((A_original - A_removed) / A_original)^z
-        // A_removed = actual overlap area between the 50m buffer and each patch.
-        // z = 0.25 (conservative for fragmented tropical forest).
-        var Z = 0.25;
-        var sarPatches = [];
-
-        // Build a lookup from patch id to full feature (for geometry access)
-        var patchFeatById = {};
-        patchFeats.forEach(function (f) {
-            var pid = f.properties && (f.properties.id || f.properties.ID);
-            if (pid != null) patchFeatById[String(pid)] = f;
-        });
-
-        hitPatches.forEach(function (p) {
-            try {
-                // Use stored area property  -  try multiple possible column names
-                var areaOriginal = parseFloat(p.area || p.area_ha || p.AREA || 0);
-                if (isNaN(areaOriginal) || areaOriginal <= 0) return;
-
-                var areaRemoved = 0;
-
-                // Try geometry-based intersection if buffer and feature are available
-                if (lineBuffer) {
-                    var pid   = p.id || p.ID;
-                    var feat  = pid != null ? patchFeatById[String(pid)] : null;
-                    // Also try matching by iterating if id lookup fails
-                    if (!feat) {
-                        feat = patchFeats.find(function (f) {
-                            return f.properties && (
-                                String(f.properties.id)   === String(pid) ||
-                                String(f.properties.ID)   === String(pid)
-                            );
-                        });
-                    }
-                    if (feat && feat.geometry) {
-                        try {
-                            var patchGJ = { type: 'Feature', geometry: feat.geometry, properties: {} };
-                            var inter   = turf.intersect(lineBuffer, patchGJ);
-                            if (inter) {
-                                areaRemoved = turf.area(inter) / 10000; // m2 to ha
-                            }
-                        } catch(ge) {
-                            // Geometry op failed  -  fall through to buffer-area proxy
-                        }
-                    }
-                    // Fallback: if geometry intersection gave 0 or failed, estimate
-                    // using buffer area relative to patch area as a proportion proxy
-                    if (areaRemoved <= 0 && lineBuffer) {
-                        try {
-                            var bufAreaHa = turf.area(lineBuffer) / 10000;
-                            // Fraction of buffer that falls within this patch
-                            // Approximation: use buffer area as upper bound of removal
-                            areaRemoved = Math.min(bufAreaHa, areaOriginal * 0.1);
-                        } catch(e2) {}
-                    }
-                }
-
-                areaRemoved = Math.min(areaRemoved, areaOriginal); // clamp
-                if (areaRemoved <= 0) return; // nothing to report
-
-                var areaRetained   = areaOriginal - areaRemoved;
-                var retentionRatio = Math.pow(areaRetained / areaOriginal, Z);
-                sarPatches.push({
-                    retentionRatio: retentionRatio,
-                    areaOriginal:   areaOriginal,
-                    areaRemoved:    Math.round(areaRemoved * 10) / 10
-                });
-            } catch(e) {}
-        });
-
-        // Area-weighted mean retention
-        var sarTotalArea = sarPatches.reduce(function (s, r) { return s + r.areaOriginal; }, 0);
-        var meanRetention = sarTotalArea > 0
-            ? sarPatches.reduce(function (s, r) { return s + r.retentionRatio * r.areaOriginal; }, 0) / sarTotalArea
-            : null;
-        var meanPctLoss = meanRetention !== null ? Math.max(1, Math.round((1 - meanRetention) * 100)) : null;
-
-                // ── Network bottleneck detection via union-find ───────────────────
+        // ── Network bottleneck detection via union-find ───────────────────
         // Build patch ID list and edge list from all visible corridors
         var allPatchIds = new Set();
         patchFeats.forEach(function (f) {
@@ -989,13 +912,7 @@
                     ' m</strong>. This line disproportionately intersects taller, more structurally complex forest, which typically represents older growth with higher biodiversity value and lower potential for regeneration within decadal timeframes.');
             }
 
-            // SAR long-term prediction
-            if (meanPctLoss !== null) {
-                parts.push('The species-area relationship (SAR) predicts a long-term reduction in species richness of approximately <strong>' +
-                    meanPctLoss + '%</strong> per fragment (z = 0.25, a conservative value for fragmented tropical forest; MacArthur and Wilson, 1967; Brooks et al., 1999). This represents extinction debt: committed future loss rather than immediate decline, as locally committed extinctions may persist for decades before being realised (Tilman et al., 1994). SAR projections may overestimate short-term losses but are widely used as first-order estimates of long-term biodiversity consequences.');
-            }
-
-                        // Carbon
+            // Carbon
             if (carbonTonnes > 0) {
                 var severity = carbonTonnes > 10000 ? 'very high' : carbonTonnes > 1000 ? 'significant' : 'moderate';
                 parts.push('The intersected patches hold an estimated <strong>' +
@@ -1076,20 +993,7 @@
             s += '</div>';
         }
 
-        // SAR panel
-        if (meanPctLoss !== null) {
-            s += sectionHdr('Projected long-term species richness loss');
-            s += '<div style="font-size:1.1em;font-weight:700;color:#8B1A1A;margin-bottom:4px">~' +
-                 meanPctLoss + '% per fragment</div>';
-            s += '<div style="font-size:0.80em;color:#666;margin-bottom:2px">' +
-                 'Area-weighted estimate across ' + sarPatches.length + ' affected patch' + (sarPatches.length !== 1 ? 'es' : '') +
-                 ' based on proportional area affected (z = 0.25; MacArthur &amp; Wilson, 1967; Brooks et al., 1999).</div>';
-            s += '<div style="font-size:0.78em;color:#888;font-style:italic">' +
-                 'Represents extinction debt: committed future loss rather than immediate decline. ' +
-                 'SAR projections simplify ecological complexity and may overestimate short-term realised extinctions.</div>';
-        }
-
-                // Carbon
+        // Carbon
         if (carbonTonnes > 0) {
             s += sectionHdr('Aboveground carbon at risk');
             s += '<div style="font-size:1.1em;font-weight:700;color:#2a6b0a;margin-bottom:4px">' +
