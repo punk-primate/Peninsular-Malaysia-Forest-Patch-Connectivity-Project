@@ -1,4 +1,4 @@
-//   I add this following line before <script src="config.js"> in each map HTML file:
+//   Add one line before <script src="config.js"> in each map HTML file:
 //       <script src="features.js"></script>
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -57,7 +57,7 @@
             btn.id = 'report-card-btn';
             btn.textContent = '\u2b07 Download report card';
             btn.style.cssText =
-                'display:block;width:100%;margin-top:0;padding:8px 10px;' +
+                'display:block;width:100%;margin-top:18px;padding:8px 10px;' +
                 'background:#2a8234;color:white;border:none;border-radius:4px;' +
                 'font-size:12px;font-weight:600;cursor:pointer;' +
                 'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
@@ -798,15 +798,40 @@
         var canopyAboveAvg = meanHitCanopy !== null && meanAllCanopy !== null && meanHitCanopy > meanAllCanopy;
 
         // ── Species-area relationship (SAR) ──────────────────────────────────────
+        // Uses actual intersection geometry to calculate area removed per patch.
+        // retention = ((A_original - A_removed) / A_original)^z
+        // A_removed = area of overlap between the 50m line buffer and each patch.
+        // z = 0.25 (conservative value for fragmented tropical forest).
         var Z = 0.25;
         var sarPatches = [];
-        hitPatches.forEach(function (p) {
-            var area = parseFloat(p.area);
-            if (!isNaN(area) && area > 0)
-                sarPatches.push({ retentionRatio: Math.pow(0.5, Z) });
+        patchFeats.forEach(function (f) {
+            try {
+                var patchFeat = { type: 'Feature', geometry: f.geometry, properties: f.properties };
+                // Only process patches that intersect the buffer zone
+                if (!lineBuffer || !turf.booleanIntersects(lineBuffer, patchFeat)) return;
+                // Calculate area of overlap between buffer and patch
+                var intersection = turf.intersect(lineBuffer, patchFeat);
+                if (!intersection) return;
+                var areaRemoved = turf.area(intersection) / 10000; // m2 to ha
+                var areaOriginal = parseFloat(f.properties.area);
+                if (isNaN(areaOriginal) || areaOriginal <= 0) return;
+                // Clamp removed area to original area (buffer may exceed patch)
+                areaRemoved = Math.min(areaRemoved, areaOriginal);
+                var areaRetained = areaOriginal - areaRemoved;
+                var retentionRatio = Math.pow(areaRetained / areaOriginal, Z);
+                var pctLoss = Math.round((1 - retentionRatio) * 100);
+                sarPatches.push({
+                    retentionRatio: retentionRatio,
+                    pctLoss: pctLoss,
+                    areaOriginal: areaOriginal,
+                    areaRemoved: Math.round(areaRemoved * 10) / 10
+                });
+            } catch(e) {}
         });
-        var meanRetention = sarPatches.length > 0
-            ? sarPatches.reduce(function (s, r) { return s + r.retentionRatio; }, 0) / sarPatches.length
+        // Area-weighted mean retention across affected patches
+        var totalArea = sarPatches.reduce(function (s, r) { return s + r.areaOriginal; }, 0);
+        var meanRetention = totalArea > 0
+            ? sarPatches.reduce(function (s, r) { return s + r.retentionRatio * r.areaOriginal; }, 0) / totalArea
             : null;
         var meanPctLoss = meanRetention !== null ? Math.round((1 - meanRetention) * 100) : null;
 
@@ -926,8 +951,8 @@
 
             // SAR long-term prediction
             if (meanPctLoss !== null) {
-                parts.push('Based on the species-area relationship (SAR), bisection of the affected patches is associated with an expected long-term reduction in species richness of approximately <strong>' +
-                    meanPctLoss + '%</strong> per fragment relative to the original patch. This uses z = 0.25, a value commonly applied to fragmented tropical forest systems and considered conservative (MacArthur & Wilson, 1967; Rosenzweig, 1995; Brooks et al., 1999). This figure represents extinction debt rather than immediate observed loss: species committed to local extinction through habitat reduction may persist for decades before disappearing (Tilman et al., 1994). Note that SAR-based projections simplify ecological complexity and may overestimate short-term realised extinctions.');
+                parts.push('The species-area relationship (SAR) predicts a long-term reduction in species richness of approximately <strong>' +
+                    meanPctLoss + '%</strong> per fragment (z = 0.25, a conservative value for fragmented tropical forest; MacArthur and Wilson, 1967; Brooks et al., 1999). This represents extinction debt: committed future loss rather than immediate decline, as locally committed extinctions may persist for decades before being realised (Tilman et al., 1994). SAR projections may overestimate short-term losses but are widely used as first-order estimates of long-term biodiversity consequences.');
             }
 
                         // Carbon
@@ -1017,8 +1042,8 @@
             s += '<div style="font-size:1.1em;font-weight:700;color:#8B1A1A;margin-bottom:4px">~' +
                  meanPctLoss + '% per fragment</div>';
             s += '<div style="font-size:0.80em;color:#666;margin-bottom:2px">' +
-                 'Long-term equilibrium estimate based on the species-area relationship (z = 0.25; ' +
-                 'MacArthur &amp; Wilson, 1967; Brooks et al., 1999).</div>';
+                 'Area-weighted estimate across ' + sarPatches.length + ' affected patch' + (sarPatches.length !== 1 ? 'es' : '') +
+                 ' based on actual intersection area (z = 0.25; MacArthur &amp; Wilson, 1967; Brooks et al., 1999).</div>';
             s += '<div style="font-size:0.78em;color:#888;font-style:italic">' +
                  'Represents extinction debt: committed future loss rather than immediate decline. ' +
                  'SAR projections simplify ecological complexity and may overestimate short-term realised extinctions.</div>';
