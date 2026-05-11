@@ -1,4 +1,4 @@
-//   Add one line before <script src="config.js"> in each map HTML file:
+//   I add this following line before <script src="config.js"> in each map HTML file:
 //       <script src="features.js"></script>
 // ─────────────────────────────────────────────────────────────────────────────
 
