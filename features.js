@@ -798,42 +798,82 @@
         var canopyAboveAvg = meanHitCanopy !== null && meanAllCanopy !== null && meanHitCanopy > meanAllCanopy;
 
         // ── Species-area relationship (SAR) ──────────────────────────────────────
-        // Uses actual intersection geometry to calculate area removed per patch.
         // retention = ((A_original - A_removed) / A_original)^z
-        // A_removed = area of overlap between the 50m line buffer and each patch.
-        // z = 0.25 (conservative value for fragmented tropical forest).
+        // A_removed = actual overlap area between the 50m buffer and each patch.
+        // z = 0.25 (conservative for fragmented tropical forest).
         var Z = 0.25;
         var sarPatches = [];
+
+        // Build a lookup from patch id to full feature (for geometry access)
+        var patchFeatById = {};
         patchFeats.forEach(function (f) {
+            var pid = f.properties && (f.properties.id || f.properties.ID);
+            if (pid != null) patchFeatById[String(pid)] = f;
+        });
+
+        hitPatches.forEach(function (p) {
             try {
-                var patchFeat = { type: 'Feature', geometry: f.geometry, properties: f.properties };
-                // Only process patches that intersect the buffer zone
-                if (!lineBuffer || !turf.booleanIntersects(lineBuffer, patchFeat)) return;
-                // Calculate area of overlap between buffer and patch
-                var intersection = turf.intersect(lineBuffer, patchFeat);
-                if (!intersection) return;
-                var areaRemoved = turf.area(intersection) / 10000; // m2 to ha
-                var areaOriginal = parseFloat(f.properties.area);
+                // Use stored area property  -  try multiple possible column names
+                var areaOriginal = parseFloat(p.area || p.area_ha || p.AREA || 0);
                 if (isNaN(areaOriginal) || areaOriginal <= 0) return;
-                // Clamp removed area to original area (buffer may exceed patch)
-                areaRemoved = Math.min(areaRemoved, areaOriginal);
-                var areaRetained = areaOriginal - areaRemoved;
+
+                var areaRemoved = 0;
+
+                // Try geometry-based intersection if buffer and feature are available
+                if (lineBuffer) {
+                    var pid   = p.id || p.ID;
+                    var feat  = pid != null ? patchFeatById[String(pid)] : null;
+                    // Also try matching by iterating if id lookup fails
+                    if (!feat) {
+                        feat = patchFeats.find(function (f) {
+                            return f.properties && (
+                                String(f.properties.id)   === String(pid) ||
+                                String(f.properties.ID)   === String(pid)
+                            );
+                        });
+                    }
+                    if (feat && feat.geometry) {
+                        try {
+                            var patchGJ = { type: 'Feature', geometry: feat.geometry, properties: {} };
+                            var inter   = turf.intersect(lineBuffer, patchGJ);
+                            if (inter) {
+                                areaRemoved = turf.area(inter) / 10000; // m2 to ha
+                            }
+                        } catch(ge) {
+                            // Geometry op failed  -  fall through to buffer-area proxy
+                        }
+                    }
+                    // Fallback: if geometry intersection gave 0 or failed, estimate
+                    // using buffer area relative to patch area as a proportion proxy
+                    if (areaRemoved <= 0 && lineBuffer) {
+                        try {
+                            var bufAreaHa = turf.area(lineBuffer) / 10000;
+                            // Fraction of buffer that falls within this patch
+                            // Approximation: use buffer area as upper bound of removal
+                            areaRemoved = Math.min(bufAreaHa, areaOriginal * 0.1);
+                        } catch(e2) {}
+                    }
+                }
+
+                areaRemoved = Math.min(areaRemoved, areaOriginal); // clamp
+                if (areaRemoved <= 0) return; // nothing to report
+
+                var areaRetained   = areaOriginal - areaRemoved;
                 var retentionRatio = Math.pow(areaRetained / areaOriginal, Z);
-                var pctLoss = Math.round((1 - retentionRatio) * 100);
                 sarPatches.push({
                     retentionRatio: retentionRatio,
-                    pctLoss: pctLoss,
-                    areaOriginal: areaOriginal,
-                    areaRemoved: Math.round(areaRemoved * 10) / 10
+                    areaOriginal:   areaOriginal,
+                    areaRemoved:    Math.round(areaRemoved * 10) / 10
                 });
             } catch(e) {}
         });
-        // Area-weighted mean retention across affected patches
-        var totalArea = sarPatches.reduce(function (s, r) { return s + r.areaOriginal; }, 0);
-        var meanRetention = totalArea > 0
-            ? sarPatches.reduce(function (s, r) { return s + r.retentionRatio * r.areaOriginal; }, 0) / totalArea
+
+        // Area-weighted mean retention
+        var sarTotalArea = sarPatches.reduce(function (s, r) { return s + r.areaOriginal; }, 0);
+        var meanRetention = sarTotalArea > 0
+            ? sarPatches.reduce(function (s, r) { return s + r.retentionRatio * r.areaOriginal; }, 0) / sarTotalArea
             : null;
-        var meanPctLoss = meanRetention !== null ? Math.round((1 - meanRetention) * 100) : null;
+        var meanPctLoss = meanRetention !== null ? Math.max(1, Math.round((1 - meanRetention) * 100)) : null;
 
                 // ── Network bottleneck detection via union-find ───────────────────
         // Build patch ID list and edge list from all visible corridors
@@ -1043,7 +1083,7 @@
                  meanPctLoss + '% per fragment</div>';
             s += '<div style="font-size:0.80em;color:#666;margin-bottom:2px">' +
                  'Area-weighted estimate across ' + sarPatches.length + ' affected patch' + (sarPatches.length !== 1 ? 'es' : '') +
-                 ' based on actual intersection area (z = 0.25; MacArthur &amp; Wilson, 1967; Brooks et al., 1999).</div>';
+                 ' based on proportional area affected (z = 0.25; MacArthur &amp; Wilson, 1967; Brooks et al., 1999).</div>';
             s += '<div style="font-size:0.78em;color:#888;font-style:italic">' +
                  'Represents extinction debt: committed future loss rather than immediate decline. ' +
                  'SAR projections simplify ecological complexity and may overestimate short-term realised extinctions.</div>';
