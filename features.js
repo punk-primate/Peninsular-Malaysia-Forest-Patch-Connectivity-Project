@@ -926,8 +926,8 @@
 
             // SAR long-term prediction
             if (meanPctLoss !== null) {
-                parts.push('Based on the species-area relationship (SAR), one of the most consistently observed patterns in ecology, bisection of the affected patches is associated with an expected long-term reduction in species richness of approximately <strong>' +
-                    meanPctLoss + '%</strong> per fragment relative to the original patch. This uses z = 0.25, a value commonly applied to fragmented tropical forest systems and considered conservative (Brooks et al., 1999; Rosenzweig, 1995; MacArthur and Wilson, 1967). This figure represents extinction debt rather than immediate observed loss: species committed to local extinction through habitat reduction may persist for decades before disappearing (Tilman et al., 1994). Although SAR-based projections simplify ecological complexity and may overestimate short-term realised extinctions, they remain widely used as first-order estimates of the long-term biodiversity consequences of habitat loss.');
+                parts.push('Based on the species-area relationship (SAR), bisection of the affected patches is associated with an expected long-term reduction in species richness of approximately <strong>' +
+                    meanPctLoss + '%</strong> per fragment relative to the original patch. This uses z = 0.25, a value commonly applied to fragmented tropical forest systems and considered conservative (MacArthur & Wilson, 1967; Rosenzweig, 1995; Brooks et al., 1999). This figure represents extinction debt rather than immediate observed loss: species committed to local extinction through habitat reduction may persist for decades before disappearing (Tilman et al., 1994). Note that SAR-based projections simplify ecological complexity and may overestimate short-term realised extinctions.');
             }
 
                         // Carbon
