@@ -797,7 +797,20 @@
         var meanAllCanopy = allCanopyN > 0 ? Math.round(allCanopySum / allCanopyN * 10) / 10 : null;
         var canopyAboveAvg = meanHitCanopy !== null && meanAllCanopy !== null && meanHitCanopy > meanAllCanopy;
 
-        // ── Network bottleneck detection via union-find ───────────────────
+        // ── Species-area relationship (SAR) ──────────────────────────────────────
+        var Z = 0.25;
+        var sarPatches = [];
+        hitPatches.forEach(function (p) {
+            var area = parseFloat(p.area);
+            if (!isNaN(area) && area > 0)
+                sarPatches.push({ retentionRatio: Math.pow(0.5, Z) });
+        });
+        var meanRetention = sarPatches.length > 0
+            ? sarPatches.reduce(function (s, r) { return s + r.retentionRatio; }, 0) / sarPatches.length
+            : null;
+        var meanPctLoss = meanRetention !== null ? Math.round((1 - meanRetention) * 100) : null;
+
+                // ── Network bottleneck detection via union-find ───────────────────
         // Build patch ID list and edge list from all visible corridors
         var allPatchIds = new Set();
         patchFeats.forEach(function (f) {
@@ -887,22 +900,21 @@
                 return '<p style="color:#888;font-style:italic">No patches or corridors were intersected by this line at the current zoom level. Try zooming in or redrawing.</p>';
             }
 
-            // Always lead with fragmentation impact if any patches are hit
+            // Merged fragmentation + core area (no repetition)
             if (hitPatches.length > 0) {
                 var highTierHit = (hitTiers['Tier 1 (Core Habitat)'] || 0) + (hitTiers['Tier 2 (Major Stepping Stones)'] || 0);
+                var coreStr = totalCurrentCoreHa > 0
+                    ? ' The intersected patches hold a combined core area of <strong>' + totalCurrentCoreHa.toFixed(1) +
+                      ' ha</strong>. Core area loss after bisection is disproportionate to area loss: smaller fragments retain significantly less interior per unit area, directly reducing the quality of habitat available to species that require undisturbed forest away from edge effects.'
+                    : '';
                 if (highTierHit > 0) {
                     parts.push('This line directly fragments <strong>' + highTierHit + '</strong> Primary or Established forest patch' +
-                        (highTierHit > 1 ? 'es' : '') + '. Bisecting a forest patch reduces its effective core area, increases edge exposure, and disrupts the interior habitat that arboreal wildlife depend on. Once fragmented, patches of this quality are unlikely to recover their ecological function within a human timescale.');
+                        (highTierHit > 1 ? 'es' : '') + '. Bisecting a patch reduces its effective core area, increases edge exposure, and disrupts interior habitat that arboreal wildlife depend on.' +
+                        coreStr + ' Patches of this structural quality are unlikely to recover their ecological function within a human timescale.');
                 } else {
                     parts.push('This line directly intersects <strong>' + hitPatches.length + '</strong> forest patch' +
-                        (hitPatches.length > 1 ? 'es' : '') + '. Even where no corridors are severed, bisecting a forest patch reduces its interior habitat, increases edge effects, and disrupts movement within the patch for resident wildlife.');
+                        (hitPatches.length > 1 ? 'es' : '') + '. Even where no corridors are severed, bisecting a patch reduces its interior habitat, increases edge effects, and disrupts movement within the patch for resident wildlife.' + coreStr);
                 }
-            }
-
-            // Core area
-            if (totalCurrentCoreHa > 0) {
-                parts.push('The intersected patches contain a combined core area of <strong>' +
-                    totalCurrentCoreHa.toFixed(1) + ' ha</strong>. Bisecting a patch creates new exposed edges on both sides of the development corridor. Core area loss is always disproportionate to area loss because smaller fragments retain significantly less interior per unit area. This directly reduces the quality of habitat available to species that require undisturbed forest away from edge effects.');
             }
 
                         // Canopy height
@@ -912,7 +924,13 @@
                     ' m</strong>. This line disproportionately intersects taller, more structurally complex forest, which typically represents older growth with higher biodiversity value and lower potential for regeneration within decadal timeframes.');
             }
 
-            // Carbon
+            // SAR long-term prediction
+            if (meanPctLoss !== null) {
+                parts.push('Based on the species-area relationship (SAR), one of the most consistently observed patterns in ecology, bisection of the affected patches is associated with an expected long-term reduction in species richness of approximately <strong>' +
+                    meanPctLoss + '%</strong> per fragment relative to the original patch. This uses z = 0.25, a value commonly applied to fragmented tropical forest systems and considered conservative (Brooks et al., 1999; Rosenzweig, 1995; MacArthur and Wilson, 1967). This figure represents extinction debt rather than immediate observed loss: species committed to local extinction through habitat reduction may persist for decades before disappearing (Tilman et al., 1994). Although SAR-based projections simplify ecological complexity and may overestimate short-term realised extinctions, they remain widely used as first-order estimates of the long-term biodiversity consequences of habitat loss.');
+            }
+
+                        // Carbon
             if (carbonTonnes > 0) {
                 var severity = carbonTonnes > 10000 ? 'very high' : carbonTonnes > 1000 ? 'significant' : 'moderate';
                 parts.push('The intersected patches hold an estimated <strong>' +
@@ -993,7 +1011,20 @@
             s += '</div>';
         }
 
-        // Carbon
+        // SAR panel
+        if (meanPctLoss !== null) {
+            s += sectionHdr('Projected long-term species richness loss');
+            s += '<div style="font-size:1.1em;font-weight:700;color:#8B1A1A;margin-bottom:4px">~' +
+                 meanPctLoss + '% per fragment</div>';
+            s += '<div style="font-size:0.80em;color:#666;margin-bottom:2px">' +
+                 'Long-term equilibrium estimate based on the species-area relationship (z = 0.25; ' +
+                 'MacArthur &amp; Wilson, 1967; Brooks et al., 1999).</div>';
+            s += '<div style="font-size:0.78em;color:#888;font-style:italic">' +
+                 'Represents extinction debt: committed future loss rather than immediate decline. ' +
+                 'SAR projections simplify ecological complexity and may overestimate short-term realised extinctions.</div>';
+        }
+
+                // Carbon
         if (carbonTonnes > 0) {
             s += sectionHdr('Aboveground carbon at risk');
             s += '<div style="font-size:1.1em;font-weight:700;color:#2a6b0a;margin-bottom:4px">' +
