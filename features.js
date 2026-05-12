@@ -1,4 +1,4 @@
-//   Add this line before <script src="config.js"> in each map HTML file:
+//   This line is added before <script src="config.js"> in each map HTML file:
 //       <script src="features.js"></script>
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -866,29 +866,46 @@
         } else {
             // Lead with permeability
             if (totalLength > 0) {
+                var lineKm = Math.round(totalLength * 10) / 10;
                 var sensitivity = patchPct > 50 ? 'high ecological sensitivity' :
                                   patchPct > 20 ? 'moderate ecological sensitivity' :
-                                  corrPct  > 40 ? 'moderate ecological sensitivity (predominantly crossing functional movement zones)' :
+                                  corrPct  > 40 ? 'moderate ecological sensitivity' :
                                   'relatively low ecological sensitivity through the visible forest network';
-                parts.push(Math.round(totalLength * 10) / 10 + ' km line. ' +
-                    '<strong>' + patchPct + '%</strong> passes through forest patches, <strong>' + corrPct + '%</strong> through functional movement zones (300 m corridor buffer), and <strong>' + matrixPct + '%</strong> through open matrix. This route has <strong>' + sensitivity + '</strong>.');
+
+                var permExplain = '';
+                if (patchPct > 0) {
+                    permExplain += ' The <strong>' + patchPct + '%</strong> passing through forest patches represents direct habitat loss: development through existing forest removes vegetation, compacts soil, introduces noise and light pollution, and creates a hard barrier that most forest-interior species cannot cross. Even a narrow road through a patch effectively splits it into two separate units with different ecological trajectories.';
+                }
+                if (corrPct > 0) {
+                    permExplain += ' The <strong>' + corrPct + '%</strong> crossing functional movement zones (300 m around mapped corridors) would disrupt wildlife movement between patches. These are the areas where species are most likely to be transiting the landscape, making them disproportionately sensitive to any barrier effect.';
+                }
+                if (matrixPct > 0 && (patchPct > 0 || corrPct > 0)) {
+                    permExplain += ' The remaining <strong>' + matrixPct + '%</strong> through open matrix has the lowest direct ecological impact, though roads through matrix can still increase predation risk and suppress movement for edge-sensitive species.';
+                }
+
+                parts.push(lineKm + ' km line with <strong>' + sensitivity + '</strong>. ' +
+                    'Breakdown: <strong>' + patchPct + '%</strong> forest, <strong>' + corrPct + '%</strong> movement zone, <strong>' + matrixPct + '%</strong> open matrix.' + permExplain);
             }
-            // Fragmentation
+            // Fragmentation  -  always flag, regardless of corridor severance
             if (hitPatches.length > 0) {
                 var highTierHit = (hitTiers['Tier 1 (Core Habitat)'] || 0) + (hitTiers['Tier 2 (Major Stepping Stones)'] || 0);
                 if (highTierHit > 0) {
-                    parts.push('The line directly fragments <strong>' + highTierHit + '</strong> Primary or Established forest patch' +
-                        (highTierHit > 1 ? 'es' : '') + ', reducing effective core area, increasing edge exposure, and disrupting interior habitat. Patches of this quality are unlikely to recover their ecological function within a human timescale.');
+                    parts.push('The line directly bisects <strong>' + highTierHit + '</strong> Primary or Established forest patch' +
+                        (highTierHit > 1 ? 'es' : '') + '. Each bisected patch is split into two fragments with their own edge environments, reducing effective core area and disrupting interior habitat. Even if no mapped corridor is severed, the fragmentation itself creates a permanent barrier to within-patch movement and may isolate one of the resulting fragments from the broader network. Patches of this quality are unlikely to recover their ecological function within a human timescale.');
+                } else {
+                    parts.push('The line directly bisects <strong>' + hitPatches.length + '</strong> forest patch' +
+                        (hitPatches.length > 1 ? 'es' : '') + '. Each bisected patch is split into two fragments. Even without corridor severance, the fragmentation creates a new edge barrier and reduces the interior habitat available on both sides of the line.');
                 }
             }
             // Bottleneck
             if (isBottleneck) {
-                parts.push('<strong>Network bottleneck detected.</strong> Removing the severed corridors splits the visible forest network into <strong>' +
+                parts.push('<strong>Network structural split detected.</strong> The visible forest network would fragment into <strong>' +
                     compAfter + ' disconnected components</strong> (currently ' + compBefore + '). Entire groups of patches would lose all connectivity to one another.');
             } else if (severed.length > 0) {
-                parts.push('The severed corridors reduce network redundancy but the visible patches remain connected through alternative pathways.');
+                parts.push('No full network split at this scale, but any reduction in corridor capacity has cumulative consequences. Forest loss is rarely offset by alternative routes, and each severed connection increases the isolation of the patches it served.');
             }
-            // Isolation
+
+                        // Isolation
             var highTierIso = (isoTiers['Tier 1 (Core Habitat)'] || 0) + (isoTiers['Tier 2 (Major Stepping Stones)'] || 0);
             if (highTierIso > 0) {
                 parts.push('<strong>' + highTierIso + '</strong> Primary or Established forest patch' +
@@ -935,17 +952,29 @@
             s += '<br>';
         }
 
-        // Network integrity
         s += secHdr('Network integrity');
         if (isBottleneck) {
-            s += '<div style="background:#fdecea;border:1px solid #f5c6cb;border-radius:4px;padding:6px 10px;font-size:0.82em;line-height:1.5;color:#721c24">' +
-                 '<strong>Bottleneck detected:</strong> network splits into ' + compAfter + ' components (was ' + compBefore + ')</div>';
-        } else {
+            s += '<div style="background:#fdecea;border:1px solid #f5c6cb;border-radius:4px;padding:6px 10px;font-size:0.82em;line-height:1.5;color:#721c24;margin-bottom:4px">' +
+                 '<strong>Structural split detected:</strong> the network fragments into ' + compAfter +
+                 ' disconnected components (currently ' + compBefore + '). Entire groups of patches would lose all connectivity to one another.</div>';
+        } else if (severed.length > 0) {
+            s += '<div style="background:#fdecea;border:1px solid #f5c6cb;border-radius:4px;padding:6px 10px;font-size:0.82em;line-height:1.5;color:#721c24;margin-bottom:4px">' +
+                 '<strong>Connectivity reduced.</strong> No full structural split at this scale, but any removal of forest or corridor capacity has cumulative consequences. ' +
+                 'Forest loss is rarely offset by alternative routes, and each severed connection increases the isolation of the patches it served.</div>';
+        }
+        if (hitPatches.length > 0) {
+            s += '<div style="background:#fdecea;border:1px solid #f5c6cb;border-radius:4px;padding:6px 10px;font-size:0.82em;line-height:1.5;color:#721c24;margin-bottom:4px">' +
+                 '<strong>Patch fragmentation:</strong> ' + hitPatches.length + ' forest patch' + (hitPatches.length > 1 ? 'es are' : ' is') +
+                 ' directly bisected by this line. Each bisected patch is split into two new units with their own edge environments. ' +
+                 'Even if one resulting fragment remains connected to the corridor network, the other may not. ' +
+                 'Interior habitat is reduced on both sides regardless of size, and the new edge created persists as a permanent barrier to within-patch movement.</div>';
+        }
+        if (!isBottleneck && severed.length === 0 && hitPatches.length === 0) {
             s += '<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:4px;padding:6px 10px;font-size:0.82em;line-height:1.5;color:#1b5e20">' +
-                 'No structural split detected</div>';
+                 'No corridor severance or patch intersection detected at this zoom level.</div>';
         }
 
-        // Patches intersected
+                // Patches intersected
         if (hitPatches.length > 0) {
             s += secHdr('Forest patches directly intersected: ' + hitPatches.length);
             s += '<ul style="margin:2px 0 0;padding-left:16px;line-height:1.8">';
