@@ -652,13 +652,11 @@
 
         var lineGJ = { type: 'Feature', geometry: lineFeature.geometry };
 
-        // ── 50m line buffer (road footprint) ──────────────────────────────
+        // ── 50m line buffer  ──────────────────────────────
         var lineBuffer = null;
         try { lineBuffer = turf.buffer(lineGJ, 0.05, { units: 'kilometers' }); } catch(e) {}
 
-        // ── 300m corridor buffer (functional movement zone) ───────────────
-        // Corridor lines are for illustration only; the actual movement zone
-        // they represent extends well beyond the line itself.
+        // ── 300m corridor buffer  ───────────────
         var corrBuffers = [];
         var corrFeats = [];
         try { corrFeats = map.queryRenderedFeatures({ layers: ['connector-solid'] }); } catch(e) {}
@@ -690,7 +688,7 @@
             try { if (lineBuffer && turf.booleanIntersects(lineBuffer, f)) hitPatches.push(f.properties); } catch(e) {}
         });
 
-        // ── Corridors severed (50m buffer) ────────────────────────────────
+        // ── Corridors severed ────────────────────────────────
         var severed = [];
         var severedSet = {};
         corrFeats.forEach(function (f) {
@@ -747,10 +745,10 @@
         });
 
         // ── Permeability profile ──────────────────────────────────────────
-        // Measures what proportion of the drawn line passes through:
-        //   1. Forest patches (direct habitat loss  -  most sensitive)
-        //   2. Corridor movement zones (300m buffer  -  functionally sensitive)
-        //   3. Open matrix (least ecologically sensitive)
+        //       Measures what proportion of the drawn line passes through:
+        //   1. Forest patches 
+        //   2. Corridor movement zones
+        //   3. Open matrix
         // Calculated as proportion of total line length overlapping each zone.
         var totalLength = 0;
         try { totalLength = turf.length(lineGJ, { units: 'kilometers' }); } catch(e) {}
@@ -878,7 +876,7 @@
                     permLines.push('The <strong>' + patchPct + '%</strong> through forest represents direct habitat loss: development removes vegetation, compacts soil, introduces noise and light pollution, and creates a hard barrier that most forest-interior species cannot cross. Even a narrow road through a patch effectively splits it into two separate units with different ecological trajectories.');
                 }
                 if (corrPct > 0) {
-                    permLines.push('The <strong>' + corrPct + '%</strong> through functional movement zones would disrupt wildlife transit between patches. These are the areas where species are most likely to be moving through the landscape, making them disproportionately sensitive to any barrier effect.');
+                    permLines.push('The <strong>' + corrPct + '%</strong> through potential movement corridor zones would disrupt wildlife transit between patches. These are the areas where species are most likely to be moving through the landscape, making them disproportionately sensitive to any barrier effect.');
                 }
                 if (matrixPct > 0 && (patchPct > 0 || corrPct > 0)) {
                     permLines.push('The <strong>' + matrixPct + '%</strong> through open matrix carries the lowest direct ecological impact, though roads through matrix can still pose risk to wildlife and suppress movement for edge-sensitive species.');
@@ -937,7 +935,7 @@
             s += '<span><span style="display:inline-block;width:10px;height:10px;background:#f0c040;border-radius:2px;margin-right:3px"></span>Movement zone ' + corrPct + '%</span>';
             s += '<span><span style="display:inline-block;width:10px;height:10px;background:#bbb;border-radius:2px;margin-right:3px"></span>Matrix ' + matrixPct + '%</span>';
             s += '</div>';
-            s += '<div style="font-size:0.78em;color:#888;font-style:italic;margin-bottom:4px">Movement zones use a 300 m buffer around each corridor. A line routed predominantly through open matrix has lower direct ecological impact than one crossing forest or functional movement areas.</div>';
+            s += '<div style="font-size:0.78em;color:#888;font-style:italic;margin-bottom:4px">Movement zones use a 300 m buffer around each corridor. A line routed predominantly through open matrix has lower direct ecological impact than one crossing forest or potential movement corridors.</div>';
         }
 
         // Corridors severed
