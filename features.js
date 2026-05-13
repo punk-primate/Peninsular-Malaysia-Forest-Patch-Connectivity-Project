@@ -1,4 +1,4 @@
-//   I made this script for new features to add and test stuff. I just added this one line before <script src="config.js"> in each map HTML file:
+// I prepared this script to test out new features and stuff. I just added one line before <script src="config.js"> in each map HTML file:
 //       <script src="features.js"></script>
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -534,7 +534,12 @@
         });
         window._corrVisibilitySnapshot = _corrVisibility;
 
-        drawInstance.changeMode('draw_line_string');
+        // Defer changeMode until draw control is fully initialised
+        // This is especially important on redraw when the control is re-added
+        setTimeout(function () {
+            try { drawInstance.changeMode('draw_line_string'); } catch(e) {}
+        }, 100);
+
         drawActive = true;
 
         if (_onDrawCreate) map.off('draw.create', _onDrawCreate);
@@ -607,11 +612,45 @@
     // ── Sidebar helpers ───────────────────────────────────────────────────
     function showHint() {
         var el = document.getElementById('patch-info-content'); if (!el) return;
+
+        // Check if corridors are currently visible
+        var map = getMap();
+        var corridorsVisible = false;
+        try {
+            var vis = map && map.getLayer('connector-solid') &&
+                      map.getLayoutProperty('connector-solid', 'visibility');
+            corridorsVisible = (vis === 'visible');
+        } catch(e) {}
+
+        var corrNote = corridorsVisible
+            ? '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;' +
+              'padding:7px 10px;margin-bottom:10px;font-size:0.82em;line-height:1.5;color:#856404">' +
+              'Corridors are currently visible. They will be hidden while you draw and restored when done. ' +
+              'Or <button id="hide-corr-btn" style="background:none;border:none;color:#856404;' +
+              'text-decoration:underline;cursor:pointer;font-size:inherit;padding:0;font-family:inherit">' +
+              'hide them now</button> before starting.</div>'
+            : '';
+
         el.innerHTML =
             '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' +
             '<div style="background:#8B1A1A;color:#fff;padding:6px 10px;border-radius:3px;font-weight:700;margin-bottom:10px;font-size:0.82em">&#9998; DEVELOPMENT LINE TOOL</div>' +
+            corrNote +
             '<p style="font-size:0.87em;line-height:1.5;margin:0 0 12px">Click on the map to draw a line. Double-click to finish.</p>' +
             '<p style="font-size:0.82em;color:#888;font-style:italic;margin:0">Analysis will appear here once the line is complete.</p></div>';
+
+        // Wire up hide button if shown
+        if (corridorsVisible) {
+            var hideBtn = document.getElementById('hide-corr-btn');
+            if (hideBtn) {
+                hideBtn.addEventListener('click', function () {
+                    try {
+                        var toggleBtn = document.getElementById('corridor-toggle-fab');
+                        if (toggleBtn) toggleBtn.click();
+                    } catch(e) {}
+                    showHint(); // refresh hint to remove the notice
+                });
+            }
+        }
     }
 
     function openSidebar() {
@@ -673,7 +712,7 @@
         var lineBuffer = null;
         try { lineBuffer = turf.buffer(lineGJ, 0.05, { units: 'kilometers' }); } catch(e) {}
 
-        // ── 300m corridor buffer (functional movement zone) ───────────────
+        // ── 300m corridor buffer (potential movement corridor zone) ───────────────
         // Corridor lines are for illustration only; the actual movement zone
         // they represent extends well beyond the line itself.
         var corrBuffers = [];
@@ -884,18 +923,13 @@
             // Lead with permeability
             if (totalLength > 0) {
                 var lineKm = Math.round(totalLength * 10) / 10;
-                var sensitivity = patchPct > 50 ? 'high ecological sensitivity' :
-                                  patchPct > 20 ? 'moderate ecological sensitivity' :
-                                  corrPct  > 40 ? 'moderate ecological sensitivity' :
-                                  'relatively low ecological sensitivity through the visible forest network';
-
                 var permLines = [];
-                permLines.push('Of the total <strong>' + lineKm + ' km</strong> drawn: <strong>' + patchPct + '%</strong> passes through forest patches, <strong>' + corrPct + '%</strong> through functional movement zones (300 m around mapped corridors), and <strong>' + matrixPct + '%</strong> through open matrix. This route has <strong>' + sensitivity + '</strong>.');
+                permLines.push('Of the total <strong>' + lineKm + ' km</strong> drawn: <strong>' + patchPct + '%</strong> passes through forest patches, <strong>' + corrPct + '%</strong> through potential movement corridor zones (300 m around mapped corridors), and <strong>' + matrixPct + '%</strong> through open matrix.');
                 if (patchPct > 0) {
                     permLines.push('The <strong>' + patchPct + '%</strong> through forest represents direct habitat loss: development removes vegetation, compacts soil, introduces noise and light pollution, and creates a hard barrier that most forest-interior species cannot cross. Even a narrow road through a patch effectively splits it into two separate units with different ecological trajectories.');
                 }
                 if (corrPct > 0) {
-                    permLines.push('The <strong>' + corrPct + '%</strong> through functional movement zones would disrupt wildlife transit between patches. These are the areas where species are most likely to be moving through the landscape, making them disproportionately sensitive to any barrier effect.');
+                    permLines.push('The <strong>' + corrPct + '%</strong> through potential movement corridor zones would disrupt wildlife transit between patches. These are the areas where species are most likely to be moving through the landscape, making them disproportionately sensitive to any barrier effect.');
                 }
                 if (matrixPct > 0 && (patchPct > 0 || corrPct > 0)) {
                     permLines.push('The <strong>' + matrixPct + '%</strong> through open matrix carries the lowest direct ecological impact, though roads through matrix can still pose risk to wildlife and suppress movement for edge-sensitive species.');
@@ -954,7 +988,7 @@
             s += '<span><span style="display:inline-block;width:10px;height:10px;background:#f0c040;border-radius:2px;margin-right:3px"></span>Movement zone ' + corrPct + '%</span>';
             s += '<span><span style="display:inline-block;width:10px;height:10px;background:#bbb;border-radius:2px;margin-right:3px"></span>Matrix ' + matrixPct + '%</span>';
             s += '</div>';
-            s += '<div style="font-size:0.78em;color:#888;font-style:italic;margin-bottom:4px">Movement zones use a 300 m buffer around each corridor. A line routed predominantly through open matrix has lower direct ecological impact than one crossing forest or functional movement areas.</div>';
+            s += '<div style="font-size:0.78em;color:#888;font-style:italic;margin-bottom:4px">Movement corridor zones use a 300 m buffer around each corridor. A line routed predominantly through open matrix has lower direct ecological impact than one crossing forest or functional movement areas.</div>';
         }
 
         // Corridors severed
