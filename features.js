@@ -1,9 +1,5 @@
-// features.js  -  myforestconnect retro report cards
-//
-// HOW TO USE:
-//   Add one line before <script src="config.js"> in each map HTML file:
+//   I made this script for new features to add and test stuff. I just added this one line before <script src="config.js"> in each map HTML file:
 //       <script src="features.js"></script>
-//   Remove that line to revert completely.
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function () {
