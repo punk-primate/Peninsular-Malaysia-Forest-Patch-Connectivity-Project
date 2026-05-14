@@ -1,4 +1,4 @@
-// I prepared this script to test out new features and stuff. I just added one line before <script src="config.js"> in each map HTML file:
+//   I prepared this script to test out new features abd stuff Just need to add one line before <script src="config.js"> in each map HTML file:
 //       <script src="features.js"></script>
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -461,8 +461,29 @@
     }
 
     // ── FAB click ─────────────────────────────────────────────────────────
+    function corridorsAreVisible(map) {
+        try {
+            return map.getLayer('connector-solid') &&
+                   map.getLayoutProperty('connector-solid', 'visibility') === 'visible';
+        } catch(e) { return false; }
+    }
+
     function onFabClick() {
         var map = getMap(); if (!map) return;
+
+        if (corridorsAreVisible(map)) {
+            var el = document.getElementById('patch-info-content');
+            if (el) {
+                el.innerHTML =
+                    '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' +
+                    '<div style="background:#8B1A1A;color:#fff;padding:6px 10px;border-radius:3px;font-weight:700;margin-bottom:10px;font-size:0.82em">&#9998; DEVELOPMENT LINE TOOL</div>' +
+                    '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:8px 12px;font-size:0.87em;line-height:1.6;color:#856404">' +
+                    'Please hide the corridors before drawing a line. Click <strong>Hide corridors</strong> in the map controls, then try again.</div></div>';
+                openSidebar();
+            }
+            return;
+        }
+
         if (drawActive) { startDraw(map); return; }
         if (!scriptsLoaded) {
             var btn = document.getElementById('road-draw-fab');
@@ -494,35 +515,18 @@
 
     // ── Start draw ────────────────────────────────────────────────────────
     function startDraw(map) {
-        if (drawInstance) {
-            try { map.removeControl(drawInstance); } catch(e) {}
-            drawInstance = null;
+        // Stop the corridor glow animation loop  -  it calls setPaintProperty
+        // every frame and conflicts with MapboxDraw's map manipulation
+        if (window.connAnimFrame) {
+            cancelAnimationFrame(window.connAnimFrame);
+            window.connAnimFrame = null;
         }
+        // Also cancel via app.js variable if accessible
+        try { if (typeof connAnimFrame !== 'undefined' && connAnimFrame) {
+            cancelAnimationFrame(connAnimFrame); connAnimFrame = null;
+        }} catch(e) {}
 
-        drawInstance = new MapboxDraw({
-            displayControlsDefault: false,
-            controls: {},
-            styles: [
-                {
-                    id: 'road-line',
-                    type: 'line',
-                    filter: ['all', ['==', '$type', 'LineString'], ['!=', 'mode', 'static']],
-                    paint: { 'line-color': '#ff4444', 'line-width': 3, 'line-dasharray': [4, 2] }
-                },
-                {
-                    id: 'road-vertex',
-                    type: 'circle',
-                    filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'vertex']],
-                    paint: { 'circle-radius': 5, 'circle-color': '#ff4444', 'circle-stroke-width': 1, 'circle-stroke-color': '#fff' }
-                }
-            ]
-        });
-
-        map.addControl(drawInstance);
-
-        // Temporarily hide corridor layers while drawing so their click/mousemove
-        // handlers cannot intercept mouse events meant for the draw tool.
-        // We store their previous visibility so we can restore it exactly.
+        // Hide corridor layers so their event handlers don't intercept draw clicks
         var _corrVisibility = {};
         ['connector-glow', 'connector-solid'].forEach(function (id) {
             try {
@@ -534,11 +538,44 @@
         });
         window._corrVisibilitySnapshot = _corrVisibility;
 
-        // Defer changeMode until draw control is fully initialised
-        // This is especially important on redraw when the control is re-added
-        setTimeout(function () {
-            try { drawInstance.changeMode('draw_line_string'); } catch(e) {}
-        }, 100);
+        // Reuse existing draw instance if possible  -  avoids layer re-registration
+        // conflicts that occur when removing and re-adding the control
+        if (drawInstance) {
+            try {
+                drawInstance.deleteAll();
+                drawInstance.changeMode('draw_line_string');
+            } catch(e) {
+                // If reuse fails, remove and recreate
+                try { map.removeControl(drawInstance); } catch(e2) {}
+                drawInstance = null;
+            }
+        }
+
+        if (!drawInstance) {
+            drawInstance = new MapboxDraw({
+                displayControlsDefault: false,
+                controls: {},
+                styles: [
+                    {
+                        id: 'road-line',
+                        type: 'line',
+                        filter: ['all', ['==', '$type', 'LineString'], ['!=', 'mode', 'static']],
+                        paint: { 'line-color': '#ff4444', 'line-width': 3, 'line-dasharray': [4, 2] }
+                    },
+                    {
+                        id: 'road-vertex',
+                        type: 'circle',
+                        filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'vertex']],
+                        paint: { 'circle-radius': 5, 'circle-color': '#ff4444', 'circle-stroke-width': 1, 'circle-stroke-color': '#fff' }
+                    }
+                ]
+            });
+            map.addControl(drawInstance);
+            // Give the control time to register its layers before changing mode
+            setTimeout(function () {
+                try { drawInstance.changeMode('draw_line_string'); } catch(e) {}
+            }, 150);
+        }
 
         drawActive = true;
 
