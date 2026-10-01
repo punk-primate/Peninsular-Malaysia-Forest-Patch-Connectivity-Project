@@ -253,6 +253,7 @@ initializeTierFilters();
         const connPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'custom-hover-popup' });
         const connInteractId = map.getLayer('connector-solid') ? 'connector-solid' : resolvedConnectorId;
         map.on('mousemove', connInteractId, (e) => {
+            if (window._developmentScenario && window._developmentScenario.active) return;
             if (!e.features || !e.features.length) return;
             map.getCanvas().style.cursor = 'pointer';
             const f = e.features[0].properties;
@@ -262,6 +263,7 @@ initializeTierFilters();
         });
         map.on('mouseleave', connInteractId, () => { map.getCanvas().style.cursor = ''; connPopup.remove(); });
         map.on('click', connInteractId, (e) => {
+            if (window._developmentScenario && window._developmentScenario.active) return;
             if (!e.features || !e.features.length) return;
             const f = e.features[0].properties;
             const el = document.getElementById('patch-info-content');
@@ -314,6 +316,7 @@ initializeTierFilters();
     function initializeHoverPopups() {
         const hoverPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'custom-hover-popup' });
         map.on('mousemove', resolvedPatchId, (e) => {
+            if (window._developmentScenario && window._developmentScenario.active) return;
             if (e.features && e.features.length > 0) {
                 map.getCanvas().style.cursor = 'pointer';
                 const p         = e.features[0].properties;
@@ -335,6 +338,7 @@ initializeTierFilters();
         const patchInfoContent = document.getElementById('patch-info-content');
         if (!patchInfoContent) return;
         map.on('click', resolvedPatchId, (e) => {
+            if (window._developmentScenario && window._developmentScenario.active) return;
             if (e.features && e.features.length > 0) {
                 displayPatchInfo(e.features[0].properties);
                 map.flyTo({ center: e.lngLat, zoom: Math.max(map.getZoom(), 14), duration: 600 });
@@ -538,7 +542,8 @@ initializeTierFilters();
         if (currentMinArea !== null && !isNaN(currentMinArea)) allFilters.push(['>=', ['get', PATCH_AREA_ATTRIBUTE], currentMinArea]);
         if (currentMaxArea !== null && !isNaN(currentMaxArea)) allFilters.push(['<=', ['get', PATCH_AREA_ATTRIBUTE], currentMaxArea]);
         try {
-            map.setFilter(resolvedPatchId, allFilters.length ? ['all', ...allFilters] : null);
+            const baseFilter = allFilters.length ? ['all', ...allFilters] : null;
+            map.setFilter(resolvedPatchId, window._developmentScenario ? window._developmentScenario.decoratePatchFilter(baseFilter) : baseFilter);
             if (typeof debouncedUpdateStats === 'function') debouncedUpdateStats();
         } catch (error) { console.error('Error applying filter:', error); }
     }
@@ -822,3 +827,4 @@ initializeTierFilters();
     }
     initializeOnboarding();
 }); // End DOMContentLoaded
+

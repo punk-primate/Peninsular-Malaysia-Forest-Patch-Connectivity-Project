@@ -9,6 +9,8 @@
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="vendor/mapbox-gl-draw-1.4.3.css">
+    <link rel="stylesheet" href="development.css">
 
     <style>
         /* ── Font reset ── */
@@ -474,6 +476,9 @@
             <h3>Potential movement corridors</h3>
             <p>Click "Show corridors" to reveal lines connecting forest patches to their nearest neighbours. Each line is coloured by connectivity level. Use the High, Moderate, and Low buttons to toggle each level on or off. Click any corridor line to see details in the sidebar.</p>
 
+            <h3>Development scenarios</h3>
+            <p>Click "Development", then draw a line with a total width, a rectangle, or a polygon. Choose "Calculate changes" to see the forest area removed and the fragments remaining. Switch between "Existing forest" and "Development scenario" to compare. This assumes complete forest clearance inside the footprint. Connectivity and wildlife movement have not been recalculated.</p>
+
             <h3>Downloading a patch report card</h3>
             <p>Click any forest patch to open its details in the sidebar, then click the <strong>Download report card</strong> button at the bottom of the panel. The card will generate automatically and download as a PNG image to your device.</p>
             <p>Each report card includes the patch's conservation tier, connectivity rating, GPS coordinates, and all six structural metrics. It also shows the actual shape of the patch drawn to scale, a tier spectrum bar indicating where it sits relative to the other tiers in the landscape, and a QR code you can scan to reopen that exact patch view in the platform. Where available, the nearest named forest reserve is shown at the top of the card.</p>
@@ -492,5 +497,7 @@
     <script src="features.js"></script>
     <script src="config.js"></script>
     <script src="app.js"></script>
+    <script src="development.js"></script>
 </body>
 </html>
+
