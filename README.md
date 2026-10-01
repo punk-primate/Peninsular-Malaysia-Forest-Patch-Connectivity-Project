@@ -35,6 +35,16 @@ The platform is designed for use without specialist GIS knowledge and is intende
 
 ---
 
+## Development scenarios (draft first version)
+
+The development tool accepts a line with a specified total width, a rectangle, or a custom polygon. It computes direct forest loss and surviving forest fragments from complete supplied patch polygons, and displays existing and development-scenario map views. Calculations assume complete forest clearance inside one footprint; circuit-theory connectivity, structural tiers, and future development growth are not recalculated.
+
+[Calculation methods, data provenance, and verification](docs/development-scenarios.md).
+
+Geometry tests: `node --test tests/scenario-engine.test.cjs`. For local review, run `python -m http.server 8000` from the repository root and open either map page. Current browsers supporting Web Workers and DecompressionStream are required.
+
+---
+
 ## The PSQI Classification Framework
 
 Each forest patch is classified into one of six conservation tiers using the **Patch Structural Quality Index (PSQI)**, a weighted composite of five patch-scale landscape metrics:
@@ -124,5 +134,6 @@ Full documentation is provided in the script headers.
 Patch data and connectivity outputs are made available for non-commercial research and educational use. Please credit and cite the accompanying paper if you use this platform or pipeline in your work.
 
 *myforestconnect: an open-access web platform for assessing forest habitat quality and landscape connectivity for arboreal wildlife in urban Peninsular Malaysia.*
+
 
 
