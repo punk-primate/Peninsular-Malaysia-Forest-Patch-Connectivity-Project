@@ -32,8 +32,9 @@
             '<p class="development-intro">Choose a shape, draw it on the map, then select Calculate changes. Red shows forest cleared; green shows what remains. You can also compare a route using Connections.</p>' +
             '<div id="development-editor"><div class="development-shapes" role="group" aria-label="Development footprint shape">' +
             '<button data-shape="line">Line</button><button data-shape="rectangle">Rectangle</button><button data-shape="polygon">Polygon</button></div>' +
+            '<p id="development-draw-help" class="development-draw-help" aria-live="polite">Choose Line for a road or other narrow development, Rectangle for a box-shaped site, or Polygon for an irregular site.</p>' +
             '<label id="development-width-row" for="development-width" hidden>Total line width (m)' +
-            '<input id="development-width" type="number" min="1" max="10000" value="30" step="1"></label>' +
+            '<input id="development-width" type="number" min="1" max="10000" value="30" step="1"><span class="development-width-help">Full width of the cleared strip. For example, 30 m extends 15 m on each side of your line.</span></label>' +
             '<p id="development-status" role="status" aria-live="polite">Loading forest boundaries…</p>' +
             '<div id="development-drawing-actions" hidden><button id="development-finish">Finish drawing</button><button id="development-cancel">Cancel drawing</button></div>' +
             '<button id="development-analyse" class="development-primary" disabled>Calculate changes</button></div>' +
@@ -262,7 +263,8 @@
             get('development-width-row').hidden = shape !== 'line';
             get('development-finish').hidden = shape === 'rectangle';
             drawing = true; draw.changeMode(shape === 'rectangle' ? 'draw_rectangle' : shape === 'line' ? 'draw_line_string' : 'draw_polygon');
-            status(shape === 'rectangle' ? 'Click two opposite corners to finish the rectangle.' : 'Click to place vertices. Press Enter or use Finish drawing when complete.');
+            get('development-draw-help').textContent = shape === 'line' ? 'Click or tap the start of your development path, then each bend, then the end. Place at least two points and select Finish drawing (or press Enter). Set the total cleared width in metres, then select Calculate changes.' : shape === 'rectangle' ? 'Click or tap one corner of the site, then the opposite corner. The rectangle finishes automatically. Select Calculate changes to assess it.' : 'Click or tap around the boundary of the site. Place at least three corners and select Finish drawing (or press Enter). Select Calculate changes to assess it.';
+            status(shape === 'rectangle' ? 'Place the first corner, then the opposite corner.' : 'Place your points on the map, then select Finish drawing.');
             updateActions();
         }
         function renderResults() {
