@@ -46,6 +46,14 @@ self.onmessage = async function (event) {
                 result.snappedEnd = ConnectivityGeometry.coordinateAt(grid, end);
                 if (message.footprint) {
                     const blocked = ConnectivityGeometry.footprintMask(metadata.resistance, message.footprint);
+                    const endpoints = [[start, 'A'], [end, 'B']].filter(([index]) => blocked.mask[index]);
+                    result.blockedEndpoints = endpoints.map(([, label]) => label);
+                    result.blockedEndpointCells = { type: 'FeatureCollection', features: endpoints.map(([index, label]) => {
+                        const m = grid.meta, x = index % m.width, y = Math.floor(index / m.width);
+                        const coordinates = [[x,y],[x+1,y],[x+1,y+1],[x,y+1],[x,y]].map(([col,row]) =>
+                            grid.projection.inverse([m.originX + col * m.cellWidth, m.originY - row * m.cellHeight]));
+                        return { type: 'Feature', properties: { endpoint: label, cellIndex: index }, geometry: { type: 'Polygon', coordinates: [coordinates] } };
+                    }) };
                     const path = ConnectivityGeometry.findPath(grid, start, end, blocked.mask, progress('development'));
                     result.scenario = ConnectivityGeometry.describePath(grid, path);
                     result.blockedCells = blocked.touchedCells; result.outsideResistanceExtent = blocked.outside;

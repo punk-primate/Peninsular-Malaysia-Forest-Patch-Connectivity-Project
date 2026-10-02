@@ -13,6 +13,7 @@
             get active() { return active; },
             get drawing() { return drawing; },
             get footprint() { return result ? result.footprint : null; },
+            get hasDrawing() { return !!feature; },
             get view() { return view; },
             decoratePatchFilter: function (base) {
                 if (!active || !result || !result.affected.length) return base;
@@ -27,7 +28,7 @@
         const panel = document.createElement('section');
         panel.id = 'development-panel'; panel.className = 'sidebar-section'; panel.hidden = true;
         panel.innerHTML = '<h3>Development scenario</h3>' +
-            '<p class="development-intro">Draw where development would take place, then calculate the forest cleared and the fragments left behind. Use Connections to compare a route around the footprint.</p>' +
+            '<p class="development-intro">Choose a shape, draw it on the map, then select Calculate changes. Red shows forest cleared; green shows what remains. You can also compare a route using Connections.</p>' +
             '<div class="development-shapes" role="group" aria-label="Development footprint shape">' +
             '<button data-shape="line">Line</button><button data-shape="rectangle">Rectangle</button><button data-shape="polygon">Polygon</button></div>' +
             '<label id="development-width-row" for="development-width" hidden>Total line width (m)' +
@@ -37,13 +38,14 @@
             '<button id="development-analyse" class="development-primary" disabled>Calculate changes</button>' +
             '<div id="development-results" hidden></div>' +
             '<p class="development-assumption">This scenario assumes complete clearance of mapped forest inside your footprint.</p>' +
-            '<div class="development-actions"><button id="development-reset">Clear scenario</button><button id="development-close">Close</button></div>';
+            '<div class="development-actions"><button id="development-reset">Clear scenario</button><button id="development-close">Close development</button></div>';
         const info = document.getElementById('info-panel-section'); info.parentNode.insertBefore(panel, info);
         const get = id => document.getElementById(id);
         const status = (message, error = false) => { get('development-status').textContent = message; get('development-status').classList.toggle('development-error', error); };
         const area = value => value.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
         function updateActions() {
+            if (window._forestMapInteraction) window._forestMapInteraction.refresh();
             get('development-analyse').disabled = !ready || !feature || drawing || busy;
             get('development-analyse').textContent = busy ? 'Calculating…' : 'Calculate changes';
             get('development-drawing-actions').hidden = !drawing;
@@ -215,7 +217,7 @@
             if (active) { close(); return; }
             const baselineLayer = findPatchLayer();
             if (!baselineLayer || !map.isStyleLoaded()) { button.textContent = 'Map loading…'; setTimeout(() => { button.textContent = 'Development'; }, 1500); return; }
-            active = true; panel.hidden = false; button.classList.add('active'); button.setAttribute('aria-expanded', 'true');
+            active = true; if (window._forestMapInteraction) window._forestMapInteraction.refresh(); panel.hidden = false; button.classList.add('active'); button.setAttribute('aria-expanded', 'true');
             patchLayer = baselineLayer.id; filterSnapshot = map.getFilter(patchLayer) || null; map.setFilter(patchLayer, null);
             ['filter-section', 'info-panel-section', 'stats-section', 'area-filter-controls'].forEach(id => {
                 const el = get(id); controlsSnapshot.push([el, el.style.display]); el.style.display = 'none';

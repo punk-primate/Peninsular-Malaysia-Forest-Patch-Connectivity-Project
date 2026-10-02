@@ -14,20 +14,21 @@
         document.getElementById('map-top-bar').insertBefore(button, document.getElementById('home-btn'));
         const panel = document.createElement('section'); panel.id = 'connectivity-panel'; panel.className = 'sidebar-section'; panel.hidden = true;
         panel.innerHTML = '<h3>Compare routes</h3>' +
-            '<p>See how a proposed development changes the modelled route between two locations. The route follows lower-resistance cells across the landscape.</p>' +
-            '<ol class="connection-steps"><li id="connection-step-points">Choose locations A and B</li><li id="connection-step-route">Calculate a route</li><li id="connection-step-development">Draw development and compare</li></ol>' +
+            '<p>Compare a route between the same two places before and with your development. Routes favour lower resistance across the landscape.</p>' +
+            '<ol class="connection-steps"><li id="connection-step-points">Place A and B on the map</li><li id="connection-step-route">Draw a development footprint</li><li id="connection-step-development">Select Calculate changes</li></ol>' +
             '<div class="connection-points"><button id="connection-start">Choose start A</button><button id="connection-end">Choose end B</button></div>' +
+            '<button id="connection-cancel" hidden>Cancel point placement</button>' +
             '<p id="connection-locations">No locations selected.</p>' +
             '<label class="connection-flow-toggle"><input type="checkbox" id="connection-flow"> Show baseline high-flow areas (blue)</label>' +
             '<p id="connection-status" role="status" aria-live="polite">Loading model data…</p>' +
-            '<div class="connection-route-actions"><button id="connection-analyse" class="connection-primary" disabled>Calculate route</button><button id="connection-fit" disabled>View routes on map</button></div>' +
-            '<div id="connection-results" hidden></div>' +
             '<button id="connection-development" class="connection-development">Draw a development to compare</button>' +
+            '<div class="connection-route-actions"><button id="connection-analyse" disabled>Refresh routes</button><button id="connection-fit" disabled>View routes on map</button></div>' +
+            '<div id="connection-results" hidden></div>' +
             '<details><summary>How this is calculated</summary><p>Paths use the original approximately 30 m resistance cells and eight-direction movement. Lower accumulated resistance is preferred. NoData cells are blocked; finite resistance values, including 100, remain traversable. Lines show paths, not corridor widths.</p>' +
             '<p>The before-development route uses the current resistance map. The with-development route treats every cell touched by your calculated footprint as impassable, then finds a route around it. Both routes connect the same A and B.</p>' +
             '<p>Blue areas mark the top 10% of positive supplied normalized-current values, with ties included. This relative threshold does not establish ecological pinch points. The overlay uses 90 m display pixels; footprint counts use the original approximately 30 m cells.</p>' +
             '<p>Modelled paths require field assessment and do not establish canopy continuity, safe road crossings, or observed wildlife movement.</p></details>' +
-            '<div class="connection-actions"><button id="connection-export" disabled>Download assessment</button><button id="connection-reset">Clear points</button><button id="connection-close">Close</button></div>';
+            '<div class="connection-actions"><button id="connection-export" disabled>Download assessment</button><button id="connection-reset">Clear points</button><button id="connection-close">Close routes</button></div>';
         document.getElementById('sidebar').insertBefore(panel, document.getElementById('tools-section'));
         const mapLegend = document.createElement('aside'); mapLegend.id = 'connection-map-legend'; mapLegend.hidden = true;
         mapLegend.setAttribute('aria-label', 'Route comparison legend'); map.getContainer().appendChild(mapLegend);
@@ -35,7 +36,9 @@
         const status = (text, error = false) => { get('connection-status').textContent = text; get('connection-status').classList.toggle('connection-error', error); };
         const fmt = value => value.toLocaleString('en-GB', { maximumFractionDigits: 2 });
         const api = window._connectivityExplorer = {
+            get active() { return active; },
             get picking() { return !!picking; },
+            get selectedPoint() { return picking === 'start' ? 'A' : 'B'; },
             get assessment() { return result ? { ...result, sourceModel: metadata.sourceModel,
                 method: 'Native-grid least-cost path; average endpoint resistance times projected step distance; development touched cells impassable',
                 flowMethod: 'Top 10% of positive supplied normalized current; whole native cells touched by footprint',
@@ -43,10 +46,13 @@
             open
         };
         function update() {
+            if (window._forestMapInteraction) window._forestMapInteraction.refresh();
             const drawing = !!(window._developmentScenario && window._developmentScenario.drawing);
             ['connection-start', 'connection-end'].forEach(id => { get(id).disabled = !ready || busy || drawing; });
             get('connection-analyse').disabled = !ready || busy || drawing || !start || !end;
-            get('connection-analyse').textContent = busy ? 'Calculating…' : footprint ? 'Compare routes' : 'Calculate route';
+            get('connection-analyse').textContent = busy ? 'Calculating…' : 'Refresh routes';
+            get('connection-analyse').hidden = !start || !end;
+            get('connection-cancel').hidden = !picking;
             get('connection-development').disabled = busy || drawing;
             get('connection-development').textContent = footprint ? 'Edit development footprint' : 'Draw a development to compare';
             get('connection-export').disabled = !result;
@@ -54,7 +60,7 @@
             get('connection-start').classList.toggle('selected', picking === 'start');
             get('connection-end').classList.toggle('selected', picking === 'end');
             get('connection-locations').textContent = 'A: ' + (start ? 'placed on map' : 'not selected') + ' · B: ' + (end ? 'placed on map' : 'not selected');
-            const complete = [!!(start && end), !!(result && result.baseline), !!(result && result.scenario)];
+            const complete = [!!(start && end), !!(window._developmentScenario && window._developmentScenario.hasDrawing), !!(result && result.scenario)];
             ['points', 'route', 'development'].forEach((step, i) => {
                 const el = get('connection-step-' + step); el.classList.toggle('complete', complete[i]);
                 if (!complete[i] && (i === 0 || complete[i - 1])) el.setAttribute('aria-current', 'step'); else el.removeAttribute('aria-current');
@@ -62,10 +68,12 @@
         }
         function layers() {
             if (!map.getStyle()) return;
-            ['connection-existing', 'connection-scenario', 'connection-points'].forEach(id => {
+            ['connection-existing', 'connection-scenario', 'connection-points', 'connection-blocked-cells'].forEach(id => {
                 if (!map.getSource(id)) map.addSource(id, { type: 'geojson', data: empty() });
             });
             const definitions = [
+                { id: 'connection-blocked-fill', type: 'fill', source: 'connection-blocked-cells', paint: { 'fill-color': '#b82323', 'fill-opacity': .22 } },
+                { id: 'connection-blocked-outline', type: 'line', source: 'connection-blocked-cells', paint: { 'line-color': '#b82323', 'line-width': 3 } },
                 { id: 'connection-existing-halo', type: 'line', source: 'connection-existing', paint: { 'line-color': '#ffffff', 'line-width': 8 } },
                 { id: 'connection-scenario-halo', type: 'line', source: 'connection-scenario', paint: { 'line-color': '#ffffff', 'line-width': 8 } },
                 { id: 'connection-scenario-line', type: 'line', source: 'connection-scenario', paint: { 'line-color': '#d25b05', 'line-width': 4 } },
@@ -74,6 +82,16 @@
                     'circle-color': '#23364e', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } }
             ];
             definitions.forEach(layer => { if (!map.getLayer(layer.id)) map.addLayer(layer); });
+            // Development may be opened after Connections. Keep filled forest
+            // and footprint overlays below route colours, and Draw handles above.
+            const ordered = map.getStyle().layers || [];
+            const firstRoute = ordered.findIndex(layer => layer.id === definitions[0].id);
+            const lastFill = ordered.reduce((last, layer, index) =>
+                /^(development-|gl-draw)/.test(layer.id) && layer.type === 'fill' ? index : last, -1);
+            if (lastFill > firstRoute) {
+                definitions.forEach(layer => map.moveLayer(layer.id));
+                ordered.filter(layer => /^gl-draw/.test(layer.id) && layer.type !== 'fill').forEach(layer => map.moveLayer(layer.id));
+            }
             if (metadata && !map.getSource('connection-high-flow')) {
                 map.addSource('connection-high-flow', { type: 'image', url: new URL(metadata.flow.display.file, metadataURL).href,
                     coordinates: metadata.flow.display.coordinates });
@@ -94,6 +112,7 @@
                 { type: 'FeatureCollection', features: [result.baseline.geometry] } : empty());
             map.getSource('connection-scenario').setData(active && !beforeView && result && result.scenario && result.scenario.status === 'found' ?
                 { type: 'FeatureCollection', features: [result.scenario.geometry] } : empty());
+            map.getSource('connection-blocked-cells').setData(active && !beforeView && result && result.blockedEndpointCells || empty());
             map.getSource('connection-points').setData({ type: 'FeatureCollection', features: active ? [[result && result.snappedStart || start, 'A'], [result && result.snappedEnd || end, 'B']].filter(([p]) => p).map(([p, label]) =>
                 ({ type: 'Feature', properties: { point: label }, geometry: { type: 'Point', coordinates: p } })) : [] });
             if (map.getLayer('connection-high-flow-raster')) map.setLayoutProperty('connection-high-flow-raster', 'visibility', active && get('connection-flow').checked ? 'visible' : 'none');
@@ -104,6 +123,11 @@
                     element.setAttribute('aria-label', 'Route endpoint ' + label); element.title = 'Route endpoint ' + label;
                     markers[label] = new mapboxgl.Marker({ element }).setLngLat(snapped || point).addTo(map);
                 } else markers[label].setLngLat(snapped || point);
+                const blocked = !beforeView && result && (result.blockedEndpoints || []).includes(label);
+                const element = markers[label].getElement();
+                element.classList.toggle('connection-marker-blocked', !!blocked);
+                element.title = 'Route endpoint ' + label + (blocked ? ': development touches its model cell' : '');
+                element.setAttribute('aria-label', element.title);
             });
             const before = active && result && result.baseline && result.baseline.status === 'found';
             const after = active && !beforeView && result && result.scenario && result.scenario.status === 'found';
@@ -111,7 +135,7 @@
             mapLegend.innerHTML = '<strong>Routes between A and B</strong>' +
                 (before ? '<div class="connection-legend-row"><span class="connection-key existing-key"></span>Before development</div>' : '') +
                 (after ? '<div class="connection-legend-row"><span class="connection-key scenario-key"></span>With development</div>' : '') +
-                (before && after ? '<p>Where lines overlap, both routes follow the same cells.</p>' : before ? '<p>' + (beforeView && result.hasDevelopment ? 'Showing the before-development view.' : result.scenario ? result.scenario.status === 'endpoint-blocked' ? 'Your footprint covers A or B. Move that endpoint to compare.' : 'No route found with development under this model.' : 'Draw and calculate development to add a comparison.') + '</p>' : '<p>Place A and B, then calculate a route.</p>') +
+                (before && after ? '<p>Where lines overlap, both routes follow the same cells.</p>' : before ? '<p>' + (beforeView && result.hasDevelopment ? 'Showing the before-development view.' : result.scenario ? result.scenario.status === 'endpoint-blocked' ? 'Red outline: blocked endpoint cell.' : 'No route found with development under this model.' : 'Draw and calculate development to add a comparison.') + '</p>' : '<p>Place A and B to see a route.</p>') +
                 (get('connection-flow').checked ? '<div class="connection-legend-row"><span class="connection-flow-key"></span>Baseline high-flow areas</div>' : '');
         }
         function flowSummary() {
@@ -139,8 +163,15 @@
                     explanation = same ? 'The same modelled route remains available for these two locations.' : 'The new route avoids your development footprint.';
                     explanation += change > 0.005 ? ' Resistance cost increases by ' + fmt(change) + '%.' : Math.abs(change) > 1e-9 ? ' Resistance cost changes by less than 0.01%.' : ' Resistance cost stays the same.';
                     if (result.scenario.lengthM < result.baseline.lengthM - 1 && change > 0.005) explanation += ' A shorter route can still pass through higher-resistance cells.';
-                } else if (result.scenario) { heading = result.scenario.status === 'endpoint-blocked' ? 'Development covers a selected endpoint' : 'No route found with this development'; explanation = messages[result.scenario.status] + (result.scenario.status === 'endpoint-blocked' ? ' Move A or B outside the footprint to compare routes.' : ' This result applies to this route model and these endpoints.'); }
+                } else if (result.scenario) {
+                    const blocked = result.blockedEndpoints || [];
+                    heading = result.scenario.status === 'endpoint-blocked' ? 'Move ' + blocked.join(' and ') + ' to compare routes' : 'No route found with this development';
+                    explanation = result.scenario.status === 'endpoint-blocked' ?
+                        'Your development touches the approximately 30 m model ' + (blocked.length > 1 ? 'cells containing ' : 'cell containing ') + blocked.join(' and ') + '. The blocked ' + (blocked.length > 1 ? 'cells are' : 'cell is') + ' outlined in red. Move the marked point farther from the footprint, even if it looks outside the drawn edge.' :
+                        messages[result.scenario.status] + ' This result applies to this route model and these endpoints.';
+                }
                 html += '<div class="connection-outcome"><strong>' + heading + '</strong><p>' + explanation + '</p></div>';
+                if (result.scenario && result.scenario.status === 'endpoint-blocked') html += '<div class="connection-points">' + result.blockedEndpoints.map(label => '<button data-move-endpoint="' + label + '">Move ' + label + '</button>').join('') + '</div>';
             } else if (!result.baseline) html += '<div class="connection-outcome"><strong>Development footprint assessed</strong><p>Choose A and B to compare a route before and with development.</p></div>';
             if (result.baseline) {
                 if (result.baseline.status === 'found') {
@@ -167,7 +198,7 @@
             if (loading) return loading;
             status('Loading the supplied resistance and flow models…');
             loading = new Promise((resolve, reject) => {
-                worker = new Worker('connectivity-worker.js');
+                worker = new Worker('connectivity-worker.js?v=20261002-editing');
                 function failure(text) {
                     ready = busy = false; loading = null; worker.terminate(); worker = null;
                     status(text, true); update();
@@ -196,7 +227,7 @@
                             if (result.baseline.status !== 'found') completionText = 'No route found between A and B under this model.';
                             else if (!result.scenario) completionText = 'Before-development route ready. Draw a development to add the orange comparison route.';
                             else if (result.scenario.status === 'found') completionText = 'Comparison ready. Dashed purple: before development. Solid orange: with development.';
-                            else completionText = result.scenario.status === 'endpoint-blocked' ? 'Your footprint covers A or B. Move the covered endpoint outside development.' : 'Comparison complete. No route found with this development under the model.';
+                            else completionText = result.scenario.status === 'endpoint-blocked' ? 'Comparison needs a new endpoint. Use Move below.' : 'Comparison complete. No route found with this development under the model.';
                         }
                         status(completionText);
                     }
@@ -223,16 +254,25 @@
         }
         button.addEventListener('click', () => active ? close() : open());
         get('connection-close').addEventListener('click', close);
-        ['start', 'end'].forEach(which => get('connection-' + which).addEventListener('click', () => {
-            picking = picking === which ? null : which; map.getCanvas().style.cursor = picking ? 'crosshair' : '';
-            status(picking ? 'Click the map to place ' + (which === 'start' ? 'start A' : 'end B') + '.' : 'Location selection cancelled.'); update();
-        }));
+        function place(which) {
+            if (!ready || busy || window._developmentScenario && window._developmentScenario.drawing) return;
+            picking = which; map.getCanvas().style.cursor = 'crosshair';
+            status('Click the map to place ' + (which === 'start' ? 'A' : 'B') + '.'); update();
+        }
+        ['start', 'end'].forEach(which => get('connection-' + which).addEventListener('click', () => place(which)));
+        get('connection-cancel').addEventListener('click', () => {
+            picking = null; map.getCanvas().style.cursor = ''; status('Point placement cancelled. Your placed points are kept.'); update();
+        });
+        get('connection-results').addEventListener('click', event => {
+            const target = event.target.closest('[data-move-endpoint]');
+            if (target) place(target.dataset.moveEndpoint === 'A' ? 'start' : 'end');
+        });
         map.on('click', event => {
             if (!picking) return;
             const point = [event.lngLat.lng, event.lngLat.lat]; if (picking === 'start') start = point; else end = point;
             picking = null; map.getCanvas().style.cursor = ''; invalidate();
-            status(start && end ? 'Both locations selected. Calculate the path.' : 'Choose the other location.');
-            if (footprint) analyse();
+            if (start && end) analyse();
+            else place(start ? 'end' : 'start');
         });
         get('connection-analyse').addEventListener('click', analyse);
         get('connection-development').addEventListener('click', () => {
@@ -262,7 +302,7 @@
         document.addEventListener('click', event => { if (event.target.closest('[data-open-connectivity]')) open(); });
         document.addEventListener('forestconnect:development', event => {
             const next = event.detail.footprint, key = next ? JSON.stringify(next.geometry) : '';
-            if (event.detail.drawing && picking) { picking = null; map.getCanvas().style.cursor = ''; }
+            if (event.detail.drawing && picking) { picking = null; map.getCanvas().style.cursor = 'crosshair'; }
             if (key !== footprintKey) {
                 footprint = next; footprintKey = key; invalidate();
                 if (footprint || (start && end)) load().then(() => { if (key === footprintKey) analyse(); }).catch(() => {});

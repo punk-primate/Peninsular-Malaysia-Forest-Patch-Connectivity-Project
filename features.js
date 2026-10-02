@@ -5,6 +5,32 @@
 (function () {
     'use strict';
 
+    // Tool ownership lasts for the whole click, including listeners that run
+    // after a marker is placed or a drawing finishes.
+    const interaction = window._forestMapInteraction = {
+        get active() {
+            return !!(window._developmentScenario && window._developmentScenario.active) ||
+                !!(window._connectivityExplorer && window._connectivityExplorer.active);
+        },
+        ownsClick(event) { return !!event.forestToolClick || this.active; },
+        refresh() {
+            const cue = document.getElementById('forest-editing-cue');
+            if (!cue) return;
+            cue.hidden = !this.active;
+            const connections = window._connectivityExplorer, development = window._developmentScenario;
+            cue.textContent = connections && connections.picking ? 'Place ' + connections.selectedPoint + ': click the map. Patch details are paused.' :
+                development && development.drawing ? 'Drawing development. Patch details are paused.' :
+                'Scenario mode. Close Development and Connections to inspect patches.';
+            document.dispatchEvent(new CustomEvent('forestconnect:interaction'));
+        }
+    };
+    function addEditingCue(map) {
+        const cue = document.createElement('div'); cue.id = 'forest-editing-cue'; cue.hidden = true;
+        cue.setAttribute('role', 'status');
+        map.getContainer().appendChild(cue);
+        interaction.refresh();
+    }
+
     (function () {
         var lnk = document.createElement('link');
         lnk.rel  = 'stylesheet';
@@ -19,9 +45,10 @@
         constructor(options) {
             super(options);
             window._mapInstance = this;
+            addEditingCue(this);
             var self = this;
             this.on('click', function (e) {
-                if ((window._developmentScenario && window._developmentScenario.active) || (window._connectivityExplorer && window._connectivityExplorer.picking)) return;
+                if (interaction.ownsClick(e)) { e.forestToolClick = true; return; }
                 try {
                     var style = self.getStyle();
                     if (!style) return;
@@ -47,7 +74,7 @@
 
     function initReportCards() {
         var observer = new MutationObserver(function () {
-            if ((window._developmentScenario && window._developmentScenario.active) || (window._connectivityExplorer && window._connectivityExplorer.picking)) return;
+            if (interaction.active) return;
             var content = document.getElementById('patch-info-content');
             if (!content) return;
             if (document.getElementById('report-card-btn')) return;
@@ -372,4 +399,3 @@
     else{document.addEventListener('DOMContentLoaded',initReportCards);}
 
 })();
-
