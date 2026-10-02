@@ -465,7 +465,11 @@ initializeTierFilters();
         }
         h += '<div style="font-size:0.87em;margin-bottom:10px"><strong>Nearest patch:</strong> ' + ennMsg + '</div>';
 
-        h += '<details><summary style="cursor:pointer;font-weight:700;font-size:0.87em;color:inherit">Show patch details</summary>';
+        h += '<div class="patch-at-glance" aria-label="Patch area summary">';
+        h += '<div><span>Forest area</span><strong>' + (Number.isFinite(parseFloat(area)) ? parseFloat(area).toFixed(2) + ' ha' : 'Not available') + '</strong></div>';
+        h += '<div><span>Core area</span><strong>' + (Number.isFinite(parseFloat(core)) ? parseFloat(core).toFixed(2) + ' ha' : 'Not available') + '</strong></div>';
+        h += '</div>';
+        h += '<details><summary style="cursor:pointer;font-weight:700;font-size:0.87em;color:inherit">Show technical details</summary>';
 
         h += '<p style="' + secHdr + '">Structural Metrics</p>';
         h += '<ul style="margin:4px 0 0;padding-left:0;font-size:0.84em;line-height:1.8;color:inherit;list-style:none">';

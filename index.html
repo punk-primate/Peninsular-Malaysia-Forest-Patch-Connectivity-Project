@@ -19,7 +19,7 @@
         body {
             background-color: var(--forest-dark);
             color: var(--forest-bright);
-            font-family: 'Press Start 2P', cursive;
+            font-family: 'Press Start 2P', monospace;
             text-align: center;
             margin: 0; padding: 0;
             display: flex;
@@ -215,7 +215,7 @@
             background: var(--forest-light);
             border: none;
             color: var(--forest-dark);
-            font-family: 'Press Start 2P', cursive;
+            font-family: 'Press Start 2P', monospace;
             padding: 12px 24px;
             cursor: pointer;
             box-shadow: 4px 4px 0 var(--forest-dark);
@@ -226,6 +226,43 @@
             box-shadow: none;
             transform: translate(2px, 2px);
         }
+        * { box-sizing:border-box; }
+        body { padding:48px 20px 24px; }
+        body::before { position:fixed; }
+        .title-container { max-width:900px; margin-bottom:26px; }
+        .home-intro { font:16px/1.7 monospace; max-width:650px; margin:18px auto 0; }
+        .subtitle { opacity:1; }
+        .start-menu { z-index:10; max-width:760px; width:100%; }
+        .start-menu h2 { font-size:10px; line-height:1.8; margin:0 0 16px; }
+        .task-options { display:flex; justify-content:center; gap:12px; }
+        .task-options button { font:10px/1.8 'Press Start 2P',monospace; padding:14px 16px; border:3px solid var(--forest-light); background:var(--forest-dark); color:var(--forest-bright); cursor:pointer; box-shadow:4px 4px 0 var(--forest-medium); }
+        .task-options button[aria-pressed="true"] { background:var(--forest-bright); color:var(--forest-dark); }
+        #task-description { font:15px/1.6 monospace; max-width:610px; margin:18px auto 26px; min-height:48px; }
+        .start-menu .landscape-label { margin-bottom:20px; }
+        .map-container { gap:30px; margin-bottom:30px; flex-wrap:wrap; }
+        .region-card { width:280px; padding:24px 18px; }
+        .region-stats, .status { opacity:1; }
+        .region-card { color:#d9efad; }
+        .region-card:hover { color:var(--forest-dark); }
+        .region-stats { font:13px/1.8 monospace; }
+        .region-title { font-size:12px; }
+        a:focus-visible, button:focus-visible { outline:3px solid white; outline-offset:5px; }
+        .site-footer { display:flex; align-items:center; gap:15px; max-width:800px; font:12px/1.8 monospace; }
+        .popup-overlay { overflow-y:auto; }
+        @media(max-width:600px) {
+            body { padding:30px 16px 20px; }
+            h1 { font-size:13px; padding:0; }
+            .cursor { width:9px; height:16px; margin-left:5px; }
+            .subtitle { font-size:7px; padding:0; }
+            .task-options { flex-direction:column; }
+            .map-container { width:100%; gap:20px; }
+            .region-card { width:100%; max-width:360px; }
+            .mesh-container { height:110px; }
+            .site-footer { text-align:left; gap:10px; overflow-wrap:anywhere; }
+            .site-footer img { width:60px !important; }
+            .popup-content { padding:22px 16px; }
+        }
+        @media(prefers-reduced-motion:reduce) { .cursor { animation:none; } .region-card, .wireframe-mesh, .mesh-layer { transition:none; } }
     </style>
     <script>
         // Apply dark mode preference immediately to avoid flash
@@ -250,10 +287,33 @@
 
     <div class="title-container">
         <h1>The Peninsular Malaysia<br>Forest Patch Connectivity Project</h1><span class="cursor"></span>
-        <span class="subtitle">An interactive landscape connectivity analysis for arboreal wildlife</span>
+        <span class="subtitle">Explore forest patches and potential connections for arboreal wildlife.</span>
+        <p class="home-intro">Find out about a forest patch, or draw a proposed development to explore how it could change the landscape.</p>
     </div>
     
-    <div class="map-container">
+    <section class="start-menu" aria-labelledby="start-title">
+        <h2 id="start-title">[ CHOOSE YOUR TASK ]</h2>
+        <div class="task-options" role="group" aria-label="What would you like to do?">
+            <button type="button" data-task="explore" aria-pressed="true">Explore forest patches</button>
+            <button type="button" data-task="development" aria-pressed="false">Test a development</button>
+        </div>
+        <p id="task-description" aria-live="polite">Choose a landscape below, then zoom in and click a forest patch to explore its details.</p>
+        <h2 class="landscape-label">[ SELECT LANDSCAPE ]</h2>
+    </section>
+    <main class="map-container" aria-label="Choose a landscape">
+        <a href="kuantan-map.html" class="region-card">
+            <div class="mesh-container">
+                <div class="wireframe-mesh">
+                    <svg viewBox="0 0 100 100" class="mesh-layer layer-base"><path d="M50,15 L85,35 L75,80 L25,80 L15,35 Z" /></svg>
+                    <svg viewBox="0 0 100 100" class="mesh-layer layer-mid"><path d="M50,30 L70,45 L65,65 L35,65 L30,45 Z" /></svg>
+                    <svg viewBox="0 0 100 100" class="mesh-layer layer-top"><path d="M50,45 L58,52 L55,58 L45,58 L42,52 Z" /></svg>
+                </div>
+            </div>
+            <div class="region-title">KUANTAN</div>
+            <div class="region-stats">4,699 patches · 209,639 ha</div>
+            <div class="status">[ OPEN MAP ]</div>
+        </a>
+
         <a href="klang-valley-map.html" class="region-card">
             <div class="mesh-container">
                 <div class="wireframe-mesh">
@@ -267,41 +327,41 @@
             <div class="status">[ OPEN MAP ]</div>
         </a>
 
-        <a href="kuantan-map.html" class="region-card">
-            <div class="mesh-container">
-                <div class="wireframe-mesh">
-                    <svg viewBox="0 0 100 100" class="mesh-layer layer-base"><path d="M50,15 L85,35 L75,80 L25,80 L15,35 Z" /></svg>
-                    <svg viewBox="0 0 100 100" class="mesh-layer layer-mid"><path d="M50,30 L70,45 L65,65 L35,65 L30,45 Z" /></svg>
-                    <svg viewBox="0 0 100 100" class="mesh-layer layer-top"><path d="M50,45 L58,52 L55,58 L45,58 L42,52 Z" /></svg>
-                </div>
-            </div>
-            <div class="region-title">KUANTAN</div>
-            <div class="region-stats">4,699 patches · 209,639 ha</div>
-            <div class="status">[ OPEN MAP ]</div>
-        </a>
-    </div>
+    </main>
 
-<footer>
-  <footer style="display:flex;align-items:center;gap:15px;z-index:10;font-size:10px;line-height:2;margin-top:20px;padding-left:1px;padding-right:45px; align-self:flex-start;width:100%">
+<footer class="site-footer">
     <img
         src="flag.gif"
         alt="Pixel flag"
         style="width:100px;image-rendering:pixelated;opacity:0.95;flex-shrink:0">
     <div>
-        Built by <a href="https://www.researchgate.net/profile/Benjamin-Galea" target="_blank">Benjamin Galea</a>. <br>
+        Built by <a href="https://www.researchgate.net/profile/Benjamin-Galea" target="_blank" rel="noopener noreferrer">Benjamin Galea</a>. <br>
         For any questions, contact <a href="mailto:bengalea97@gmail.com">bengalea97@gmail.com</a>
     </div>
 </footer>
 
     <script>
+        document.querySelectorAll('[data-task]').forEach(button => button.addEventListener('click', () => {
+            const development = button.dataset.task === 'development';
+            document.querySelectorAll('[data-task]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+            document.getElementById('task-description').textContent = development ? 'Choose a landscape below. The drawing workflow will open so you can test a road, building site or other development.' : 'Choose a landscape below, then zoom in and click a forest patch to explore its details.';
+            document.querySelectorAll('.region-card').forEach(card => {
+                const url = new URL(card.href);
+                if (development) url.searchParams.set('task', 'development'); else url.searchParams.delete('task');
+                card.href = url.href;
+                card.querySelector('.status').textContent = development ? '[ TEST DEVELOPMENT ]' : '[ OPEN MAP ]';
+            });
+        }));
+        let noticeDismissed = false;
         function checkDevice() {
             const popup = document.getElementById('mobile-popup');
-            if (window.innerWidth <= 768 || /Mobi|Android/i.test(navigator.userAgent)) {
+            if (!noticeDismissed && (window.innerWidth <= 768 || /Mobi|Android/i.test(navigator.userAgent))) {
                 popup.style.display = 'flex';
             }
         }
 
         function closePopup() {
+            noticeDismissed = true;
             document.getElementById('mobile-popup').style.display = 'none';
         }
 
@@ -310,3 +370,4 @@
     </script>
 </body>
 </html>
+
