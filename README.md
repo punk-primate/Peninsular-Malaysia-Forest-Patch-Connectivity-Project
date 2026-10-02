@@ -71,7 +71,7 @@ Metrics are independently min-max normalised within each landscape. Lower PSQI s
 | Tier 5 | Marginal fragment | 50–75% |
 | Tier 6 | Remnant patch | Top 25% |
 
-Functional connectivity values are derived from Omniscape circuit-theory modelling reported in the companion study (Galea, in review).
+Functional connectivity values are derived from Omniscape circuit-theory modelling reported in the companion study (Galea, in writing).
 
 ---
 
