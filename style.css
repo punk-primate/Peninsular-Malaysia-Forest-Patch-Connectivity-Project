@@ -25,7 +25,9 @@
     color: #333;
     white-space: nowrap;
 }
-#howto-btn:hover { background: #f0f0f0; }
+#howto-btn:hover {
+    background: #f0f0f0;
+}
 
 #corridor-controls {
     display: flex;
@@ -45,8 +47,12 @@
     white-space: nowrap;
     transition: background 0.15s;
 }
-#corridor-toggle-fab:hover { background: #1e6b27; }
-#corridor-toggle-fab.active { background: #00b8d9; }
+#corridor-toggle-fab:hover {
+    background: #1e6b27;
+}
+#corridor-toggle-fab.active {
+    background: #00b8d9;
+}
 
 #conn-level-toggles {
     display: flex;
@@ -65,8 +71,12 @@
     opacity: 0.45;
     transition: opacity 0.15s;
 }
-.conn-level-btn.active { opacity: 1; }
-.conn-level-btn:hover   { opacity: 0.8; }
+.conn-level-btn.active {
+    opacity: 1;
+}
+.conn-level-btn:hover {
+    opacity: 0.8;
+}
 
 #home-btn {
     background: none;
@@ -82,4 +92,6 @@
     text-decoration: none;
     transition: background 0.15s;
 }
-#home-btn:hover { background: #f0f0f0; }
+#home-btn:hover {
+    background: #f0f0f0;
+}

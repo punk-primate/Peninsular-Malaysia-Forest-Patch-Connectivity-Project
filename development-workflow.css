@@ -1,33 +1,159 @@
-#development-toggle, #connectivity-toggle { display:none !important; }
-#development-workflow-toggle { background:#8b1a1a; color:#fff; border:0; border-radius:4px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; }
-#development-workflow-toggle.active { background:#5b1010; }
-#development-workflow { color:#23364e; font:13px/1.5 Arial,sans-serif; }
-#development-workflow[hidden], #development-workflow [hidden] { display:none !important; }
-#development-workflow h3 { color:#8b1a1a; border-left-color:#8b1a1a; }
-#development-workflow button { cursor:pointer; border:1px solid #c6ccd5; border-radius:4px; padding:8px; background:#fff; color:#23364e; font-size:12px; }
-#development-workflow button:disabled { opacity:.5; cursor:default; }
-#development-workflow button:focus-visible, #development-workflow-toggle:focus-visible { outline:2px solid #2563eb; outline-offset:2px; }
-.workflow-steps { list-style:none; padding:0; margin:12px 0; display:grid; gap:6px; }
-.workflow-steps button { width:100%; text-align:left; }
-.workflow-steps span { float:right; font-size:11px; }
-#development-workflow .workflow-steps [aria-current="step"] { background:#8b1a1a; color:#fff; border-color:#8b1a1a; font-weight:700; }
-#workflow-guidance { padding:10px; background:#edf3fa; border-radius:6px; }
-#workflow-content > .sidebar-section { padding:0; margin:0; border:0; }
-#workflow-content #development-panel > h3, #workflow-content .development-intro, #workflow-content .development-actions, #workflow-content .development-view, #workflow-content #connectivity-panel > h3, #workflow-content .connection-steps { display:none; }
-#development-workflow[data-step="draw"] .development-assumption { display:none; }
-#workflow-map-view, .workflow-actions { display:flex; gap:6px; margin:12px 0; }
-#workflow-map-view button, .workflow-actions button { flex:1; }
-#development-workflow #workflow-map-view button.selected { background:#254f86; color:#fff; border-color:#254f86; }
-body.dark-mode #development-workflow { color:#e7edf5; }
-body.dark-mode #development-workflow h3 { color:#ffb7ae; border-color:#ffb7ae; }
-body.dark-mode #development-workflow button { background:#233449; color:#e7edf5; border-color:#536680; }
-body.dark-mode #workflow-guidance { background:#233449; }
-@media(max-width:600px) { #development-workflow-toggle { padding:6px; font-size:10px; } }
+#development-toggle,
+#connectivity-toggle {
+    display: none !important;
+}
+#development-workflow-toggle {
+    background: #8b1a1a;
+    color: #fff;
+    border: 0;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+#development-workflow-toggle.active {
+    background: #5b1010;
+}
+#development-workflow {
+    color: #23364e;
+    font:
+        13px/1.5 Arial,
+        sans-serif;
+}
+#development-workflow[hidden],
+#development-workflow [hidden] {
+    display: none !important;
+}
+#development-workflow h3 {
+    color: #8b1a1a;
+    border-left-color: #8b1a1a;
+}
+#development-workflow button {
+    cursor: pointer;
+    border: 1px solid #c6ccd5;
+    border-radius: 4px;
+    padding: 8px;
+    background: #fff;
+    color: #23364e;
+    font-size: 12px;
+}
+#development-workflow button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+#development-workflow button:focus-visible,
+#development-workflow-toggle:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+.workflow-steps {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0;
+    display: grid;
+    gap: 6px;
+}
+.workflow-steps button {
+    width: 100%;
+    text-align: left;
+}
+.workflow-steps span {
+    float: right;
+    font-size: 11px;
+}
+#development-workflow .workflow-steps [aria-current='step'] {
+    background: #8b1a1a;
+    color: #fff;
+    border-color: #8b1a1a;
+    font-weight: 700;
+}
+#workflow-guidance {
+    padding: 10px;
+    background: #edf3fa;
+    border-radius: 6px;
+}
+#workflow-content > .sidebar-section {
+    padding: 0;
+    margin: 0;
+    border: 0;
+}
+#workflow-content #development-panel > h3,
+#workflow-content .development-intro,
+#workflow-content .development-actions,
+#workflow-content .development-view,
+#workflow-content #connectivity-panel > h3,
+#workflow-content .connection-steps {
+    display: none;
+}
+#development-workflow[data-step='draw'] .development-assumption {
+    display: none;
+}
+#workflow-map-view,
+.workflow-actions {
+    display: flex;
+    gap: 6px;
+    margin: 12px 0;
+}
+#workflow-map-view button,
+.workflow-actions button {
+    flex: 1;
+}
+#development-workflow #workflow-map-view button.selected {
+    background: #254f86;
+    color: #fff;
+    border-color: #254f86;
+}
+body.dark-mode #development-workflow {
+    color: #e7edf5;
+}
+body.dark-mode #development-workflow h3 {
+    color: #ffb7ae;
+    border-color: #ffb7ae;
+}
+body.dark-mode #development-workflow button {
+    background: #233449;
+    color: #e7edf5;
+    border-color: #536680;
+}
+body.dark-mode #workflow-guidance {
+    background: #233449;
+}
+@media (max-width: 600px) {
+    #development-workflow-toggle {
+        padding: 6px;
+        font-size: 10px;
+    }
+}
 
-#development-workflow nav { position:sticky; top:0; z-index:5; background:#fff; padding:2px 0; }
-#workflow-content #connectivity-panel > p:first-of-type { display:none; }
-body.dark-mode #development-workflow nav { background:#1e1e1e; }
+#development-workflow nav {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: #fff;
+    padding: 2px 0;
+}
+#workflow-content #connectivity-panel > p:first-of-type {
+    display: none;
+}
+body.dark-mode #development-workflow nav {
+    background: #1e1e1e;
+}
 
-.development-draw-help { padding:10px; border-left:3px solid #254f86; background:#edf3fa; border-radius:4px; }
-.development-width-help { display:block; font-size:12px; font-weight:400; margin-top:5px; }
-body.dark-mode .development-draw-help { background:#233449; border-color:#8db8ef; color:#e7edf5; }
+.development-draw-help {
+    padding: 10px;
+    border-left: 3px solid #254f86;
+    background: #edf3fa;
+    border-radius: 4px;
+}
+.development-width-help {
+    display: block;
+    font-size: 12px;
+    font-weight: 400;
+    margin-top: 5px;
+}
+body.dark-mode .development-draw-help {
+    background: #233449;
+    border-color: #8db8ef;
+    color: #e7edf5;
+}

@@ -1,403 +1,722 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="favicon.png">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Peninsular Malaysia Forest Patch Connectivity Project</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    
-    <style>
-        :root {
-            --forest-dark: #0f380f;
-            --forest-medium: #306230;
-            --forest-light: #8bac0f;
-            --forest-bright: #9bbc0f;
-        }
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="icon" type="image/png" href="favicon.png" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>The Peninsular Malaysia Forest Patch Connectivity Project</title>
 
-        body {
-            background-color: var(--forest-dark);
-            color: var(--forest-bright);
-            font-family: 'Press Start 2P', monospace;
-            text-align: center;
-            margin: 0; padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            overflow-x: hidden;
-            background-image: 
-                linear-gradient(var(--forest-medium) 1px, transparent 1px),
-                linear-gradient(90deg, var(--forest-medium) 1px, transparent 1px);
-            background-size: 20px 20px;
-        }
+        <link
+            href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+            rel="stylesheet"
+        />
 
-        /* Scanline Overlay */
-        body::before {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-            z-index: 5;
-            background-size: 100% 4px;
-            pointer-events: none;
-        }
-
-        .title-container {
-            margin-bottom: 50px;
-            z-index: 10;
-        }
-
-        h1 {
-            font-size: 20px;
-            line-height: 1.8;
-            text-shadow: 4px 4px 0 var(--forest-medium);
-            padding: 0 20px;
-            margin: 0;
-            display: inline;
-        }
-
-        .cursor {
-            display: inline-block;
-            width: 15px;
-            height: 24px;
-            background-color: var(--forest-bright);
-            animation: blink 0.8s steps(2) infinite;
-            vertical-align: middle;
-            margin-left: 10px;
-        }
-
-        .subtitle {
-            display: block;
-            margin-top: 24px;
-            font-size: 8px;
-            line-height: 2;
-            opacity: 0.75;
-            letter-spacing: 0.5px;
-            padding: 0 20px;
-        }
-
-        @keyframes blink { 0% { opacity: 1; } 100% { opacity: 0; } }
-
-        .map-container {
-            display: flex;
-            gap: 50px;
-            z-index: 10;
-            margin-bottom: 60px;
-            justify-content: center;
-        }
-
-        .region-card {
-            background-color: var(--forest-medium);
-            border: 4px solid var(--forest-light);
-            padding: 40px 20px;
-            text-decoration: none;
-            color: var(--forest-bright);
-            width: 240px;
-            transition: all 0.2s steps(4);
-            box-shadow: 10px 10px 0 var(--forest-dark);
-            perspective: 1000px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .region-card:hover {
-            transform: translateY(-10px);
-            background-color: var(--forest-light);
-            color: var(--forest-dark);
-            box-shadow: 15px 20px 0 var(--forest-dark);
-            border-color: white;
-        }
-
-        .mesh-container {
-            height: 150px;
-            width: 150px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 10px;
-            position: relative;
-        }
-
-        .wireframe-mesh {
-            width: 100px;
-            height: 100px;
-            transform: rotateX(60deg) rotateZ(-45deg);
-            transform-style: preserve-3d;
-            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            margin: auto;
-        }
-
-        .mesh-layer {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            fill: none;
-            stroke: var(--forest-bright);
-            stroke-width: 3.5;
-            transition: all 0.3s;
-        }
-
-        .layer-top { transform: translateZ(45px); opacity: 1; stroke-width: 4.5; }
-        .layer-mid { transform: translateZ(22px); opacity: 0.7; }
-        .layer-base { transform: translateZ(0); opacity: 0.4; }
-
-        .region-card:hover .wireframe-mesh {
-            transform: rotateX(0deg) rotateZ(135deg) scale(0.9);
-        }
-
-        .region-card:hover .mesh-layer {
-            transform: translateZ(0);
-            stroke: var(--forest-dark);
-            opacity: 1;
-        }
-
-        .region-title { font-size: 11px; margin-top: 10px; letter-spacing: 1px; }
-
-        .region-stats {
-            font-size: 7px;
-            margin-top: 10px;
-            opacity: 0.75;
-            line-height: 2;
-            letter-spacing: 0.5px;
-        }
-
-        .status { font-size: 9px; margin-top: 16px; opacity: 0.8; }
-        .disabled { opacity: 0.4; cursor: not-allowed; }
-
-        footer { z-index: 10; font-size: 10px; line-height: 2; margin-top: 20px;}
-        footer a { color: var(--forest-bright); text-decoration: underline; }
-        footer a:hover { color: white; background-color: var(--forest-medium); }
-
-        /* --- MOBILE POPUP STYLES --- */
-        .popup-overlay {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(15, 56, 15, 0.95);
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .popup-content {
-            background-color: var(--forest-medium);
-            border: 4px solid var(--forest-light);
-            padding: 30px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 10px 10px 0 var(--forest-dark);
-            text-align: center;
-        }
-
-        .popup-header {
-            color: white;
-            margin-bottom: 20px;
-            font-size: 14px;
-            text-decoration: underline;
-        }
-
-        .popup-content p {
-            font-size: 10px;
-            line-height: 1.8;
-            margin-bottom: 20px;
-            color: var(--forest-bright);
-        }
-
-        .popup-content button {
-            background: var(--forest-light);
-            border: none;
-            color: var(--forest-dark);
-            font-family: 'Press Start 2P', monospace;
-            padding: 12px 24px;
-            cursor: pointer;
-            box-shadow: 4px 4px 0 var(--forest-dark);
-            font-size: 10px;
-        }
-
-        .popup-content button:active {
-            box-shadow: none;
-            transform: translate(2px, 2px);
-        }
-        * { box-sizing:border-box; }
-        body { padding:46px 22px 28px; background-color:#0e241b; color:#f1eed5;
-            background-image:linear-gradient(rgba(139,172,15,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(139,172,15,.10) 1px,transparent 1px); }
-        body::before { position:fixed; opacity:.35; }
-        .title-container { max-width:920px; margin-bottom:32px; }
-        h1 { color:#f1eed5; text-shadow:3px 3px 0 #306230; }
-        .cursor { width:12px; height:22px; }
-        .subtitle { opacity:1; color:#c5d4b6; font:12px/1.8 monospace; letter-spacing:1.2px; margin-top:20px; }
-        .home-intro { font:17px/1.65 monospace; color:#f1eed5; max-width:650px; margin:18px auto 0; }
-        .landscape-label { font-size:10px; line-height:1.8; color:#b6d365; z-index:10; margin:0 0 22px; }
-        .map-container { width:100%; max-width:780px; gap:28px; margin-bottom:30px; flex-wrap:wrap; }
-        .region-card { width:350px; padding:22px 26px 26px; background:#18382a; border:2px solid #779457; color:#f1eed5; box-shadow:7px 7px 0 #06170f; }
-        .region-card:hover { transform:none; background:#18382a; color:#f1eed5; border-color:#b6d365; box-shadow:7px 7px 0 #06170f; }
-        .mesh-container { height:130px; margin-bottom:4px; }
-        .region-card:hover .wireframe-mesh { transform:rotateX(0deg) rotateZ(135deg) scale(.9); }
-        .region-card:hover .mesh-layer { stroke:#b6d365; }
-        .region-card:hover .mesh-layer { transform:translateZ(0); opacity:1; }
-        .region-title { font-size:13px; margin:12px 0 0; color:#f1eed5; line-height:1.7; }
-        .region-stats { font:14px/1.8 monospace; color:#d0dec4; opacity:1; margin:10px 0 22px; letter-spacing:0; }
-        .region-actions { display:grid; gap:10px; width:100%; }
-        .region-actions a { display:block; text-decoration:none; padding:13px 10px; font:10px/1.8 'Press Start 2P',monospace; border:2px solid #f1eed5; transition:background .15s steps(3); }
-        .map-link { background:#f1eed5; color:#10271c; box-shadow:3px 3px 0 #06170f; }
-        .map-link:hover { background:#d6e9a3; border-color:#d6e9a3; }
-        a:focus-visible, button:focus-visible { outline:3px solid #e9ce87; outline-offset:5px; }
-        .home-about { z-index:10; width:100%; max-width:728px; margin:0 0 24px; }
-        #home-about-toggle { font:10px/1.8 'Press Start 2P',monospace; border:0; border-bottom:2px solid #b6d365; padding:10px 4px; color:#f1eed5; background:transparent; cursor:pointer; }
-        #home-about-toggle:hover { color:#d6e9a3; }
-        #home-about-content { text-align:left; padding:20px 24px; margin-top:18px; background:#18382a; border:2px solid #779457; color:#f1eed5; font:15px/1.7 monospace; }
-        #home-about-content h2 { font:11px/1.8 'Press Start 2P',monospace; margin:0 0 16px; }
-        #home-about-content p { margin:0 0 12px; }
-        #home-about-content p:last-child { margin-bottom:0; }
-        .site-footer { display:flex; align-items:center; gap:15px; max-width:800px; font:12px/1.8 monospace; color:#c5d4b6; }
-        .site-footer a { color:#f1eed5; }
-        .popup-overlay { overflow-y:auto; }
-        @media(min-width:900px) {
-            body { padding:clamp(12px,3vh,28px) 22px; }
-            h1 { font-size:clamp(15px,2.2vh,20px); }
-            .title-container { margin-bottom:clamp(12px,2vh,20px); }
-            .subtitle { margin-top:12px; }
-            .home-intro { font-size:16px; line-height:1.5; max-width:760px; margin-top:12px; }
-            .landscape-label { margin-bottom:14px; }
-            .map-container { margin-bottom:18px; }
-            .region-card { padding:14px 24px 18px; }
-            .mesh-container { height:100px; }
-            .region-title { margin-top:4px; }
-            .region-stats { margin:8px 0 14px; }
-            .region-actions a { padding:11px 10px; }
-            .home-about { margin-bottom:14px; }
-            #home-about-toggle { padding:8px 4px; }
-            .site-footer { margin-top:0; }
-            .site-footer img { width:72px !important; }
-        }
-        @media(max-width:600px) {
-            body { padding:30px 18px 22px; }
-            h1 { font-size:13px; padding:0; line-height:1.9; }
-            .cursor { width:8px; height:15px; margin-left:5px; }
-            .subtitle { font-size:11px; padding:0; letter-spacing:.4px; }
-            .home-intro { font-size:15px; }
-            .map-container { gap:22px; }
-            .region-card { width:100%; max-width:370px; padding:18px 22px 24px; }
-            .mesh-container { height:105px; }
-            .site-footer { text-align:left; gap:10px; overflow-wrap:anywhere; }
-            .site-footer img { width:60px !important; }
-            .popup-content { padding:22px 16px; }
-        }
-        @media(prefers-reduced-motion:reduce) { .cursor { animation:none; } .region-card, .wireframe-mesh, .mesh-layer, .region-actions a { transition:none; } }
-    </style>
-    <script>
-        // Apply dark mode preference immediately to avoid flash
-        if (localStorage.getItem('darkMode') === 'enabled') {
-            document.documentElement.style.setProperty('--forest-dark',   '#0a2a0a');
-            document.documentElement.style.setProperty('--forest-medium',  '#1a4a1a');
-            document.documentElement.style.setProperty('--forest-light',   '#4a7c4a');
-            document.documentElement.style.setProperty('--forest-bright',  '#81c784');
-        }
-    </script>
-</head>
-<body>
-
-    <div id="mobile-popup" class="popup-overlay" style="display: none;">
-        <div class="popup-content">
-            <div class="popup-header">[ SYSTEM NOTICE ]</div>
-            <p>This project is optimised for desktop usage.</p>
-            <p>If viewing on mobile, please be aware that there will be reduced functionality.</p>
-            <button onclick="closePopup()">[ OK ]</button>
-        </div>
-    </div>
-
-    <div class="title-container">
-        <h1>The Peninsular Malaysia<br>Forest Patch Connectivity Project</h1><span class="cursor"></span>
-        <span class="subtitle">FOREST PATCHES / LANDSCAPE CONNECTIVITY</span>
-        <p class="home-intro">Choose a landscape to explore its forest patches and potential connections. Zoom in and select a patch to learn more.</p>
-    </div>
-    
-    <h2 class="landscape-label">[ SELECT A LANDSCAPE ]</h2>
-    <main class="map-container" aria-label="Choose a landscape">
-        <article class="region-card" aria-labelledby="kuantan-title">
-            <div class="mesh-container">
-                <div class="wireframe-mesh">
-                    <svg viewBox="0 0 100 100" class="mesh-layer layer-base"><path d="M50,15 L85,35 L75,80 L25,80 L15,35 Z" /></svg>
-                    <svg viewBox="0 0 100 100" class="mesh-layer layer-mid"><path d="M50,30 L70,45 L65,65 L35,65 L30,45 Z" /></svg>
-                    <svg viewBox="0 0 100 100" class="mesh-layer layer-top"><path d="M50,45 L58,52 L55,58 L45,58 L42,52 Z" /></svg>
-                </div>
-            </div>
-            <h3 class="region-title" id="kuantan-title">KUANTAN</h3>
-            <div class="region-stats">4,699 patches · 209,639 ha</div>
-            <div class="region-actions">
-                <a class="map-link" href="kuantan-map.html">Open map</a>
-            </div>
-        </article>
-
-        <article class="region-card" aria-labelledby="klang-valley-title">
-            <div class="mesh-container">
-                <div class="wireframe-mesh">
-                    <svg viewBox="0 0 100 100" class="mesh-layer layer-base"><path d="M10,50 Q25,10 50,10 T90,50 T50,90 T10,50" /></svg>
-                    <svg viewBox="0 0 100 100" class="mesh-layer layer-mid"><path d="M25,50 Q35,25 50,25 T75,50 T50,75 T25,50" /></svg>
-                    <svg viewBox="0 0 100 100" class="mesh-layer layer-top"><path d="M40,50 Q45,40 50,40 T60,50 T50,60 T40,50" /></svg>
-                </div>
-            </div>
-            <h3 class="region-title" id="klang-valley-title">KLANG VALLEY</h3>
-            <div class="region-stats">11,466 patches · 129,802 ha</div>
-            <div class="region-actions">
-                <a class="map-link" href="klang-valley-map.html">Open map</a>
-            </div>
-        </article>
-
-    </main>
-
-<section class="home-about" aria-label="About the website">
-    <button id="home-about-toggle" type="button" aria-expanded="false" aria-controls="home-about-content">[ About this project ]</button>
-    <div id="home-about-content" hidden>
-        <h2>Forests in a changing landscape</h2>
-        <p>This research-based website brings together information about forest patches and potential connections for arboreal wildlife in Peninsular Malaysia. More cities will be added in future updates.</p>
-        <p>Open a landscape, zoom in and select a forest patch to see its area, structural characteristics and modelled connectivity information. The map also includes a development tool for exploring how a proposed road or site could affect forest and potential routes.</p>
-        <p>The maps support exploration and discussion. Potential connections represent modelled opportunities for movement, which need field assessment.</p>
-    </div>
-</section>
-
-<footer class="site-footer">
-    <img
-        src="flag.gif"
-        alt="Pixel flag"
-        style="width:100px;image-rendering:pixelated;opacity:0.95;flex-shrink:0">
-    <div>
-        Built by <a href="https://www.researchgate.net/profile/Benjamin-Galea" target="_blank" rel="noopener noreferrer">Benjamin Galea</a>. <br>
-        For any questions, contact <a href="mailto:bengalea97@gmail.com">bengalea97@gmail.com</a>
-    </div>
-</footer>
-
-    <script>
-        document.getElementById('home-about-toggle').addEventListener('click', event => {
-            const button = event.currentTarget, content = document.getElementById('home-about-content');
-            const expanded = button.getAttribute('aria-expanded') !== 'true';
-            button.setAttribute('aria-expanded', String(expanded));
-            content.hidden = !expanded;
-        });
-        let noticeDismissed = false;
-        function checkDevice() {
-            const popup = document.getElementById('mobile-popup');
-            if (!noticeDismissed && (window.innerWidth <= 768 || /Mobi|Android/i.test(navigator.userAgent))) {
-                popup.style.display = 'flex';
+        <style>
+            :root {
+                --forest-dark: #0f380f;
+                --forest-medium: #306230;
+                --forest-light: #8bac0f;
+                --forest-bright: #9bbc0f;
             }
-        }
 
-        function closePopup() {
-            noticeDismissed = true;
-            document.getElementById('mobile-popup').style.display = 'none';
-        }
+            body {
+                background-color: var(--forest-dark);
+                color: var(--forest-bright);
+                font-family: 'Press Start 2P', monospace;
+                text-align: center;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                overflow-x: hidden;
+                background-image:
+                    linear-gradient(var(--forest-medium) 1px, transparent 1px),
+                    linear-gradient(90deg, var(--forest-medium) 1px, transparent 1px);
+                background-size: 20px 20px;
+            }
 
-        window.addEventListener('load', checkDevice);
-        window.addEventListener('resize', checkDevice);
-    </script>
-</body>
+            /* Scanline Overlay */
+            body::before {
+                content: ' ';
+                display: block;
+                position: absolute;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                right: 0;
+                background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+                z-index: 5;
+                background-size: 100% 4px;
+                pointer-events: none;
+            }
+
+            .title-container {
+                margin-bottom: 50px;
+                z-index: 10;
+            }
+
+            h1 {
+                font-size: 20px;
+                line-height: 1.8;
+                text-shadow: 4px 4px 0 var(--forest-medium);
+                padding: 0 20px;
+                margin: 0;
+                display: inline;
+            }
+
+            .cursor {
+                display: inline-block;
+                width: 15px;
+                height: 24px;
+                background-color: var(--forest-bright);
+                animation: blink 0.8s steps(2) infinite;
+                vertical-align: middle;
+                margin-left: 10px;
+            }
+
+            .subtitle {
+                display: block;
+                margin-top: 24px;
+                font-size: 8px;
+                line-height: 2;
+                opacity: 0.75;
+                letter-spacing: 0.5px;
+                padding: 0 20px;
+            }
+
+            @keyframes blink {
+                0% {
+                    opacity: 1;
+                }
+                100% {
+                    opacity: 0;
+                }
+            }
+
+            .map-container {
+                display: flex;
+                gap: 50px;
+                z-index: 10;
+                margin-bottom: 60px;
+                justify-content: center;
+            }
+
+            .region-card {
+                background-color: var(--forest-medium);
+                border: 4px solid var(--forest-light);
+                padding: 40px 20px;
+                text-decoration: none;
+                color: var(--forest-bright);
+                width: 240px;
+                transition: all 0.2s steps(4);
+                box-shadow: 10px 10px 0 var(--forest-dark);
+                perspective: 1000px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .region-card:hover {
+                transform: translateY(-10px);
+                background-color: var(--forest-light);
+                color: var(--forest-dark);
+                box-shadow: 15px 20px 0 var(--forest-dark);
+                border-color: white;
+            }
+
+            .mesh-container {
+                height: 150px;
+                width: 150px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-bottom: 10px;
+                position: relative;
+            }
+
+            .wireframe-mesh {
+                width: 100px;
+                height: 100px;
+                transform: rotateX(60deg) rotateZ(-45deg);
+                transform-style: preserve-3d;
+                transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                margin: auto;
+            }
+
+            .mesh-layer {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                fill: none;
+                stroke: var(--forest-bright);
+                stroke-width: 3.5;
+                transition: all 0.3s;
+            }
+
+            .layer-top {
+                transform: translateZ(45px);
+                opacity: 1;
+                stroke-width: 4.5;
+            }
+            .layer-mid {
+                transform: translateZ(22px);
+                opacity: 0.7;
+            }
+            .layer-base {
+                transform: translateZ(0);
+                opacity: 0.4;
+            }
+
+            .region-card:hover .wireframe-mesh {
+                transform: rotateX(0deg) rotateZ(135deg) scale(0.9);
+            }
+
+            .region-card:hover .mesh-layer {
+                transform: translateZ(0);
+                stroke: var(--forest-dark);
+                opacity: 1;
+            }
+
+            .region-title {
+                font-size: 11px;
+                margin-top: 10px;
+                letter-spacing: 1px;
+            }
+
+            .region-stats {
+                font-size: 7px;
+                margin-top: 10px;
+                opacity: 0.75;
+                line-height: 2;
+                letter-spacing: 0.5px;
+            }
+
+            .status {
+                font-size: 9px;
+                margin-top: 16px;
+                opacity: 0.8;
+            }
+            .disabled {
+                opacity: 0.4;
+                cursor: not-allowed;
+            }
+
+            footer {
+                z-index: 10;
+                font-size: 10px;
+                line-height: 2;
+                margin-top: 20px;
+            }
+            footer a {
+                color: var(--forest-bright);
+                text-decoration: underline;
+            }
+            footer a:hover {
+                color: white;
+                background-color: var(--forest-medium);
+            }
+
+            /* --- MOBILE POPUP STYLES --- */
+            .popup-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(15, 56, 15, 0.95);
+                z-index: 100;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }
+
+            .popup-content {
+                background-color: var(--forest-medium);
+                border: 4px solid var(--forest-light);
+                padding: 30px;
+                width: 100%;
+                max-width: 400px;
+                box-shadow: 10px 10px 0 var(--forest-dark);
+                text-align: center;
+            }
+
+            .popup-header {
+                color: white;
+                margin-bottom: 20px;
+                font-size: 14px;
+                text-decoration: underline;
+            }
+
+            .popup-content p {
+                font-size: 10px;
+                line-height: 1.8;
+                margin-bottom: 20px;
+                color: var(--forest-bright);
+            }
+
+            .popup-content button {
+                background: var(--forest-light);
+                border: none;
+                color: var(--forest-dark);
+                font-family: 'Press Start 2P', monospace;
+                padding: 12px 24px;
+                cursor: pointer;
+                box-shadow: 4px 4px 0 var(--forest-dark);
+                font-size: 10px;
+            }
+
+            .popup-content button:active {
+                box-shadow: none;
+                transform: translate(2px, 2px);
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                padding: 46px 22px 28px;
+                background-color: #0e241b;
+                color: #f1eed5;
+                background-image:
+                    linear-gradient(rgba(139, 172, 15, 0.1) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(139, 172, 15, 0.1) 1px, transparent 1px);
+            }
+            body::before {
+                position: fixed;
+                opacity: 0.35;
+            }
+            .title-container {
+                max-width: 920px;
+                margin-bottom: 32px;
+            }
+            h1 {
+                color: #f1eed5;
+                text-shadow: 3px 3px 0 #306230;
+            }
+            .cursor {
+                width: 12px;
+                height: 22px;
+            }
+            .subtitle {
+                opacity: 1;
+                color: #c5d4b6;
+                font: 12px/1.8 monospace;
+                letter-spacing: 1.2px;
+                margin-top: 20px;
+            }
+            .home-intro {
+                font: 17px/1.65 monospace;
+                color: #f1eed5;
+                max-width: 650px;
+                margin: 18px auto 0;
+            }
+            .landscape-label {
+                font-size: 10px;
+                line-height: 1.8;
+                color: #b6d365;
+                z-index: 10;
+                margin: 0 0 22px;
+            }
+            .map-container {
+                width: 100%;
+                max-width: 780px;
+                gap: 28px;
+                margin-bottom: 30px;
+                flex-wrap: wrap;
+            }
+            .region-card {
+                width: 350px;
+                padding: 22px 26px 26px;
+                background: #18382a;
+                border: 2px solid #779457;
+                color: #f1eed5;
+                box-shadow: 7px 7px 0 #06170f;
+            }
+            .region-card:hover {
+                transform: none;
+                background: #18382a;
+                color: #f1eed5;
+                border-color: #b6d365;
+                box-shadow: 7px 7px 0 #06170f;
+            }
+            .mesh-container {
+                height: 130px;
+                margin-bottom: 4px;
+            }
+            .region-card:hover .wireframe-mesh {
+                transform: rotateX(0deg) rotateZ(135deg) scale(0.9);
+            }
+            .region-card:hover .mesh-layer {
+                stroke: #b6d365;
+            }
+            .region-card:hover .mesh-layer {
+                transform: translateZ(0);
+                opacity: 1;
+            }
+            .region-title {
+                font-size: 13px;
+                margin: 12px 0 0;
+                color: #f1eed5;
+                line-height: 1.7;
+            }
+            .region-stats {
+                font: 14px/1.8 monospace;
+                color: #d0dec4;
+                opacity: 1;
+                margin: 10px 0 22px;
+                letter-spacing: 0;
+            }
+            .region-actions {
+                display: grid;
+                gap: 10px;
+                width: 100%;
+            }
+            .region-actions a {
+                display: block;
+                text-decoration: none;
+                padding: 13px 10px;
+                font:
+                    10px/1.8 'Press Start 2P',
+                    monospace;
+                border: 2px solid #f1eed5;
+                transition: background 0.15s steps(3);
+            }
+            .map-link {
+                background: #f1eed5;
+                color: #10271c;
+                box-shadow: 3px 3px 0 #06170f;
+            }
+            .map-link:hover {
+                background: #d6e9a3;
+                border-color: #d6e9a3;
+            }
+            a:focus-visible,
+            button:focus-visible {
+                outline: 3px solid #e9ce87;
+                outline-offset: 5px;
+            }
+            .home-about {
+                z-index: 10;
+                width: 100%;
+                max-width: 728px;
+                margin: 0 0 24px;
+            }
+            #home-about-toggle {
+                font:
+                    10px/1.8 'Press Start 2P',
+                    monospace;
+                border: 0;
+                border-bottom: 2px solid #b6d365;
+                padding: 10px 4px;
+                color: #f1eed5;
+                background: transparent;
+                cursor: pointer;
+            }
+            #home-about-toggle:hover {
+                color: #d6e9a3;
+            }
+            #home-about-content {
+                text-align: left;
+                padding: 20px 24px;
+                margin-top: 18px;
+                background: #18382a;
+                border: 2px solid #779457;
+                color: #f1eed5;
+                font: 15px/1.7 monospace;
+            }
+            #home-about-content h2 {
+                font:
+                    11px/1.8 'Press Start 2P',
+                    monospace;
+                margin: 0 0 16px;
+            }
+            #home-about-content p {
+                margin: 0 0 12px;
+            }
+            #home-about-content p:last-child {
+                margin-bottom: 0;
+            }
+            .site-footer {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                max-width: 800px;
+                font: 12px/1.8 monospace;
+                color: #c5d4b6;
+            }
+            .site-footer a {
+                color: #f1eed5;
+            }
+            .popup-overlay {
+                overflow-y: auto;
+            }
+            @media (min-width: 900px) {
+                body {
+                    padding: clamp(12px, 3vh, 28px) 22px;
+                }
+                h1 {
+                    font-size: clamp(15px, 2.2vh, 20px);
+                }
+                .title-container {
+                    margin-bottom: clamp(12px, 2vh, 20px);
+                }
+                .subtitle {
+                    margin-top: 12px;
+                }
+                .home-intro {
+                    font-size: 16px;
+                    line-height: 1.5;
+                    max-width: 760px;
+                    margin-top: 12px;
+                }
+                .landscape-label {
+                    margin-bottom: 14px;
+                }
+                .map-container {
+                    margin-bottom: 18px;
+                }
+                .region-card {
+                    padding: 14px 24px 18px;
+                }
+                .mesh-container {
+                    height: 100px;
+                }
+                .region-title {
+                    margin-top: 4px;
+                }
+                .region-stats {
+                    margin: 8px 0 14px;
+                }
+                .region-actions a {
+                    padding: 11px 10px;
+                }
+                .home-about {
+                    margin-bottom: 14px;
+                }
+                #home-about-toggle {
+                    padding: 8px 4px;
+                }
+                .site-footer {
+                    margin-top: 0;
+                }
+                .site-footer img {
+                    width: 72px !important;
+                }
+            }
+            @media (max-width: 600px) {
+                body {
+                    padding: 30px 18px 22px;
+                }
+                h1 {
+                    font-size: 13px;
+                    padding: 0;
+                    line-height: 1.9;
+                }
+                .cursor {
+                    width: 8px;
+                    height: 15px;
+                    margin-left: 5px;
+                }
+                .subtitle {
+                    font-size: 11px;
+                    padding: 0;
+                    letter-spacing: 0.4px;
+                }
+                .home-intro {
+                    font-size: 15px;
+                }
+                .map-container {
+                    gap: 22px;
+                }
+                .region-card {
+                    width: 100%;
+                    max-width: 370px;
+                    padding: 18px 22px 24px;
+                }
+                .mesh-container {
+                    height: 105px;
+                }
+                .site-footer {
+                    text-align: left;
+                    gap: 10px;
+                    overflow-wrap: anywhere;
+                }
+                .site-footer img {
+                    width: 60px !important;
+                }
+                .popup-content {
+                    padding: 22px 16px;
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .cursor {
+                    animation: none;
+                }
+                .region-card,
+                .wireframe-mesh,
+                .mesh-layer,
+                .region-actions a {
+                    transition: none;
+                }
+            }
+        </style>
+        <script>
+            // Apply dark mode preference immediately to avoid flash
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                document.documentElement.style.setProperty('--forest-dark', '#0a2a0a');
+                document.documentElement.style.setProperty('--forest-medium', '#1a4a1a');
+                document.documentElement.style.setProperty('--forest-light', '#4a7c4a');
+                document.documentElement.style.setProperty('--forest-bright', '#81c784');
+            }
+        </script>
+    </head>
+    <body>
+        <div id="mobile-popup" class="popup-overlay" style="display: none">
+            <div class="popup-content">
+                <div class="popup-header">[ SYSTEM NOTICE ]</div>
+                <p>This project is optimised for desktop usage.</p>
+                <p>
+                    If viewing on mobile, please be aware that there will be reduced functionality.
+                </p>
+                <button onclick="closePopup()">[ OK ]</button>
+            </div>
+        </div>
+
+        <div class="title-container">
+            <h1>The Peninsular Malaysia<br />Forest Patch Connectivity Project</h1>
+            <span class="cursor"></span>
+            <span class="subtitle">FOREST PATCHES / LANDSCAPE CONNECTIVITY</span>
+            <p class="home-intro">
+                Choose a landscape to explore its forest patches and potential connections. Zoom in
+                and select a patch to learn more.
+            </p>
+        </div>
+
+        <h2 class="landscape-label">[ SELECT A LANDSCAPE ]</h2>
+        <main class="map-container" aria-label="Choose a landscape">
+            <article class="region-card" aria-labelledby="kuantan-title">
+                <div class="mesh-container">
+                    <div class="wireframe-mesh">
+                        <svg viewBox="0 0 100 100" class="mesh-layer layer-base">
+                            <path d="M50,15 L85,35 L75,80 L25,80 L15,35 Z" />
+                        </svg>
+                        <svg viewBox="0 0 100 100" class="mesh-layer layer-mid">
+                            <path d="M50,30 L70,45 L65,65 L35,65 L30,45 Z" />
+                        </svg>
+                        <svg viewBox="0 0 100 100" class="mesh-layer layer-top">
+                            <path d="M50,45 L58,52 L55,58 L45,58 L42,52 Z" />
+                        </svg>
+                    </div>
+                </div>
+                <h3 class="region-title" id="kuantan-title">KUANTAN</h3>
+                <div class="region-stats">4,699 patches · 209,639 ha</div>
+                <div class="region-actions">
+                    <a class="map-link" href="kuantan-map.html">Open map</a>
+                </div>
+            </article>
+
+            <article class="region-card" aria-labelledby="klang-valley-title">
+                <div class="mesh-container">
+                    <div class="wireframe-mesh">
+                        <svg viewBox="0 0 100 100" class="mesh-layer layer-base">
+                            <path d="M10,50 Q25,10 50,10 T90,50 T50,90 T10,50" />
+                        </svg>
+                        <svg viewBox="0 0 100 100" class="mesh-layer layer-mid">
+                            <path d="M25,50 Q35,25 50,25 T75,50 T50,75 T25,50" />
+                        </svg>
+                        <svg viewBox="0 0 100 100" class="mesh-layer layer-top">
+                            <path d="M40,50 Q45,40 50,40 T60,50 T50,60 T40,50" />
+                        </svg>
+                    </div>
+                </div>
+                <h3 class="region-title" id="klang-valley-title">KLANG VALLEY</h3>
+                <div class="region-stats">11,466 patches · 129,802 ha</div>
+                <div class="region-actions">
+                    <a class="map-link" href="klang-valley-map.html">Open map</a>
+                </div>
+            </article>
+        </main>
+
+        <section class="home-about" aria-label="About the website">
+            <button
+                id="home-about-toggle"
+                type="button"
+                aria-expanded="false"
+                aria-controls="home-about-content"
+            >
+                [ About this project ]
+            </button>
+            <div id="home-about-content" hidden>
+                <h2>Forests in a changing landscape</h2>
+                <p>
+                    This research-based website brings together information about forest patches and
+                    potential connections for arboreal wildlife in Peninsular Malaysia. More cities
+                    will be added in future updates.
+                </p>
+                <p>
+                    Open a landscape, zoom in and select a forest patch to see its area, structural
+                    characteristics and modelled connectivity information. The map also includes a
+                    development tool for exploring how a proposed road or site could affect forest
+                    and potential routes.
+                </p>
+                <p>
+                    The maps support exploration and discussion. Potential connections represent
+                    modelled opportunities for movement, which need field assessment.
+                </p>
+            </div>
+        </section>
+
+        <footer class="site-footer">
+            <img
+                src="flag.gif"
+                alt="Pixel flag"
+                style="width: 100px; image-rendering: pixelated; opacity: 0.95; flex-shrink: 0"
+            />
+            <div>
+                Built by
+                <a
+                    href="https://www.researchgate.net/profile/Benjamin-Galea"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >Benjamin Galea</a
+                >. <br />
+                For any questions, contact
+                <a href="mailto:bengalea97@gmail.com">bengalea97@gmail.com</a>
+            </div>
+        </footer>
+
+        <script>
+            document.getElementById('home-about-toggle').addEventListener('click', (event) => {
+                const button = event.currentTarget,
+                    content = document.getElementById('home-about-content');
+                const expanded = button.getAttribute('aria-expanded') !== 'true';
+                button.setAttribute('aria-expanded', String(expanded));
+                content.hidden = !expanded;
+            });
+            let noticeDismissed = false;
+            function checkDevice() {
+                const popup = document.getElementById('mobile-popup');
+                if (
+                    !noticeDismissed &&
+                    (window.innerWidth <= 768 || /Mobi|Android/i.test(navigator.userAgent))
+                ) {
+                    popup.style.display = 'flex';
+                }
+            }
+
+            function closePopup() {
+                noticeDismissed = true;
+                document.getElementById('mobile-popup').style.display = 'none';
+            }
+
+            window.addEventListener('load', checkDevice);
+            window.addEventListener('resize', checkDevice);
+        </script>
+    </body>
 </html>
-

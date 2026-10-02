@@ -1,34 +1,70 @@
-/* First-stage development scenarios: complete clearance inside one footprint. */
+/* Development footprints and forest-clearance scenarios. */
 (function () {
     'use strict';
     document.addEventListener('DOMContentLoaded', function () {
         const map = window._mapInstance;
         if (!map) return;
-        let active = false, drawing = false, busy = false, ready = false;
-        let draw = null, worker = null, feature = null, result = null, job = 0;
-        let view = 'scenario', loading = null, controlsSnapshot = [], filterSnapshot = null;
-        let patchLayer = null, corridorSnapshot = [];
+        let active = false,
+            drawing = false,
+            busy = false,
+            ready = false;
+        let draw = null,
+            worker = null,
+            feature = null,
+            result = null,
+            job = 0;
+        let view = 'scenario',
+            loading = null,
+            controlsSnapshot = [],
+            filterSnapshot = null;
+        let patchLayer = null,
+            corridorSnapshot = [];
         const empty = () => ({ type: 'FeatureCollection', features: [] });
-        const api = window._developmentScenario = {
-            get active() { return active; },
-            get drawing() { return drawing; },
-            get footprint() { return result ? result.footprint : null; },
-            get hasDrawing() { return !!feature; },
-            get view() { return view; },
-            open, close,
+        const api = (window._developmentScenario = {
+            get active() {
+                return active;
+            },
+            get drawing() {
+                return drawing;
+            },
+            get footprint() {
+                return result ? result.footprint : null;
+            },
+            get hasDrawing() {
+                return !!feature;
+            },
+            get view() {
+                return view;
+            },
+            open,
+            close,
             decoratePatchFilter: function (base) {
                 if (!active || !result || !result.affected.length) return base;
-                const exclude = ['!', ['in', ['to-string', ['get', PATCH_ID_ATTRIBUTE]], ['literal', result.affected.map(p => String(p.id))]]];
+                const exclude = [
+                    '!',
+                    [
+                        'in',
+                        ['to-string', ['get', PATCH_ID_ATTRIBUTE]],
+                        ['literal', result.affected.map((p) => String(p.id))],
+                    ],
+                ];
                 return base ? ['all', base, exclude] : exclude;
-            }
-        };
+            },
+        });
         const button = document.createElement('button');
-        button.id = 'development-toggle'; button.textContent = 'Development';
-        button.setAttribute('aria-expanded', 'false'); button.setAttribute('aria-controls', 'development-panel');
-        document.getElementById('map-top-bar').insertBefore(button, document.getElementById('home-btn'));
+        button.id = 'development-toggle';
+        button.textContent = 'Development';
+        button.setAttribute('aria-expanded', 'false');
+        button.setAttribute('aria-controls', 'development-panel');
+        document
+            .getElementById('map-top-bar')
+            .insertBefore(button, document.getElementById('home-btn'));
         const panel = document.createElement('section');
-        panel.id = 'development-panel'; panel.className = 'sidebar-section'; panel.hidden = true;
-        panel.innerHTML = '<h3>Development scenario</h3>' +
+        panel.id = 'development-panel';
+        panel.className = 'sidebar-section';
+        panel.hidden = true;
+        panel.innerHTML =
+            '<h3>Development scenario</h3>' +
             '<p class="development-intro">Choose a shape, draw it on the map, then select Calculate changes. Red shows forest cleared; green shows what remains. You can also compare a route using Connections.</p>' +
             '<div id="development-editor"><div class="development-shapes" role="group" aria-label="Development footprint shape">' +
             '<button data-shape="line">Line</button><button data-shape="rectangle">Rectangle</button><button data-shape="polygon">Polygon</button></div>' +
@@ -41,23 +77,50 @@
             '<div id="development-results" hidden></div>' +
             '<p class="development-assumption">This scenario assumes complete clearance of mapped forest inside your footprint.</p>' +
             '<div class="development-actions"><button id="development-reset">Clear scenario</button><button id="development-close">Close development</button></div>';
-        const info = document.getElementById('info-panel-section'); info.parentNode.insertBefore(panel, info);
-        const get = id => document.getElementById(id);
-        const status = (message, error = false) => { get('development-status').textContent = message; get('development-status').classList.toggle('development-error', error); };
-        const area = value => value.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
+        const info = document.getElementById('info-panel-section');
+        info.parentNode.insertBefore(panel, info);
+        const get = (id) => document.getElementById(id);
+        const status = (message, error = false) => {
+            get('development-status').textContent = message;
+            get('development-status').classList.toggle('development-error', error);
+        };
+        const area = (value) =>
+            value.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const escape = (value) =>
+            String(value).replace(
+                /[&<>"']/g,
+                (char) =>
+                    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]
+            );
         function updateActions() {
             if (window._forestMapInteraction) window._forestMapInteraction.refresh();
             get('development-analyse').disabled = !ready || !feature || drawing || busy;
             get('development-analyse').textContent = busy ? 'Calculating…' : 'Calculate changes';
             get('development-drawing-actions').hidden = !drawing;
-            document.dispatchEvent(new CustomEvent('forestconnect:development', { detail: { active, drawing,
-                footprint: active && result ? result.footprint : null, view } }));
+            document.dispatchEvent(
+                new CustomEvent('forestconnect:development', {
+                    detail: {
+                        active,
+                        drawing,
+                        footprint: active && result ? result.footprint : null,
+                        view,
+                    },
+                })
+            );
         }
         function loadScript(url) {
             return new Promise((resolve, reject) => {
-                const script = document.createElement('script'); script.src = url;
-                script.onload = resolve; script.onerror = () => { script.remove(); reject(new Error('Drawing dependencies could not load. Close the tool and try again.')); };
+                const script = document.createElement('script');
+                script.src = url;
+                script.onload = resolve;
+                script.onerror = () => {
+                    script.remove();
+                    reject(
+                        new Error(
+                            'Drawing dependencies could not load. Close the tool and try again.'
+                        )
+                    );
+                };
                 document.head.appendChild(script);
             });
         }
@@ -71,77 +134,133 @@
             if (worker) return;
             worker = new Worker('scenario-worker.js');
             worker.onerror = () => {
-                ready = busy = false; worker.terminate(); worker = null; loading = null;
-                status('The calculation service could not start. Close the tool and try again.', true); updateActions();
+                ready = busy = false;
+                worker.terminate();
+                worker = null;
+                loading = null;
+                status(
+                    'The calculation service could not start. Close the tool and try again.',
+                    true
+                );
+                updateActions();
             };
-            worker.onmessage = event => {
+            worker.onmessage = (event) => {
                 const message = event.data;
                 if (message.type === 'ready') {
                     ready = true;
-                    if (active && !drawing && !feature) status(message.count.toLocaleString() + ' forest patches loaded. Choose a drawing shape.');
-                    updateActions(); return;
+                    if (active && !drawing && !feature)
+                        status(
+                            message.count.toLocaleString() +
+                                ' forest patches loaded. Choose a drawing shape.'
+                        );
+                    updateActions();
+                    return;
                 }
                 if (message.job != null && message.job !== job) return;
-                if (message.type === 'progress') { status('Calculating forest changes… ' + message.percent + '%'); return; }
+                if (message.type === 'progress') {
+                    status('Calculating forest changes… ' + message.percent + '%');
+                    return;
+                }
                 if (message.type === 'error') {
                     busy = false;
-                    if (message.job == null) { ready = false; worker.terminate(); worker = null; loading = null; }
-                    status(message.message, true); updateActions(); return;
+                    if (message.job == null) {
+                        ready = false;
+                        worker.terminate();
+                        worker = null;
+                        loading = null;
+                    }
+                    status(message.message, true);
+                    updateActions();
+                    return;
                 }
                 if (message.type === 'result' && active) {
-                    busy = false; result = message.result; view = 'scenario';
-                    applyMapView(); renderResults(); status('Scenario calculated. Use Before development and With development to compare the map.'); updateActions();
+                    busy = false;
+                    result = message.result;
+                    view = 'scenario';
+                    applyMapView();
+                    renderResults();
+                    status(
+                        'Scenario calculated. Use Before development and With development to compare the map.'
+                    );
+                    updateActions();
                 }
             };
-            const dataset = FOREST_PATCH_LAYER_ID === 'Kuantan Forest Patches' ? 'kuantan' : 'klang-valley';
-            worker.postMessage({ type: 'load', url: new URL('data/' + dataset + '-patches.geojson.gz', window.location.href).href });
+            const dataset =
+                FOREST_PATCH_LAYER_ID === 'Kuantan Forest Patches' ? 'kuantan' : 'klang-valley';
+            worker.postMessage({
+                type: 'load',
+                url: new URL('data/' + dataset + '-patches.geojson.gz', window.location.href).href,
+            });
         }
         function rectangleMode() {
             return {
                 onSetup: function () {
-                    const polygon = this.newFeature({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[]] } });
-                    this.addFeature(polygon); this.clearSelectedFeatures(); this.updateUIClasses({ mouse: 'add' });
+                    const polygon = this.newFeature({
+                        type: 'Feature',
+                        properties: {},
+                        geometry: { type: 'Polygon', coordinates: [[]] },
+                    });
+                    this.addFeature(polygon);
+                    this.clearSelectedFeatures();
+                    this.updateUIClasses({ mouse: 'add' });
                     this.setActionableState({ trash: true });
-                    const zoomEnabled = this.map.doubleClickZoom.isEnabled(); this.map.doubleClickZoom.disable();
+                    const zoomEnabled = this.map.doubleClickZoom.isEnabled();
+                    this.map.doubleClickZoom.disable();
                     return { polygon, start: null, valid: false, completed: false, zoomEnabled };
                 },
                 onClick: function (state, event) {
-                    if (!state.start) { state.start = [event.lngLat.lng, event.lngLat.lat]; return; }
+                    if (!state.start) {
+                        state.start = [event.lngLat.lng, event.lngLat.lat];
+                        return;
+                    }
                     this.updateRectangle(state, event);
-                    if (state.valid) { state.completed = true; this.changeMode('simple_select', { featureIds: [state.polygon.id] }); }
+                    if (state.valid) {
+                        state.completed = true;
+                        this.changeMode('simple_select', { featureIds: [state.polygon.id] });
+                    }
                 },
                 updateRectangle: function (state, event) {
                     if (!state.start) return;
-                    const a = state.start, b = [event.lngLat.lng, event.lngLat.lat];
+                    const a = state.start,
+                        b = [event.lngLat.lng, event.lngLat.lat];
                     state.valid = Math.abs(a[0] - b[0]) > 1e-8 && Math.abs(a[1] - b[1]) > 1e-8;
                     // Draw's internal polygon rings are unclosed; toGeoJSON()
                     // adds the closing vertex. Avoid a duplicate zero-length edge.
                     state.polygon.setCoordinates([[a, [b[0], a[1]], b, [a[0], b[1]]]]);
                 },
-                onMouseMove: function (state, event) { this.updateRectangle(state, event); },
+                onMouseMove: function (state, event) {
+                    this.updateRectangle(state, event);
+                },
                 onKeyUp: function (state, event) {
                     if (event.keyCode === 27) this.changeMode('simple_select');
-                    if (event.keyCode === 13 && state.valid) { state.completed = true; this.changeMode('simple_select', { featureIds: [state.polygon.id] }); }
+                    if (event.keyCode === 13 && state.valid) {
+                        state.completed = true;
+                        this.changeMode('simple_select', { featureIds: [state.polygon.id] });
+                    }
                 },
-                onTrash: function () { this.changeMode('simple_select'); },
+                onTrash: function () {
+                    this.changeMode('simple_select');
+                },
                 onStop: function (state) {
                     if (state.zoomEnabled) this.map.doubleClickZoom.enable();
-                    if (state.completed && this.getFeature(state.polygon.id)) this.map.fire('draw.create', { features: [state.polygon.toGeoJSON()] });
+                    if (state.completed && this.getFeature(state.polygon.id))
+                        this.map.fire('draw.create', { features: [state.polygon.toGeoJSON()] });
                     else this.deleteFeature([state.polygon.id], { silent: true });
                 },
                 toDisplayFeatures: function (state, geojson, display) {
-                    geojson.properties.active = geojson.properties.id === state.polygon.id ? 'true' : 'false';
+                    geojson.properties.active =
+                        geojson.properties.id === state.polygon.id ? 'true' : 'false';
                     if (geojson.properties.active !== 'true' || state.valid) display(geojson);
-                }
+                },
             };
         }
         function createDraw() {
             if (draw) return;
             const modes = Object.assign({}, MapboxDraw.modes, { draw_rectangle: rectangleMode() });
-            ['simple_select', 'draw_line_string', 'draw_polygon'].forEach(name => {
+            ['simple_select', 'draw_line_string', 'draw_polygon'].forEach((name) => {
                 const original = modes[name];
                 modes[name] = Object.assign({}, original);
-                ['onClick', 'onTap'].forEach(handler => {
+                ['onClick', 'onTap'].forEach((handler) => {
                     modes[name][handler] = function (state, event) {
                         // Map tiles can briefly retain a deleted shape's vertices.
                         // They must not finish a new drawing or select a missing feature.
@@ -149,92 +268,199 @@
                         if (target) {
                             const id = target.properties.parent || target.properties.id;
                             const current = state.line || state.polygon;
-                            if (!this.getFeature(id) || (current && id !== current.id)) event.featureTarget = null;
+                            if (!this.getFeature(id) || (current && id !== current.id))
+                                event.featureTarget = null;
                         }
                         return original[handler].call(this, state, event);
                     };
                 });
             });
-            draw = new MapboxDraw({ displayControlsDefault: false, controls: {},
-                modes });
+            draw = new MapboxDraw({ displayControlsDefault: false, controls: {}, modes });
             map.addControl(draw);
-            map.on('draw.create', handleFeature); map.on('draw.update', handleFeature);
-            map.on('draw.delete', () => { clearResult(); feature = null; updateActions(); status('Choose a shape to draw another footprint.'); });
-            map.on('draw.modechange', event => {
-                drawing = event.mode.startsWith('draw_'); updateActions();
-                if (active && !drawing && !feature) status('Drawing cancelled. Choose a shape to start again.');
+            map.on('draw.create', handleFeature);
+            map.on('draw.update', handleFeature);
+            map.on('draw.delete', () => {
+                clearResult();
+                feature = null;
+                updateActions();
+                status('Choose a shape to draw another footprint.');
+            });
+            map.on('draw.modechange', (event) => {
+                drawing = event.mode.startsWith('draw_');
+                updateActions();
+                if (active && !drawing && !feature)
+                    status('Drawing cancelled. Choose a shape to start again.');
             });
         }
         function waitForMapIdle() {
             if (map.loaded()) return Promise.resolve();
             return new Promise((resolve, reject) => {
-                const timeout = setTimeout(() => { map.off('idle', done); reject(new Error('The map is still loading. Close the tool and try again.')); }, 15000);
-                function done() { clearTimeout(timeout); resolve(); }
+                const timeout = setTimeout(() => {
+                    map.off('idle', done);
+                    reject(new Error('The map is still loading. Close the tool and try again.'));
+                }, 15000);
+                function done() {
+                    clearTimeout(timeout);
+                    resolve();
+                }
                 map.once('idle', done);
             });
         }
         function findPatchLayer() {
-            return (map.getStyle().layers || []).find(layer => layer.type === 'fill' &&
-                (layer.id === FOREST_PATCH_LAYER_ID || /forest|patch/i.test(layer.id)));
+            return (map.getStyle().layers || []).find(
+                (layer) =>
+                    layer.type === 'fill' &&
+                    (layer.id === FOREST_PATCH_LAYER_ID || /forest|patch/i.test(layer.id))
+            );
         }
         function ensureLayers() {
-            [['development-footprint', empty()], ['development-forest', empty()], ['development-loss', empty()]].forEach(([id, data]) => {
+            [
+                ['development-footprint', empty()],
+                ['development-forest', empty()],
+                ['development-loss', empty()],
+            ].forEach(([id, data]) => {
                 if (!map.getSource(id)) map.addSource(id, { type: 'geojson', data });
             });
             const layers = [
-                { id: 'development-forest-fill', type: 'fill', source: 'development-forest', paint: { 'fill-color': '#2a8234', 'fill-opacity': 0.65 } },
-                { id: 'development-forest-outline', type: 'line', source: 'development-forest', paint: { 'line-color': '#0b4b19', 'line-width': 1.5 } },
-                { id: 'development-loss-fill', type: 'fill', source: 'development-loss', paint: { 'fill-color': '#d44532', 'fill-opacity': 0.75 } },
-                { id: 'development-footprint-fill', type: 'fill', source: 'development-footprint', paint: { 'fill-color': '#e5a132', 'fill-opacity': 0.14 } },
-                { id: 'development-footprint-outline', type: 'line', source: 'development-footprint', paint: { 'line-color': '#b56804', 'line-width': 2, 'line-dasharray': [3, 2] } }
+                {
+                    id: 'development-forest-fill',
+                    type: 'fill',
+                    source: 'development-forest',
+                    paint: { 'fill-color': '#2a8234', 'fill-opacity': 0.65 },
+                },
+                {
+                    id: 'development-forest-outline',
+                    type: 'line',
+                    source: 'development-forest',
+                    paint: { 'line-color': '#0b4b19', 'line-width': 1.5 },
+                },
+                {
+                    id: 'development-loss-fill',
+                    type: 'fill',
+                    source: 'development-loss',
+                    paint: { 'fill-color': '#d44532', 'fill-opacity': 0.75 },
+                },
+                {
+                    id: 'development-footprint-fill',
+                    type: 'fill',
+                    source: 'development-footprint',
+                    paint: { 'fill-color': '#e5a132', 'fill-opacity': 0.14 },
+                },
+                {
+                    id: 'development-footprint-outline',
+                    type: 'line',
+                    source: 'development-footprint',
+                    paint: { 'line-color': '#b56804', 'line-width': 2, 'line-dasharray': [3, 2] },
+                },
             ];
-            layers.forEach(layer => { if (!map.getLayer(layer.id)) map.addLayer(layer); });
+            layers.forEach((layer) => {
+                if (!map.getLayer(layer.id)) map.addLayer(layer);
+            });
         }
         function applyMapView() {
             if (!active) return;
             ensureLayers();
             if (result) {
                 map.getSource('development-footprint').setData(result.footprint);
-                map.getSource('development-forest').setData(view === 'before' ? result.baselineForest : result.remainingForest);
-                map.getSource('development-loss').setData(view === 'scenario' ? result.lostForest : empty());
+                map.getSource('development-forest').setData(
+                    view === 'before' ? result.baselineForest : result.remainingForest
+                );
+                map.getSource('development-loss').setData(
+                    view === 'scenario' ? result.lostForest : empty()
+                );
             }
-            if (patchLayer && map.getLayer(patchLayer)) map.setFilter(patchLayer, api.decoratePatchFilter(null));
+            if (patchLayer && map.getLayer(patchLayer))
+                map.setFilter(patchLayer, api.decoratePatchFilter(null));
         }
         function clearResult() {
-            job++; busy = false; result = null; get('development-results').hidden = true;
-            ['development-footprint', 'development-forest', 'development-loss'].forEach(id => { if (map.getSource(id)) map.getSource(id).setData(empty()); });
+            job++;
+            busy = false;
+            result = null;
+            get('development-results').hidden = true;
+            ['development-footprint', 'development-forest', 'development-loss'].forEach((id) => {
+                if (map.getSource(id)) map.getSource(id).setData(empty());
+            });
             if (active && patchLayer && map.getLayer(patchLayer)) map.setFilter(patchLayer, null);
         }
         function handleFeature(event) {
             if (!active || !event.features.length) return;
-            clearResult(); feature = event.features[0]; drawing = false;
+            clearResult();
+            feature = event.features[0];
+            drawing = false;
             try {
-                const footprint = DevelopmentGeometry.createFootprint(feature, get('development-width').value);
-                ensureLayers(); map.getSource('development-footprint').setData(footprint);
-                status('Footprint ready. Calculate changes to compare the forest before and after development.');
-            } catch (error) { status(error.message, true); }
+                const footprint = DevelopmentGeometry.createFootprint(
+                    feature,
+                    get('development-width').value
+                );
+                ensureLayers();
+                map.getSource('development-footprint').setData(footprint);
+                status(
+                    'Footprint ready. Calculate changes to compare the forest before and after development.'
+                );
+            } catch (error) {
+                status(error.message, true);
+            }
             updateActions();
         }
         async function open() {
             if (active) return;
             const baselineLayer = findPatchLayer();
-            if (!baselineLayer || !map.isStyleLoaded()) { button.textContent = 'Map loading…'; setTimeout(() => { button.textContent = 'Development'; }, 1500); return; }
-            active = true; if (window._forestMapInteraction) window._forestMapInteraction.refresh(); panel.hidden = false; button.classList.add('active'); button.setAttribute('aria-expanded', 'true');
-            patchLayer = baselineLayer.id; filterSnapshot = map.getFilter(patchLayer) || null; map.setFilter(patchLayer, null);
-            ['filter-section', 'info-panel-section', 'stats-section', 'area-filter-controls'].forEach(id => {
-                const el = get(id); controlsSnapshot.push([el, el.style.display]); el.style.display = 'none';
+            if (!baselineLayer || !map.isStyleLoaded()) {
+                button.textContent = 'Map loading…';
+                setTimeout(() => {
+                    button.textContent = 'Development';
+                }, 1500);
+                return;
+            }
+            active = true;
+            if (window._forestMapInteraction) window._forestMapInteraction.refresh();
+            panel.hidden = false;
+            button.classList.add('active');
+            button.setAttribute('aria-expanded', 'true');
+            patchLayer = baselineLayer.id;
+            filterSnapshot = map.getFilter(patchLayer) || null;
+            map.setFilter(patchLayer, null);
+            [
+                'filter-section',
+                'info-panel-section',
+                'stats-section',
+                'area-filter-controls',
+            ].forEach((id) => {
+                const el = get(id);
+                controlsSnapshot.push([el, el.style.display]);
+                el.style.display = 'none';
             });
             get('basemap-toggle').disabled = true;
             // Existing illustrative corridors must not be confused with scenario outputs.
             const corridorButton = get('corridor-toggle-fab');
-            if (corridorButton && corridorButton.classList.contains('active')) { corridorButton.click(); corridorSnapshot.push('restore'); }
-            ['corridor-controls', 'corridor-tier-filter'].forEach(id => { const el = get(id); controlsSnapshot.push([el, el.style.display]); el.style.display = 'none'; });
-            const sidebar = get('sidebar'); if (sidebar.classList.contains('collapsed')) get('toggle-sidebar-btn').click();
+            if (corridorButton && corridorButton.classList.contains('active')) {
+                corridorButton.click();
+                corridorSnapshot.push('restore');
+            }
+            ['corridor-controls', 'corridor-tier-filter'].forEach((id) => {
+                const el = get(id);
+                controlsSnapshot.push([el, el.style.display]);
+                el.style.display = 'none';
+            });
+            const sidebar = get('sidebar');
+            if (sidebar.classList.contains('collapsed')) get('toggle-sidebar-btn').click();
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            panel.querySelectorAll('[data-shape]').forEach(el => { el.disabled = true; });
-            status(ready ? 'Choose a drawing shape.' : 'Loading drawing tools and complete forest boundaries…');
+            panel.querySelectorAll('[data-shape]').forEach((el) => {
+                el.disabled = true;
+            });
+            status(
+                ready
+                    ? 'Choose a drawing shape.'
+                    : 'Loading drawing tools and complete forest boundaries…'
+            );
             try {
-                if (!loading) loading = dependencies().then(startWorker).catch(error => { loading = null; throw error; });
+                if (!loading)
+                    loading = dependencies()
+                        .then(startWorker)
+                        .catch((error) => {
+                            loading = null;
+                            throw error;
+                        });
                 await loading;
                 if (!active) return;
                 // Draw 1.4.3 waits for a map load event if added while loaded()
@@ -242,92 +468,233 @@
                 // Wait for idle so its sources and event handlers connect now.
                 if (!draw) await waitForMapIdle();
                 if (!active) return;
-                createDraw(); ensureLayers(); panel.querySelectorAll('[data-shape]').forEach(el => { el.disabled = false; });
-            } catch (error) { status(error.message, true); }
+                createDraw();
+                ensureLayers();
+                panel.querySelectorAll('[data-shape]').forEach((el) => {
+                    el.disabled = false;
+                });
+            } catch (error) {
+                status(error.message, true);
+            }
         }
         function close() {
             if (!active) return;
-            if (draw) { draw.changeMode('simple_select'); draw.deleteAll(); }
-            feature = null; clearResult(); drawing = false; active = false; panel.hidden = true;
-            button.classList.remove('active'); button.setAttribute('aria-expanded', 'false');
+            if (draw) {
+                draw.changeMode('simple_select');
+                draw.deleteAll();
+            }
+            feature = null;
+            clearResult();
+            drawing = false;
+            active = false;
+            panel.hidden = true;
+            button.classList.remove('active');
+            button.setAttribute('aria-expanded', 'false');
             if (patchLayer && map.getLayer(patchLayer)) map.setFilter(patchLayer, filterSnapshot);
-            controlsSnapshot.forEach(([el, display]) => { el.style.display = display; }); controlsSnapshot = [];
+            controlsSnapshot.forEach(([el, display]) => {
+                el.style.display = display;
+            });
+            controlsSnapshot = [];
             get('basemap-toggle').disabled = false;
-            if (corridorSnapshot.length) get('corridor-toggle-fab').click(); corridorSnapshot = [];
+            if (corridorSnapshot.length) get('corridor-toggle-fab').click();
+            corridorSnapshot = [];
             updateActions();
         }
         function startDrawing(shape) {
             if (!draw || busy) return;
-            draw.changeMode('simple_select'); draw.deleteAll(); clearResult(); feature = null;
-            panel.querySelectorAll('[data-shape]').forEach(el => el.classList.toggle('selected', el.dataset.shape === shape));
+            draw.changeMode('simple_select');
+            draw.deleteAll();
+            clearResult();
+            feature = null;
+            panel
+                .querySelectorAll('[data-shape]')
+                .forEach((el) => el.classList.toggle('selected', el.dataset.shape === shape));
             get('development-width-row').hidden = shape !== 'line';
             get('development-finish').hidden = shape === 'rectangle';
-            drawing = true; draw.changeMode(shape === 'rectangle' ? 'draw_rectangle' : shape === 'line' ? 'draw_line_string' : 'draw_polygon');
-            get('development-draw-help').textContent = shape === 'line' ? 'Click or tap the start of your development path, then each bend, then the end. Place at least two points and select Finish drawing (or press Enter). Set the total cleared width in metres, then select Calculate changes.' : shape === 'rectangle' ? 'Click or tap one corner of the site, then the opposite corner. The rectangle finishes automatically. Select Calculate changes to assess it.' : 'Click or tap around the boundary of the site. Place at least three corners and select Finish drawing (or press Enter). Select Calculate changes to assess it.';
-            status(shape === 'rectangle' ? 'Place the first corner, then the opposite corner.' : 'Place your points on the map, then select Finish drawing.');
+            drawing = true;
+            draw.changeMode(
+                shape === 'rectangle'
+                    ? 'draw_rectangle'
+                    : shape === 'line'
+                      ? 'draw_line_string'
+                      : 'draw_polygon'
+            );
+            get('development-draw-help').textContent =
+                shape === 'line'
+                    ? 'Click or tap the start of your development path, then each bend, then the end. Place at least two points and select Finish drawing (or press Enter). Set the total cleared width in metres, then select Calculate changes.'
+                    : shape === 'rectangle'
+                      ? 'Click or tap one corner of the site, then the opposite corner. The rectangle finishes automatically. Select Calculate changes to assess it.'
+                      : 'Click or tap around the boundary of the site. Place at least three corners and select Finish drawing (or press Enter). Select Calculate changes to assess it.';
+            status(
+                shape === 'rectangle'
+                    ? 'Place the first corner, then the opposite corner.'
+                    : 'Place your points on the map, then select Finish drawing.'
+            );
             updateActions();
         }
         function renderResults() {
-            const container = get('development-results'); container.hidden = false;
-            const row = (label, value, cls = '') => '<div class="development-metric ' + cls + '"><span>' + label + '</span><strong>' + value + '</strong></div>';
-            const headline = result.affected.length ? area(result.lostHa) + ' ha of mapped forest would be cleared' : result.outsideDatasetExtent ? 'Footprint outside the available forest data' : 'No mapped forest overlaps your footprint';
-            let html = '<div class="development-outcome"><strong>' + headline + '</strong><p>' + (result.splitCount ? result.splitCount.toLocaleString() + ' affected patches would be split into additional fragments.' : 'No new splits in the affected forest patches.') + '</p></div>' +
+            const container = get('development-results');
+            container.hidden = false;
+            const row = (label, value, cls = '') =>
+                '<div class="development-metric ' +
+                cls +
+                '"><span>' +
+                label +
+                '</span><strong>' +
+                value +
+                '</strong></div>';
+            const headline = result.affected.length
+                ? area(result.lostHa) + ' ha of mapped forest would be cleared'
+                : result.outsideDatasetExtent
+                  ? 'Footprint outside the available forest data'
+                  : 'No mapped forest overlaps your footprint';
+            let html =
+                '<div class="development-outcome"><strong>' +
+                headline +
+                '</strong><p>' +
+                (result.splitCount
+                    ? result.splitCount.toLocaleString() +
+                      ' affected patches would be split into additional fragments.'
+                    : 'No new splits in the affected forest patches.') +
+                '</p></div>' +
                 '<div class="development-view" role="group" aria-label="Compare landscape views"><button data-view="before">Before development</button>' +
                 '<button data-view="scenario" class="selected">With development</button></div>' +
                 '<p class="development-legend"><span class="forest-key"></span>Remaining forest <span class="loss-key"></span>Forest cleared <span class="footprint-key"></span>Your footprint</p>' +
                 row('Development footprint', area(result.footprintHa) + ' ha') +
                 row('Forest removed', area(result.lostHa) + ' ha', 'development-loss') +
-                row('Forest remaining in affected patches', area(result.affectedRemainingHa) + ' ha') +
+                row(
+                    'Forest remaining in affected patches',
+                    area(result.affectedRemainingHa) + ' ha'
+                ) +
                 row('Patches affected', result.affected.length.toLocaleString()) +
                 row('Patches with new separation', result.splitCount.toLocaleString()) +
                 row('Patches completely removed', result.removedCount.toLocaleString()) +
-                '<p class="development-detail">Additional fragments: ' + result.newFragments + '. Existing disconnected parts are accounted for; touching corners count as connected.</p>' +
+                '<p class="development-detail">Additional fragments: ' +
+                result.newFragments +
+                '. Existing disconnected parts are accounted for; touching corners count as connected.</p>' +
                 '<div id="development-connectivity-summary" class="development-detail">Loading baseline high-flow exposure…</div>' +
                 '<button data-open-connectivity>Compare routes before and with development</button>' +
-                '<details><summary>Landscape totals</summary>' + row('Existing mapped forest', area(result.baselineHa) + ' ha') +
-                row('Forest after this scenario', area(result.remainingLandscapeHa) + ' ha') + '</details>';
-            if (!result.affected.length) html += '<p class="development-detail">' + (result.outsideDatasetExtent ? 'This footprint is outside the extent of the supplied forest data.' : 'No mapped forest overlaps this footprint. This result does not assess other habitats or development impacts.') + '</p>';
+                '<details><summary>Landscape totals</summary>' +
+                row('Existing mapped forest', area(result.baselineHa) + ' ha') +
+                row('Forest after this scenario', area(result.remainingLandscapeHa) + ' ha') +
+                '</details>';
+            if (!result.affected.length)
+                html +=
+                    '<p class="development-detail">' +
+                    (result.outsideDatasetExtent
+                        ? 'This footprint is outside the extent of the supplied forest data.'
+                        : 'No mapped forest overlaps this footprint. This result does not assess other habitats or development impacts.') +
+                    '</p>';
             if (result.affected.length) {
-                html += '<details><summary>Affected patches</summary><div class="development-table"><table><thead><tr><th>Patch</th><th>Loss (ha)</th><th>Fragments<br>before → after</th></tr></thead><tbody>';
-                result.affected.slice().sort((a, b) => b.lostHa - a.lostHa).forEach(p => {
-                    html += '<tr><td>' + escape(p.id) + '</td><td>' + area(p.lostHa) + '</td><td>' + p.partsBefore + ' → ' + p.partsAfter + '</td></tr>';
-                });
+                html +=
+                    '<details><summary>Affected patches</summary><div class="development-table"><table><thead><tr><th>Patch</th><th>Loss (ha)</th><th>Fragments<br>before → after</th></tr></thead><tbody>';
+                result.affected
+                    .slice()
+                    .sort((a, b) => b.lostHa - a.lostHa)
+                    .forEach((p) => {
+                        html +=
+                            '<tr><td>' +
+                            escape(p.id) +
+                            '</td><td>' +
+                            area(p.lostHa) +
+                            '</td><td>' +
+                            p.partsBefore +
+                            ' → ' +
+                            p.partsAfter +
+                            '</td></tr>';
+                    });
                 html += '</tbody></table></div></details>';
             }
             html += '<button id="development-export">Download scenario</button>';
             container.innerHTML = html;
-            container.querySelectorAll('[data-view]').forEach(el => el.addEventListener('click', () => {
-                view = el.dataset.view; container.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('selected', b.dataset.view === view));
-                container.querySelector('.development-legend').innerHTML = view === 'before' ? '<span class="forest-key"></span>Forest before development <span class="footprint-key"></span>Your footprint' : '<span class="forest-key"></span>Remaining forest <span class="loss-key"></span>Forest cleared <span class="footprint-key"></span>Your footprint';
-                applyMapView(); updateActions();
-            }));
+            container.querySelectorAll('[data-view]').forEach((el) =>
+                el.addEventListener('click', () => {
+                    view = el.dataset.view;
+                    container
+                        .querySelectorAll('[data-view]')
+                        .forEach((b) => b.classList.toggle('selected', b.dataset.view === view));
+                    container.querySelector('.development-legend').innerHTML =
+                        view === 'before'
+                            ? '<span class="forest-key"></span>Forest before development <span class="footprint-key"></span>Your footprint'
+                            : '<span class="forest-key"></span>Remaining forest <span class="loss-key"></span>Forest cleared <span class="footprint-key"></span>Your footprint';
+                    applyMapView();
+                    updateActions();
+                })
+            );
             get('development-export').addEventListener('click', () => {
-                const output = { landscape: FOREST_PATCH_LAYER_ID, assumption: 'Complete mapped forest clearance inside the footprint',
-                    areaMethod: 'Turf 6.5.0 spherical geodesic area from complete supplied polygons',
-                    connectivityRecalculated: false, created: new Date().toISOString(), ...result };
-                if (window._connectivityExplorer) output.connectivityAssessment = window._connectivityExplorer.assessment;
-                const url = URL.createObjectURL(new Blob([JSON.stringify(output)], { type: 'application/json' }));
-                const link = document.createElement('a'); link.href = url; link.download = 'development-scenario.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+                const output = {
+                    landscape: FOREST_PATCH_LAYER_ID,
+                    assumption: 'Complete mapped forest clearance inside the footprint',
+                    areaMethod:
+                        'Turf 6.5.0 spherical geodesic area from complete supplied polygons',
+                    connectivityRecalculated: false,
+                    created: new Date().toISOString(),
+                    ...result,
+                };
+                if (window._connectivityExplorer)
+                    output.connectivityAssessment = window._connectivityExplorer.assessment;
+                const url = URL.createObjectURL(
+                    new Blob([JSON.stringify(output)], { type: 'application/json' })
+                );
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'development-scenario.json';
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
             });
         }
         button.addEventListener('click', open);
-        panel.querySelectorAll('[data-shape]').forEach(el => el.addEventListener('click', () => startDrawing(el.dataset.shape)));
-        get('development-width').addEventListener('change', () => { if (feature) handleFeature({ features: [feature] }); });
+        panel
+            .querySelectorAll('[data-shape]')
+            .forEach((el) => el.addEventListener('click', () => startDrawing(el.dataset.shape)));
+        get('development-width').addEventListener('change', () => {
+            if (feature) handleFeature({ features: [feature] });
+        });
         get('development-analyse').addEventListener('click', () => {
             if (!ready || !feature || busy || drawing) return;
-            clearResult(); busy = true; updateActions(); status('Calculating forest changes…');
-            worker.postMessage({ type: 'analyse', job, feature, widthM: get('development-width').value });
+            clearResult();
+            busy = true;
+            updateActions();
+            status('Calculating forest changes…');
+            worker.postMessage({
+                type: 'analyse',
+                job,
+                feature,
+                widthM: get('development-width').value,
+            });
         });
-        get('development-finish').addEventListener('click', () => { if (draw) draw.changeMode('simple_select'); });
+        get('development-finish').addEventListener('click', () => {
+            if (draw) draw.changeMode('simple_select');
+        });
         get('development-cancel').addEventListener('click', () => {
-            if (draw) { draw.changeMode('simple_select'); draw.deleteAll(); }
-            feature = null; drawing = false; clearResult(); updateActions(); status('Drawing cancelled. Choose a shape to start again.');
+            if (draw) {
+                draw.changeMode('simple_select');
+                draw.deleteAll();
+            }
+            feature = null;
+            drawing = false;
+            clearResult();
+            updateActions();
+            status('Drawing cancelled. Choose a shape to start again.');
         });
         get('development-reset').addEventListener('click', () => {
-            if (draw) { draw.changeMode('simple_select'); draw.deleteAll(); }
-            feature = null; drawing = false; clearResult(); updateActions(); status('Choose a shape to draw another footprint.');
+            if (draw) {
+                draw.changeMode('simple_select');
+                draw.deleteAll();
+            }
+            feature = null;
+            drawing = false;
+            clearResult();
+            updateActions();
+            status('Choose a shape to draw another footprint.');
         });
         get('development-close').addEventListener('click', close);
-        map.on('style.load', () => { if (active) { const layer = findPatchLayer(); patchLayer = layer && layer.id; applyMapView(); } });
+        map.on('style.load', () => {
+            if (active) {
+                const layer = findPatchLayer();
+                patchLayer = layer && layer.id;
+                applyMapView();
+            }
+        });
     });
 })();

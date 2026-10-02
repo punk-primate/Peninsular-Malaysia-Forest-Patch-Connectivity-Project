@@ -1,142 +1,101 @@
-# myforestconnect - Peninsular Malaysia Forest Patch Connectivity
+# myforestconnect
 
-An open-access interactive web platform and analysis pipeline for assessing forest habitat quality and landscape connectivity for arboreal wildlife in urban and peri-urban Peninsular Malaysia.
+Forest patch structure and landscape connectivity in Peninsular Malaysia.
 
-**Live platform:** [myforestconnect.online](https://myforestconnect.online)
+[Open the website](https://myforestconnect.online)
 
----
+The platform provides public access to research data for 4,699 forest patches in Kuantan and 11,466 in Klang Valley. It forms part of Benjamin Galea's research at Universiti Sains Malaysia. Additional cities are planned for future updates.
 
-## About
+## Map tools
 
-This repository contains the complete source code for the myforestconnect web platform, along with the full analytical pipeline used to produce the underlying dataset. The platform provides open public access to patch-level habitat quality and connectivity data for two study landscapes in Peninsular Malaysia: Klang Valley (greater Kuala Lumpur) and Kuantan (Pahang).
+- Explore patch attributes, search for places and switch basemaps.
+- Filter by tier and area, view active filters and reset them together.
+- Compare up to three patches using a table and numbered map markers.
+- Measure distances and areas, and download a map with its legend, scale and attribution.
+- Draw a proposed development footprint and assess forest loss and fragmentation.
+- Compare potential routes before and with development using the supplied resistance grids.
+- View baseline high-flow areas and their overlap with a development footprint.
+- Download patch report cards and share the current map view.
 
-The work is part of a PhD research project at Universiti Sains Malaysia examining structural and functional landscape connectivity across contrasting urban and peri-urban environments.
+Each map includes a **How to use this map** guide.
 
-The accompanying journal paper is currently under review:
+## Methods and data
 
-> Citation. *myforestconnect: an open-access web platform for assessing forest habitat quality and landscape connectivity for arboreal wildlife in urban Peninsular Malaysia.*
+The Patch Structural Quality Index (PSQI) combines five metrics, normalised within each landscape:
 
----
+| Metric | Weight | More favourable value |
+|---|---:|---|
+| Core area | 0.30 | Higher |
+| Euclidean nearest-neighbour distance | 0.30 | Lower |
+| Patch area | 0.20 | Higher |
+| Contiguity | 0.10 | Higher |
+| Perimeter-area ratio | 0.10 | Lower |
 
-## The Platform
+Lower PSQI values indicate more favourable patch structure. The six tiers use within-landscape percentile boundaries at 1%, 15%, 25%, 50% and 75%. Tier 1 also applies a minimum patch-area threshold of 30 ha.
 
-The platform hosts data for 11,466 Klang Valley patches and 4,699 Kuantan patches. Users can:
+Land-cover inputs include Dynamic World V1 (2025), the oil-palm extent dataset of Danylo et al. (2021), and MyGDI roads (2021). Baseline connectivity surfaces come from the associated Omniscape analysis.
 
-- Explore the spatial distribution of forest patches classified into six conservation tiers based on the Patch Structural Quality Index (PSQI)
-- Filter patches by tier or area
-- Click any patch to retrieve its tier classification, connectivity rating, distance to the nearest adjacent forest, and underlying structural metric values
-- Select two locations and calculate a native-grid least-cost path using supplied resistance data
-- Draw a development footprint and compare forest clearance, fragmentation, and modelled path changes
-- View supplied baseline high-flow areas and count cells touched by development
-- Search for any location within the study areas
-- Switch between a custom basemap and satellite imagery
-- Share a direct link to any map view
+Development calculations assume complete forest clearance inside a single footprint. Forest loss and remaining fragments use complete polygons, independently of rendered map tiles. Route comparison treats resistance cells touched by development as barriers. These are modelled potential connections, not observations of wildlife movement.
 
-The platform is designed for use without specialist GIS knowledge and is intended to support conservation communication in urban planning, environmental impact assessment, and public engagement with green infrastructure decisions.
+Detailed methods, numerical tolerances and provenance:
 
----
+- [Development footprints and forest geometry](docs/development-scenarios.md)
+- [Resistance grids, route calculations and high-flow exposure](docs/connectivity-scenarios.md)
 
-## Development and connectivity scenarios
+The repository contains the website, its prepared data and the raster preparation script. It does not contain the complete land-cover, PSQI or Omniscape research pipeline. Original source GeoTIFFs are needed to reproduce the prepared raster files.
 
-The development tool accepts a line with a specified total width, a rectangle, or a custom polygon. It computes direct forest loss and surviving forest fragments from complete supplied patch polygons, and displays existing and development-scenario map views. Calculations assume complete forest clearance inside one footprint; circuit-theory connectivity, structural tiers, and future development growth are not recalculated.
+## Source files
 
-[Forest-clearance methods](docs/development-scenarios.md) and [connectivity methods, data provenance, and verification](docs/connectivity-scenarios.md).
+| Files | Purpose |
+|---|---|
+| `index.html` | Homepage |
+| `kuantan-map.html`, `klang-valley-map.html` | Map pages and help |
+| `app-kuantan.js`, `app.js` | Map interaction and patch information |
+| `config-kuantan.js`, `config.js` | Landscape configuration |
+| `features.js` | Report cards and shared interaction handling |
+| `development*`, `scenario*` | Footprint workflow and forest geometry |
+| `connectivity*` | Resistance routing, flow exposure and route display |
+| `map-tools.js`, `map-tools.css` | Comparison, measurement, filters and map export |
+| `data/` | Compressed patch boundaries and prepared native grids |
+| `vendor/` | Pinned browser libraries and their licences |
+| `scripts/` | Raster preparation |
+| `tests/` | Geometry, routing, reference and browser checks |
+| `docs/` | Methods and data provenance |
 
-Connections compares an existing least-cost path with a development scenario that treats every touched resistance cell as impassable. The original approximately 30 m resistance grids are retained. Blue areas show the top 10% of positive supplied normalized-current values, and footprint exposure uses their native grid. These are baseline flow areas; circuit current is not recalculated. Finite high resistance remains traversable outside the footprint, so paths need ecological and crossing-feasibility assessment.
+The site uses Mapbox GL JS 3.1.2. Geometry operations use Turf 6.5.0 and polygon-clipping 0.15.7; native-coordinate conversion uses Proj4js 2.12.1. Map drawing uses Mapbox GL Draw 1.4.3.
 
-Geometry tests: `node --test tests/scenario-engine.test.cjs tests/connectivity-engine.test.cjs`. For local review, run `python -m http.server 8000` from the repository root and open either map page. Current browsers supporting Web Workers and DecompressionStream are required.
+## Local review
 
----
+Serve the repository over HTTP:
 
-## The PSQI Classification Framework
-
-Each forest patch is classified into one of six conservation tiers using the **Patch Structural Quality Index (PSQI)**, a weighted composite of five patch-scale landscape metrics:
-
-| Metric | Weight | Direction |
-|---|---|---|
-| Core area (ha) | 0.30 | Higher = better |
-| Euclidean nearest-neighbour distance (m) | 0.30 | Lower = better |
-| Total area (ha) | 0.20 | Higher = better |
-| Contiguity index (0–1) | 0.10 | Higher = better |
-| Perimeter–area ratio | 0.10 | Lower = better |
-
-Metrics are independently min-max normalised within each landscape. Lower PSQI scores indicate higher structural quality. Tier boundaries are defined by within-landscape percentile thresholds, with Tier 1 additionally requiring a minimum core area of 30 ha.
-
-| Tier | Name | PSQI percentile |
-|---|---|---|
-| Tier 1 | Primary forest | Bottom 1% |
-| Tier 2 | Established forest | 1–15% |
-| Tier 3 | Functional fragment | 15–25% |
-| Tier 4 | Vulnerable fragment | 25–50% |
-| Tier 5 | Marginal fragment | 50–75% |
-| Tier 6 | Remnant patch | Top 25% |
-
-Functional connectivity values are derived from Omniscape circuit-theory modelling reported in the companion study (Galea, in writing).
-
----
-
-## Repository Structure
-
-```
-├── index.html                            # Home page
-├── klang-valley-map.html                 # Klang Valley map view
-├── kuantan-map.html                      # Kuantan map view
-├── app.js                                # Application logic (Klang Valley)
-├── app-kuantan.js                        # Application logic (Kuantan)
-├── config.js                             # Map configuration (Klang Valley)
-├── config-kuantan.js                     # Map configuration (Kuantan)
-├── style.css                             # Shared styles
-└── analysis/
-    ├── 01_land_cover_acquisition.py      # Stage 1: GEE land cover acquisition
-    ├── 02_patch_psqi_pipeline.R          # Stages 2–3: Patch delineation and PSQI
-    ├── 03_omniscape_config_example.ini   # Stage 4: Omniscape configuration
-    ├── 04_omniscape_postprocess.R        # Stage 4b: Flow surface post-processing
-    ├── 05_generate_connectors.R          # Stage 5: Corridor generation
-    └── 06_analysis_figures.R             # Stage 6: Statistical analysis and figures
+```sh
+python -m http.server 8000
 ```
 
----
+Open `http://localhost:8000`. The basemap and place search require an internet connection. Scenario calculations run in browser Web Workers; compressed inputs require a browser supporting DecompressionStream.
 
-## Replicating the Analysis
+Run the geometry and routing tests with Node.js:
 
-The complete pipeline can be reproduced for any urban or peri-urban landscape in Peninsular Malaysia, and additional study areas may be incorporated into the platform as the dataset expands. Run the scripts in numerical order — each stage depends on the outputs of the previous one.
+```sh
+node --test tests/scenario-engine.test.cjs tests/connectivity-engine.test.cjs
+```
 
-**Requirements:**
-- Python 3.8+ with `earthengine-api` and `geemap`
-- R 4.3+ with `terra`, `sf`, `landscapemetrics`, `tidyverse`, `dunn.test`, `patchwork`
-- Julia with `Omniscape.jl`
+The independent reference check requires Python with NumPy, SciPy, Shapely and pyproj:
 
-**Data sources:**
-- Dynamic World V1 (Brown et al., 2022)
-- Oil palm plantation extent (Danylo et al., 2021)
-- Road network: Malaysian Geospatial Data Infrastructure (MyGDI, 2021)
+```sh
+python tests/verify-connectivity-reference.py
+```
 
-Full documentation is provided in the script headers.
+Browser checks require Playwright and Chromium:
 
----
+```sh
+node tests/development-browser.cjs
+```
 
-## Built With
+These checks use the production analytical datasets with an offline basemap fixture. External hosted tiles and satellite imagery require separate visual review. Optional `SCENARIO_BROWSER_EXECUTABLE`, `SCENARIO_MAPBOX_JS` and `SCENARIO_MAPBOX_CSS` environment variables select cached browser assets.
 
-- [Mapbox GL JS v3.1.2](https://docs.mapbox.com/mapbox-gl-js/)
-- [Omniscape.jl](https://docs.circuitscape.org/Omniscape.jl/)
-- R (`landscapemetrics`, `terra`, `sf`, `tidyverse`)
-- Google Earth Engine via `geemap`
+## Contact and use
 
----
+Benjamin Galea: [email](mailto:bengalea97@gmail.com) · [ResearchGate](https://www.researchgate.net/profile/Benjamin-Galea)
 
-## Contact
-
-**Benjamin Galea**
-[bengalea97@gmail.com](mailto:bengalea97@gmail.com)
-[ResearchGate](https://www.researchgate.net/profile/Benjamin-Galea)
-
----
-
-## Licence
-
-Patch data and connectivity outputs are made available for non-commercial research and educational use. Please credit and cite the accompanying paper if you use this platform or pipeline in your work.
-
-*myforestconnect: an open-access web platform for assessing forest habitat quality and landscape connectivity for arboreal wildlife in urban Peninsular Malaysia.*
-
-
-
+Patch data and connectivity outputs are made available for non-commercial research and educational use. Please credit the author and cite the associated research when using the data. Third-party libraries retain the licences provided in `vendor/`.
