@@ -70,32 +70,17 @@ async function run() {
             await page.evaluate(c=>window._mapInstance.jumpTo({center:c,zoom:17}),patchPoint);
             await page.waitForTimeout(200);
             assert.ok(await page.evaluate(([c,layer])=>window._mapInstance.queryRenderedFeatures(window._mapInstance.project(c),{layers:[layer]}).length,[patchPoint,layer]), 'Click target must be a rendered patch');
-            await page.locator('#connectivity-toggle').click();
-            await page.waitForFunction(()=>!document.getElementById('connection-start').disabled);
             await page.evaluate(()=>{
                 const map=window._mapInstance, fly=map.flyTo, info=document.getElementById('info-panel-section'), scroll=info.scrollIntoView;
                 window._patchInspectionCalls={fly:0,scroll:0};
                 map.flyTo=function(...args){window._patchInspectionCalls.fly++;return fly.apply(this,args);};
                 info.scrollIntoView=function(...args){window._patchInspectionCalls.scroll++;return scroll.apply(this,args);};
             });
-            await page.locator('#connection-start').click();
-            const selectionPoint=await page.evaluate(c=>{const p=window._mapInstance.project(c),b=window._mapInstance.getContainer().getBoundingClientRect();return {x:p.x+b.left,y:p.y+b.top};},patchPoint);
-            await page.mouse.click(selectionPoint.x,selectionPoint.y);
-            await page.waitForTimeout(120);
-            assert.deepEqual(await page.evaluate(()=>window._patchInspectionCalls),{fly:0,scroll:0},'Marker placement on a patch must not inspect, zoom, or scroll');
-            assert.equal(await page.evaluate(()=>window._connectivityExplorer.selectedPoint),'B');
-            assert.equal(await page.locator('#connection-cancel').isVisible(),true);
-            await page.locator('#connection-cancel').click();
-            // Keep the tool open without a placement in progress: its map clicks
-            // still belong to the tool and cannot open patch inspection.
-            await page.mouse.click(selectionPoint.x,selectionPoint.y);
-            await page.waitForTimeout(120);
-            assert.deepEqual(await page.evaluate(()=>window._patchInspectionCalls),{fly:0,scroll:0});
-            assert.equal(await page.evaluate(()=>window._lastPatchProps),undefined);
-            assert.equal(await page.locator('#forest-editing-cue').isVisible(),true);
-            await page.locator('#connection-reset').click();
-            await page.locator('#connection-close').click();
-            await page.locator('#development-toggle').click();
+            await page.locator('#development-workflow-toggle').click();
+            assert.equal(await page.locator('#development-toggle').isVisible(),false);
+            assert.equal(await page.locator('#connectivity-toggle').isVisible(),false);
+            assert.equal(await page.locator('[data-workflow-step="forest"]').isEnabled(),false);
+            assert.equal(await page.locator('[data-workflow-step="routes"]').isEnabled(),false);
             await page.waitForFunction(() => /forest patches loaded/.test(document.getElementById('development-status').textContent), { timeout: 20000 });
             async function clickCoordinate(coordinate) {
                 const point = await page.evaluate(c => {
@@ -110,6 +95,10 @@ async function run() {
                 await page.locator('#development-analyse').click();
                 await page.waitForFunction(() => /Scenario calculated/.test(document.getElementById('development-status').textContent), null, { timeout: 10000 });
                 assert.equal(await page.locator('#development-results').isVisible(), true);
+                assert.equal(await page.evaluate(()=>window._developmentWorkflow.step),'forest');
+                assert.equal(await page.locator('#development-editor').isVisible(),false);
+                assert.equal(await page.locator('#connectivity-panel').isVisible(),false);
+                assert.equal(await page.locator('[data-workflow-step="forest"]').getAttribute('aria-current'),'step');
             }
             // Vertex and completed-shape editing clicks on rendered patches
             // must not inspect them or steal the sidebar. Exercise all shapes.
@@ -135,19 +124,54 @@ async function run() {
                 await page.waitForTimeout(120);
                 assert.deepEqual(await page.evaluate(()=>window._patchInspectionCalls),{fly:0,scroll:0},shape+' must not inspect a patch');
                 assert.deepEqual(await page.evaluate(()=>({center:window._mapInstance.getCenter().toArray(),zoom:window._mapInstance.getZoom()})),camera);
-                await page.locator('#development-reset').click();
+                await page.locator('#workflow-reset').click();
             }
             await page.evaluate(([x,y])=>window._mapInstance.jumpTo({center:[x,y],zoom:16}),[cx,cy]);
+            // An outside footprint leaves the real patch layer visible, so
+            // marker ownership is checked against the actual inspection handler.
+            await page.locator('[data-workflow-step="draw"]').click();
+            await page.locator('[data-shape="rectangle"]').click();
+            await clickCoordinate([bbox[2]+0.00005,cy-0.00002]);
+            await clickCoordinate([bbox[2]+0.00010,cy+0.00002]);
+            await calculate();
+            assert.ok(await page.evaluate(([c,layer])=>window._mapInstance.queryRenderedFeatures(window._mapInstance.project(c),{layers:[layer]}).length,[patchPoint,layer]));
+            const savedFootprint=await page.evaluate(()=>window._developmentScenario.footprint);
+            await page.locator('[data-workflow-step="routes"]').click();
+            await page.waitForFunction(()=>!document.getElementById('connection-start').disabled);
+            await page.locator('#connection-start').click();
+            const selectionPoint=await page.evaluate(c=>{const p=window._mapInstance.project(c),b=window._mapInstance.getContainer().getBoundingClientRect();return {x:p.x+b.left,y:p.y+b.top};},patchPoint);
+            await page.mouse.click(selectionPoint.x,selectionPoint.y);
+            await page.waitForTimeout(120);
+            assert.deepEqual(await page.evaluate(()=>window._patchInspectionCalls),{fly:0,scroll:0},'Marker placement on a patch must not inspect, zoom, or scroll');
+            assert.equal(await page.evaluate(()=>window._connectivityExplorer.selectedPoint),'B');
+            assert.equal(await page.locator('#connection-cancel').isVisible(),true);
+            await page.locator('#connection-cancel').click();
+            // Keep the tool open without a placement in progress: its map clicks
+            // still belong to the tool and cannot open patch inspection.
+            await page.mouse.click(selectionPoint.x,selectionPoint.y);
+            await page.waitForTimeout(120);
+            assert.deepEqual(await page.evaluate(()=>window._patchInspectionCalls),{fly:0,scroll:0});
+            assert.equal(await page.evaluate(()=>window._lastPatchProps),undefined);
+            assert.equal(await page.locator('#forest-editing-cue').isVisible(),true);
+            await page.locator('#connection-reset').click();
+            await page.locator('#connection-close').click();
+            assert.equal(await page.evaluate(()=>window._developmentWorkflow.step),'forest');
+            assert.deepEqual(await page.evaluate(()=>window._developmentScenario.footprint),savedFootprint);
+            await page.locator('#workflow-reset').click();
+            assert.equal(await page.locator('[data-workflow-step="forest"]').isEnabled(),false);
+            assert.equal(await page.locator('[data-workflow-step="routes"]').isEnabled(),false);
+            assert.equal(await page.locator('.connection-marker').count(),0);
+            await page.locator('[data-workflow-step="draw"]').click();
             await page.locator('[data-shape="rectangle"]').click();
             await clickCoordinate([cx - 0.00004, bbox[1] - 0.0001]);
             await clickCoordinate([cx + 0.00004, bbox[3] + 0.0001]);
             assert.equal(await page.locator('#development-analyse').isEnabled(), true);
             await calculate();
             assert.ok(await page.evaluate(() => window._mapInstance.getSource('development-loss')._data.features.length > 0));
-            await page.locator('[data-view="before"]').click();
+            await page.locator('[data-guide-view="before"]').click();
             assert.equal(await page.evaluate(() => window._mapInstance.getSource('development-loss')._data.features.length), 0);
             assert.ok(await page.evaluate(() => window._mapInstance.getSource('development-forest')._data.features.length > 0));
-            await page.locator('[data-view="scenario"]').click();
+            await page.locator('[data-guide-view="scenario"]').click();
             const download = page.waitForEvent('download'); await page.locator('#development-export').click();
             assert.equal((await download).suggestedFilename(), 'development-scenario.json');
             try {
@@ -186,9 +210,11 @@ async function run() {
             const routeDownload = page.waitForEvent('download'); await page.locator('#connection-export').click();
             assert.equal((await routeDownload).suggestedFilename(), 'connectivity-assessment.json');
             await page.evaluate(([a,b]) => window._mapInstance.jumpTo({center:[(a[0]+b[0])/2,(a[1]+b[1])/2],zoom:14.5}), developmentCorners);
+            await page.locator('[data-workflow-step="draw"]').click();
             await page.locator('[data-shape="rectangle"]').click();
             await clickCoordinate(developmentCorners[0]); await clickCoordinate(developmentCorners[1]); await calculate();
             try {
+                await page.locator('[data-workflow-step="routes"]').click();
                 await page.waitForFunction(() => {
                     const a=window._connectivityExplorer.assessment;
                     return a && a.scenario && a.scenario.status==='found' && a.scenario.cost>=a.baseline.cost &&
@@ -237,10 +263,10 @@ async function run() {
             await page.waitForFunction(()=>window._connectivityExplorer.assessment?.scenario?.status==='found',null,{timeout:20000});
             assert.ok(await page.locator('#connection-map-legend').isVisible());
             assert.match(await page.locator('#connection-map-legend').innerText(), /With development/);
-            await page.locator('[data-view="before"]').click();
+            await page.locator('[data-guide-view="before"]').click();
             assert.equal(await page.evaluate(() => window._mapInstance.getSource('connection-scenario')._data.features.length), 0);
             assert.doesNotMatch(await page.locator('#connection-map-legend').innerText(), /With development/);
-            await page.locator('[data-view="scenario"]').click();
+            await page.locator('[data-guide-view="scenario"]').click();
             await page.locator('#connection-fit').click();
             await page.waitForFunction(() => !window._mapInstance.isMoving());
             // Check actual computed contrast, including nested result text and
@@ -252,7 +278,7 @@ async function run() {
                         const c=n/255; return c<=0.04045 ? c/12.92 : ((c+0.055)/1.055)**2.4;
                     }).reduce((s,c,i)=>s+c*[.2126,.7152,.0722][i],0);
                     const failures=[];
-                    document.querySelectorAll('#development-panel h3, #development-panel p, #development-panel summary, .development-metric span, .development-metric strong, #connectivity-panel h3, #connectivity-panel h4, #connectivity-panel p, #connectivity-panel li, #connectivity-panel label, #connectivity-panel summary, .connection-metric span, .connection-metric strong, .connection-outcome strong, #connection-map-legend strong, #connection-map-legend p, .connection-legend-row, #forest-editing-cue').forEach(el=>{
+                    document.querySelectorAll('#development-panel h3, #development-panel p, #development-panel summary, .development-metric span, .development-metric strong, #connectivity-panel h3, #connectivity-panel h4, #connectivity-panel p, #connectivity-panel li, #connectivity-panel label, #connectivity-panel summary, .connection-metric span, .connection-metric strong, .connection-outcome strong, #connection-map-legend strong, #connection-map-legend p, .connection-legend-row, #forest-editing-cue, #development-workflow h3, #workflow-guidance, .workflow-steps button, #workflow-map-view button').forEach(el=>{
                         if(!el.getClientRects().length) return;
                         let ancestor=el, bg;
                         while(ancestor) {
@@ -306,10 +332,10 @@ async function run() {
             assert.deepEqual(blockedAssessment.blockedEndpointCells.features[0].geometry.coordinates,[expectedCell]);
             assert.equal(await page.evaluate(()=>window._mapInstance.getSource('connection-blocked-cells')._data.features.length),1);
             assert.deepEqual(await page.locator('.connection-marker-blocked').allTextContents(),['A']);
-            await page.locator('[data-view="before"]').click();
+            await page.locator('[data-guide-view="before"]').click();
             assert.equal(await page.locator('.connection-marker-blocked').count(),0);
             assert.equal(await page.evaluate(()=>window._mapInstance.getSource('connection-blocked-cells')._data.features.length),0);
-            await page.locator('[data-view="scenario"]').click();
+            await page.locator('[data-guide-view="scenario"]').click();
             const otherCoveredPoint=connectionEngine.coordinateAt(nativeGrid,middle+1);
             await page.locator('#connection-end').click(); await clickCoordinate(otherCoveredPoint);
             await page.waitForFunction(()=>window._connectivityExplorer.assessment?.blockedEndpoints?.length===2,null,{timeout:20000});
@@ -328,40 +354,43 @@ async function run() {
             assert.equal(await page.evaluate(() => window._mapInstance.getSource('connection-existing')._data.features.length), 0);
             assert.equal(await page.locator('.connection-marker').count(), 0);
             assert.equal(await page.locator('#connection-map-legend').isVisible(), false);
-            await page.locator('#development-reset').click();
-            await page.waitForFunction(() => !window._connectivityExplorer.assessment?.hasDevelopment, null, {timeout:20000});
-            await page.locator('#connectivity-toggle').click();
-            await page.waitForFunction(()=>window._connectivityExplorer.assessment?.baseline?.status==='found',null,{timeout:20000});
-            assert.deepEqual(await page.locator('.connection-route-card:not(.connection-resistance-reference) h4').allTextContents(), ['Before development']);
-            assert.match(await page.locator('.connection-outcome').innerText(),/Potential connection before development/);
-            assert.doesNotMatch(await page.locator('#connection-map-legend').innerText(), /With development/);
+            const preserved=await page.evaluate(()=>window._developmentScenario.footprint);
+            await page.locator('[data-workflow-step="routes"]').click();
+            await page.waitForFunction(()=>window._connectivityExplorer.assessment?.scenario?.status==='found',null,{timeout:20000});
             await page.locator('#connection-development').click();
-            assert.equal(await page.locator('#development-panel').isVisible(), true);
-            await page.locator('#connection-close').click();
+            assert.equal(await page.evaluate(()=>window._developmentWorkflow.step),'draw');
+            assert.deepEqual(await page.evaluate(()=>window._developmentScenario.footprint),preserved);
+            assert.equal(await page.locator('#connectivity-panel').isVisible(),false);
             await page.evaluate(([x,y]) => window._mapInstance.jumpTo({center:[x,y],zoom:16}), [cx,cy]);
             if (process.env.SCENARIO_SCREENSHOT_DIR) await page.screenshot({ path:path.join(process.env.SCENARIO_SCREENSHOT_DIR, landscape + '-scenario.png') });
+            await page.locator('[data-workflow-step="draw"]').click();
             await page.locator('[data-shape="line"]').click();
             await clickCoordinate([cx, bbox[1] - 0.0001]);
             await clickCoordinate([cx, bbox[3] + 0.0001]);
             if (await page.locator('#development-finish').isVisible()) await page.locator('#development-finish').click();
             await calculate();
+            await page.locator('[data-workflow-step="draw"]').click();
             await page.locator('#development-width').fill('60'); await page.locator('#development-width').press('Tab');
             assert.equal(await page.locator('#development-results').isVisible(), false);
             await calculate();
+            await page.locator('[data-workflow-step="draw"]').click();
             await page.locator('[data-shape="polygon"]').click();
             for (const c of [[cx-0.0002,bbox[1]-0.0001],[cx+0.0002,bbox[1]-0.0001],[cx+0.0002,bbox[3]+0.0001],[cx-0.0002,bbox[3]+0.0001]]) await clickCoordinate(c);
             if (await page.locator('#development-finish').isVisible()) await page.locator('#development-finish').click(); await calculate();
-            await page.locator('#development-reset').click();
+            await page.locator('#workflow-reset').click();
             assert.equal(await page.locator('#development-results').isVisible(), false);
             assert.equal(await page.locator('#development-analyse').isEnabled(), false);
-            await page.locator('#development-close').click();
+            await page.locator('#workflow-exit').click();
+            assert.equal(await page.locator('#development-workflow').isVisible(),false);
+            assert.equal(await page.locator('#development-workflow-toggle').textContent(),'Test a development');
+            assert.equal(await page.evaluate(()=>window._connectivityExplorer.active),false);
             assert.equal(await page.locator('#development-panel').isVisible(), false);
             assert.equal(await page.locator('#info-panel-section').isVisible(), true);
             assert.equal(await page.locator('#basemap-toggle').isEnabled(), true);
             assert.deepEqual(await page.evaluate(layerId => window._mapInstance.getFilter(layerId) || null, layer), previousFilter);
-            await page.locator('#development-toggle').click(); await page.locator('[data-shape="rectangle"]').click();
+            await page.locator('#development-workflow-toggle').click(); await page.locator('[data-shape="rectangle"]').click();
             await page.locator('#development-cancel').click(); assert.equal(await page.locator('#development-analyse').isEnabled(), false);
-            await page.locator('#development-close').click();
+            await page.locator('#workflow-exit').click();
             // Ordinary patch inspection resumes only after both tools are closed.
             await page.evaluate(()=>{window._patchInspectionCalls={fly:0,scroll:0};});
             await page.evaluate(c=>window._mapInstance.jumpTo({center:c,zoom:17}),patchPoint);
@@ -376,7 +405,7 @@ async function run() {
             await page.evaluate(c=>{
                 const map=window._mapInstance,p=map.project(c);
                 map.fire('click',{point:p,lngLat:mapboxgl.LngLat.convert(c)});
-                document.getElementById('connectivity-toggle').click();
+                document.getElementById('development-workflow-toggle').click();
             },patchPoint);
             await page.waitForTimeout(120);
             assert.equal(await page.evaluate(()=>window._patchInspectionCalls.scroll),1);

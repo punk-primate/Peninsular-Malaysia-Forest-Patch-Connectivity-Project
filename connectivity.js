@@ -44,7 +44,7 @@
                 method: 'Native-grid least-cost path; average endpoint resistance times projected step distance; development touched cells impassable',
                 flowMethod: 'Top 10% of positive supplied normalized current; whole native cells touched by footprint',
                 sourceProvenance: metadata.provenance, currentFlowRecalculated: false } : null; },
-            open
+            open, close
         };
         function update() {
             if (window._forestMapInteraction) window._forestMapInteraction.refresh();
@@ -270,7 +270,7 @@
             map.getCanvas().style.cursor = ''; drawMap(); update();
         }
         button.addEventListener('click', () => active ? close() : open());
-        get('connection-close').addEventListener('click', close);
+        get('connection-close').addEventListener('click', () => window._developmentWorkflow ? window._developmentWorkflow.show('forest') : close());
         function place(which) {
             if (!ready || busy || window._developmentScenario && window._developmentScenario.drawing) return;
             picking = which; map.getCanvas().style.cursor = 'crosshair';
@@ -293,6 +293,7 @@
         });
         get('connection-analyse').addEventListener('click', analyse);
         get('connection-development').addEventListener('click', () => {
+            if (window._developmentWorkflow) { window._developmentWorkflow.show('draw'); return; }
             if (!window._developmentScenario.active) get('development-toggle').click();
             else get('development-panel').scrollIntoView({ block: 'start', behavior: 'smooth' });
         });
@@ -316,7 +317,11 @@
             const link = document.createElement('a'); link.href = url; link.download = 'connectivity-assessment.json'; link.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         });
-        document.addEventListener('click', event => { if (event.target.closest('[data-open-connectivity]')) open(); });
+        document.addEventListener('click', event => {
+            if (event.target.closest('[data-open-connectivity]')) {
+                if (window._developmentWorkflow) window._developmentWorkflow.show('routes'); else open();
+            }
+        });
         document.addEventListener('forestconnect:development', event => {
             const next = event.detail.footprint, key = next ? JSON.stringify(next.geometry) : '';
             if (event.detail.drawing && picking) { picking = null; map.getCanvas().style.cursor = 'crosshair'; }
