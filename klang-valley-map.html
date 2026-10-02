@@ -10,9 +10,9 @@
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="vendor/mapbox-gl-draw-1.4.3.css">
-    <link rel="stylesheet" href="development.css?v=20261002-workflow">
-    <link rel="stylesheet" href="connectivity.css?v=20261002-workflow">
-    <link rel="stylesheet" href="development-workflow.css?v=20261002-workflow">
+    <link rel="stylesheet" href="development.css?v=20261002-drawing-help">
+    <link rel="stylesheet" href="connectivity.css?v=20261002-drawing-help">
+    <link rel="stylesheet" href="development-workflow.css?v=20261002-drawing-help">
 
     <style>
         /* ── Font reset ── */
@@ -400,7 +400,7 @@
                         </div>
                         <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
                             <span style="background:#2a8234;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">2</span>
-                            <p style="margin:0;font-size:0.88em;color:#333;line-height:1.5"><strong>Test a development</strong> to draw a footprint, review forest changes and optionally compare potential routes.</p>
+                            <p style="margin:0;font-size:0.88em;color:#333;line-height:1.5"><strong>Test a development</strong> to draw a line, rectangle or polygon. Follow the instructions in the sidebar, finish your drawing and calculate forest changes. You can then compare potential routes.</p>
                         </div>
                         <div style="display:flex;align-items:flex-start;gap:12px">
                             <span style="background:#2a8234;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">3</span>
@@ -456,11 +456,22 @@
             <h3>Clicking on a patch</h3>
             <p>Outside the development workflow, click any forest patch to see its details in the sidebar. The panel shows the conservation tier, a plain-language description of what it means ecologically, and the distance to the nearest adjacent patch. Expand "Show technical details" to see the individual landscape metrics. Each metric has a small "i" button you can click for a plain-language explanation.</p>
 
-            <h3>Modelled connections</h3>
-            <p>In "Test a development", draw your footprint and select "Calculate changes". Review the forest results, then choose the optional "Potential routes" stage. Choose A and click the map to place it, then click to place B. The route comparison calculates automatically using your footprint. The dashed purple route shows the landscape before development. The solid orange route avoids your footprint, which is treated as a barrier. Both routes connect the same A and B. The map legend and result summary explain the comparison; "View routes on map" brings both routes into view. Blue areas show baseline high flow. These are potential connections that may need protection or restoration to become functioning wildlife corridors. Development can obstruct a future corridor opportunity before one is established. The results distinguish an alternative route from a connection blocked under the model. Resistance cost combines distance and mapped resistance along the route. In the results, the before-development route is set to 100: a with-development score of 120 means 20% more resistance for the same A and B. This is a route comparison, not a percentage of habitat lost or wildlife survival. Routes need field assessment.</p>
-
-            <h3>Development scenarios</h3>
-            <p>Click "Test a development" and follow the stages. First draw a line with a total width, a rectangle, or a polygon. Choose "Calculate changes" to see the forest area removed and the fragments remaining. Switch between "Before development" and "With development" to compare. Green shows forest remaining, red shows forest cleared, and the orange outline marks your footprint. This assumes complete forest clearance inside the footprint. Continue to "Potential routes" if you want to assess a connection between A and B. You can return to drawing to edit the footprint, or select "Return to patch explorer" to finish.</p>
+            <h3>Test a development: draw and calculate</h3>
+            <p>Click <strong>Test a development</strong> to assess a proposed road, building site or other development. Zoom to its location before drawing. Your drawing marks the area assumed to be cleared.</p>
+            <ol>
+                <li><strong>Choose a shape.</strong> Line creates a path with a width, Rectangle creates a box-shaped site, and Polygon creates an irregular site.</li>
+                <li><strong>Draw on the map.</strong> For a Line, click or tap the start, each bend and the end. Use at least two points, then select <strong>Finish drawing</strong> or press Enter. For a Rectangle, select two opposite corners; it finishes automatically. For a Polygon, place at least three corners around the boundary, then select <strong>Finish drawing</strong> or press Enter. Select <strong>Cancel drawing</strong> to discard an unfinished shape.</li>
+                <li><strong>For a Line, set Total line width (m).</strong> This is the full cleared width, not the length. A width of 30 m extends 15 m on either side of the line. The line represents your development path; it is separate from the potential wildlife routes in stage 3.</li>
+                <li><strong>Select Calculate changes.</strong> The workflow moves to Forest changes when the calculation finishes.</li>
+            </ol>
+            <h3>Review forest changes</h3>
+            <p>Compare <strong>Before development</strong> and <strong>With development</strong>. Green shows forest remaining, red shows forest cleared, and the orange outline marks your development footprint. The results report forest loss and remaining fragments, assuming complete forest clearance inside the footprint.</p>
+            <p>Return to <strong>Draw and calculate</strong> to edit your shape. Selecting another shape replaces the current drawing. Recalculate after editing. <strong>Start again</strong> clears the drawing and route markers; <strong>Return to patch explorer</strong> restores normal patch inspection.</p>
+            <h3>Compare potential routes (optional)</h3>
+            <p>Select <strong>Potential routes</strong> after calculating your footprint. Place A and B at the two locations you want to connect, such as forest on either side of a proposed development. Choose A and click or tap the map, then place B. The comparison calculates automatically.</p>
+            <p>The <strong>dashed purple route</strong> shows the potential route before development. The <strong>solid orange route</strong> avoids your footprint, which is treated as a barrier. Both connect the same A and B. Select <strong>View routes on map</strong> to bring them into view. The result explains whether an alternative route remains or the connection is blocked under the model.</p>
+            <p>These are potential connections, which may need protection or restoration to become functioning wildlife corridors. Development can obstruct a future corridor opportunity before one is established. Blue areas show baseline high flow. Routes need field assessment.</p>
+            <p><strong>Resistance cost</strong> combines route distance and mapped resistance. The before-development route is set to 100: a with-development score of 120 means 20% more resistance between the same A and B. This is a route comparison, not a percentage of habitat lost or wildlife survival.</p>
 
             <h3>Downloading a patch report card</h3>
             <p>Click any forest patch to open its details in the sidebar, then click the <strong>Download report card</strong> button at the bottom of the panel. The card will generate automatically and download as a PNG image to your device.</p>
@@ -477,11 +488,11 @@
         </div>
     </div>
     
-    <script src="features.js?v=20261002-workflow"></script>
+    <script src="features.js?v=20261002-drawing-help"></script>
     <script src="config.js"></script>
-    <script src="app.js?v=20261002-workflow"></script>
-    <script src="development.js?v=20261002-workflow"></script>
-    <script src="connectivity.js?v=20261002-workflow"></script>
-    <script src="development-workflow.js?v=20261002-workflow"></script>
+    <script src="app.js?v=20261002-drawing-help"></script>
+    <script src="development.js?v=20261002-drawing-help"></script>
+    <script src="connectivity.js?v=20261002-drawing-help"></script>
+    <script src="development-workflow.js?v=20261002-drawing-help"></script>
 </body>
 </html>

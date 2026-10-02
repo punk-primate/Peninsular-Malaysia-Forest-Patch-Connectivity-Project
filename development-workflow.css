@@ -27,3 +27,7 @@ body.dark-mode #workflow-guidance { background:#233449; }
 #development-workflow nav { position:sticky; top:0; z-index:5; background:#fff; padding:2px 0; }
 #workflow-content #connectivity-panel > p:first-of-type { display:none; }
 body.dark-mode #development-workflow nav { background:#1e1e1e; }
+
+.development-draw-help { padding:10px; border-left:3px solid #254f86; background:#edf3fa; border-radius:4px; }
+.development-width-help { display:block; font-size:12px; font-weight:400; margin-top:5px; }
+body.dark-mode .development-draw-help { background:#233449; border-color:#8db8ef; color:#e7edf5; }

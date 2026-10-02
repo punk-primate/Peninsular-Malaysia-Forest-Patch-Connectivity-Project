@@ -46,7 +46,7 @@
                 el.classList.toggle('selected', selected); el.setAttribute('aria-pressed', String(selected));
             });
             get('workflow-guidance').textContent = step === 'draw' ?
-                'Choose a line, rectangle or polygon. Draw it on the map, then select Calculate changes.' : step === 'forest' ?
+                'Test where a proposed development could clear or split forest and obstruct a potential connection. Zoom to your proposed location, then choose a shape below. A line is a development path, such as a road; the wildlife routes are assessed later.' : step === 'forest' ?
                 'Review forest cleared and remaining. Switch map views to compare. You can stop here, edit your footprint, or continue to optional route comparison.' :
                 'Place A and B on either side of the connection you want to assess. Routes calculate automatically for the same development footprint.';
             if (window._forestMapInteraction) window._forestMapInteraction.refresh();
