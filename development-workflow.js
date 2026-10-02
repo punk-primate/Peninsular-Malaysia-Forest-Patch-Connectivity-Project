@@ -92,5 +92,14 @@
             else sync();
         });
         sync();
+        // A homepage task link opens the workflow after the map's initial setup.
+        if (new URLSearchParams(location.search).get('task') === 'development') {
+            const map = window._mapInstance;
+            if (map) map.once('idle', () => {
+                const onboarding = get('onboarding-overlay');
+                if (onboarding) onboarding.style.display = 'none';
+                open();
+            });
+        }
     });
 })();

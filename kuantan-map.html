@@ -10,9 +10,9 @@
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="vendor/mapbox-gl-draw-1.4.3.css">
-    <link rel="stylesheet" href="development.css?v=20261002-drawing-help">
-    <link rel="stylesheet" href="connectivity.css?v=20261002-drawing-help">
-    <link rel="stylesheet" href="development-workflow.css?v=20261002-drawing-help">
+    <link rel="stylesheet" href="development.css?v=20261002-site-navigation">
+    <link rel="stylesheet" href="connectivity.css?v=20261002-site-navigation">
+    <link rel="stylesheet" href="development-workflow.css?v=20261002-site-navigation">
 
     <style>
         /* ── Font reset ── */
@@ -307,6 +307,13 @@
             #tools-section select,
             #area-filter-controls input[type="number"] { font-size:16px !important; }
         }
+        .sidebar-disclosure > summary { cursor:pointer; font-size:0.9em; font-weight:700; padding:4px 0; color:inherit; }
+        .sidebar-disclosure > summary:focus-visible { outline:2px solid #8bac0f; outline-offset:4px; }
+        .patch-at-glance { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0; }
+        .patch-at-glance div { border:1px solid #b8c5b8; border-left:3px solid #306230; padding:8px; }
+        .patch-at-glance span { display:block; font-size:11px; margin-bottom:4px; }
+        .patch-at-glance strong { font-size:15px; }
+        body.dark-mode .patch-at-glance div { border-color:#607660; border-left-color:#9bbc0f; }
     </style>
 </head>
 <body>
@@ -320,27 +327,13 @@
                 </div>
             </div>
 
-            <div class="sidebar-section" id="filter-section">
-                <h3>Filter by category</h3>
-            </div>
-
             <div class="sidebar-section" id="info-panel-section">
                 <h3>Patch details</h3>
-                <div id="patch-info-content">Select a patch on the map.</div>
-            </div>
-
-            <div class="sidebar-section" id="stats-section">
-                <h3>Summary statistics</h3>
-                <div id="stats-content">
-                    <p>Visible patches: <span id="visible-patches-count">-</span></p>
-                    <p>Total area: <span id="visible-patches-area">- ha</span></p>
-                    <p>Average ENN: <span id="visible-patches-enn">- m</span></p>
-                    <div id="tier-stats-breakdown"></div>
-                </div>
+                <div id="patch-info-content">Zoom in until forest patches appear, then click a patch to see its details. To assess a proposed development, use <strong>Test a development</strong> above the map.</div>
             </div>
 
             <div class="sidebar-section" id="tools-section">
-                <h3>Tools</h3>
+                <h3>Find a place and map tools</h3>
                 <div id="search-geocoder-container"></div>
                 <label for="basemap-toggle" style="margin-top:10px">Basemap:</label>
                 <select id="basemap-toggle">
@@ -364,6 +357,20 @@
                     </div>
                 </div>
             </div>
+
+            <div class="sidebar-section" id="filter-section">
+                <h3>Filter by category</h3>
+            </div>
+
+            <details class="sidebar-section sidebar-disclosure" id="stats-section">
+                <summary>Map summary</summary>
+                <div id="stats-content">
+                    <p>Visible patches: <span id="visible-patches-count">-</span></p>
+                    <p>Total area: <span id="visible-patches-area">- ha</span></p>
+                    <p>Average ENN: <span id="visible-patches-enn">- m</span></p>
+                    <div id="tier-stats-breakdown"></div>
+                </div>
+            </details>
 
             <div id="sidebar-footer">
                 <button id="about-btn">About this project</button>
@@ -488,11 +495,11 @@
         </div>
     </div>
     
-    <script src="features.js?v=20261002-drawing-help"></script>
+    <script src="features.js?v=20261002-site-navigation"></script>
     <script src="config-kuantan.js"></script>
-    <script src="app-kuantan.js?v=20261002-drawing-help"></script>
-    <script src="development.js?v=20261002-drawing-help"></script>
-    <script src="connectivity.js?v=20261002-drawing-help"></script>
-    <script src="development-workflow.js?v=20261002-drawing-help"></script>
+    <script src="app-kuantan.js?v=20261002-site-navigation"></script>
+    <script src="development.js?v=20261002-site-navigation"></script>
+    <script src="connectivity.js?v=20261002-site-navigation"></script>
+    <script src="development-workflow.js?v=20261002-site-navigation"></script>
 </body>
 </html>

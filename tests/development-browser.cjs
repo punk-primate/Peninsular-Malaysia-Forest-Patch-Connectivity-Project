@@ -26,6 +26,28 @@ async function run() {
         ...(process.env.SCENARIO_BROWSER_EXECUTABLE ? { executablePath: process.env.SCENARIO_BROWSER_EXECUTABLE } : {}),
         args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
     try {
+        const home = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+        await home.route('**/*', route => {
+            const url=route.request().url();
+            if (process.env.SCENARIO_PIXEL_FONT && url.includes('fonts.googleapis.com')) return route.fulfill({contentType:'text/css',body:'@font-face {font-family:"Press Start 2P";src:url(https://test-font.invalid/pixel.ttf)}'});
+            if (process.env.SCENARIO_PIXEL_FONT && url.includes('test-font.invalid')) return route.fulfill({contentType:'font/ttf',body:fs.readFileSync(process.env.SCENARIO_PIXEL_FONT)});
+            return url.startsWith(origin) ? route.continue() : route.fulfill({ status:200, body:'' });
+        });
+        await home.goto(origin + '/index.html');
+        await home.evaluate(()=>document.fonts.ready);
+        assert.equal(await home.locator('.region-card').first().getAttribute('href'), 'kuantan-map.html');
+        await home.locator('[data-task="development"]').click();
+        assert.ok((await home.locator('.region-card').first().getAttribute('href')).includes('task=development'));
+        await home.locator('[data-task="explore"]').click();
+        assert.ok(!(await home.locator('.region-card').first().getAttribute('href')).includes('task=development'));
+        if (process.env.SCENARIO_SCREENSHOT_DIR) await home.screenshot({path:path.join(process.env.SCENARIO_SCREENSHOT_DIR,'homepage-desktop.png'),fullPage:true});
+        await home.setViewportSize({width:390,height:844});
+        await home.locator('#mobile-popup button').click();
+        await home.setViewportSize({width:391,height:844});
+        assert.equal(await home.locator('#mobile-popup').isVisible(),false);
+        assert.equal(await home.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+        if (process.env.SCENARIO_SCREENSHOT_DIR) await home.screenshot({path:path.join(process.env.SCENARIO_SCREENSHOT_DIR,'homepage-mobile.png'),fullPage:true});
+        await home.close();
         for (const landscape of ['kuantan', 'klang-valley']) {
             const data = JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(root, 'data', landscape + '-patches.geojson.gz'))));
             const patch = data.features.find(f => turf.area(f) > 20000 && turf.area(f) < 100000 && f.geometry.coordinates.length === 1);
@@ -400,6 +422,8 @@ async function run() {
             await page.waitForTimeout(120);
             assert.deepEqual(await page.evaluate(()=>window._patchInspectionCalls),{fly:1,scroll:1});
             assert.ok(await page.evaluate(()=>window._lastPatchProps));
+            assert.equal(await page.locator('.patch-at-glance').isVisible(),true);
+            assert.equal(await page.locator('#stats-section').getAttribute('open'),null);
             // A pending inspection scroll is cancelled if the user opens a tool.
             await page.waitForFunction(()=>!window._mapInstance.isMoving());
             await page.evaluate(c=>{
@@ -411,6 +435,13 @@ async function run() {
             assert.equal(await page.evaluate(()=>window._patchInspectionCalls.scroll),1);
             assert.deepEqual(errors, []);
             console.log(landscape + ': drawing regression, native-grid path, development rerouting, baseline flow exposure, flow overlay, exports, before/after, reset, and controls passed');
+            await page.goto(origin + '/' + landscape + '-map.html?task=development', {waitUntil:'domcontentloaded'});
+            await page.waitForFunction(()=>window._developmentWorkflow?.active && window._developmentScenario?.active, {timeout:20000});
+            await page.waitForFunction(()=>/forest patches loaded/.test(document.getElementById('development-status').textContent), {timeout:20000});
+            assert.equal(await page.locator('#onboarding-overlay').isVisible(),false);
+            assert.equal(await page.evaluate(()=>window._developmentWorkflow.step),'draw');
+            await page.locator('#workflow-exit').click();
+            assert.equal(await page.locator('#info-panel-section').isVisible(),true);
             await page.close();
         }
     } finally { await browser.close(); server.close(); }
