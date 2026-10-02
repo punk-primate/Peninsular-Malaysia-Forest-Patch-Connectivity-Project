@@ -27,7 +27,7 @@
         const panel = document.createElement('section');
         panel.id = 'development-panel'; panel.className = 'sidebar-section'; panel.hidden = true;
         panel.innerHTML = '<h3>Development scenario</h3>' +
-            '<p class="development-intro">Draw a proposed development to see the forest that would be removed and the fragments left behind.</p>' +
+            '<p class="development-intro">Draw where development would take place, then calculate the forest cleared and the fragments left behind. Use Connections to compare a route around the footprint.</p>' +
             '<div class="development-shapes" role="group" aria-label="Development footprint shape">' +
             '<button data-shape="line">Line</button><button data-shape="rectangle">Rectangle</button><button data-shape="polygon">Polygon</button></div>' +
             '<label id="development-width-row" for="development-width" hidden>Total line width (m)' +
@@ -36,7 +36,7 @@
             '<div id="development-drawing-actions" hidden><button id="development-finish">Finish drawing</button><button id="development-cancel">Cancel drawing</button></div>' +
             '<button id="development-analyse" class="development-primary" disabled>Calculate changes</button>' +
             '<div id="development-results" hidden></div>' +
-            '<p class="development-assumption">Assumes all mapped forest inside the footprint is cleared. Results describe changes in forest geometry; wildlife movement has not been recalculated.</p>' +
+            '<p class="development-assumption">This scenario assumes complete clearance of mapped forest inside your footprint.</p>' +
             '<div class="development-actions"><button id="development-reset">Clear scenario</button><button id="development-close">Close</button></div>';
         const info = document.getElementById('info-panel-section'); info.parentNode.insertBefore(panel, info);
         const get = id => document.getElementById(id);
@@ -86,7 +86,7 @@
                 }
                 if (message.type === 'result' && active) {
                     busy = false; result = message.result; view = 'scenario';
-                    applyMapView(); renderResults(); status('Scenario calculated. Compare the existing forest with the development scenario.'); updateActions();
+                    applyMapView(); renderResults(); status('Scenario calculated. Use Before development and With development to compare the map.'); updateActions();
                 }
             };
             const dataset = FOREST_PATCH_LAYER_ID === 'Kuantan Forest Patches' ? 'kuantan' : 'klang-valley';
@@ -265,9 +265,11 @@
         function renderResults() {
             const container = get('development-results'); container.hidden = false;
             const row = (label, value, cls = '') => '<div class="development-metric ' + cls + '"><span>' + label + '</span><strong>' + value + '</strong></div>';
-            let html = '<div class="development-view" role="group" aria-label="Compare landscape views"><button data-view="before">Existing forest</button>' +
-                '<button data-view="scenario" class="selected">Development scenario</button></div>' +
-                '<p class="development-legend"><span class="forest-key"></span>Forest <span class="loss-key"></span>Removed <span class="footprint-key"></span>Footprint</p>' +
+            const headline = result.affected.length ? area(result.lostHa) + ' ha of mapped forest would be cleared' : result.outsideDatasetExtent ? 'Footprint outside the available forest data' : 'No mapped forest overlaps your footprint';
+            let html = '<div class="development-outcome"><strong>' + headline + '</strong><p>' + (result.splitCount ? result.splitCount.toLocaleString() + ' affected patches would be split into additional fragments.' : 'No new splits in the affected forest patches.') + '</p></div>' +
+                '<div class="development-view" role="group" aria-label="Compare landscape views"><button data-view="before">Before development</button>' +
+                '<button data-view="scenario" class="selected">With development</button></div>' +
+                '<p class="development-legend"><span class="forest-key"></span>Remaining forest <span class="loss-key"></span>Forest cleared <span class="footprint-key"></span>Your footprint</p>' +
                 row('Development footprint', area(result.footprintHa) + ' ha') +
                 row('Forest removed', area(result.lostHa) + ' ha', 'development-loss') +
                 row('Forest remaining in affected patches', area(result.affectedRemainingHa) + ' ha') +
@@ -276,7 +278,7 @@
                 row('Patches completely removed', result.removedCount.toLocaleString()) +
                 '<p class="development-detail">Additional fragments: ' + result.newFragments + '. Existing disconnected parts are accounted for; touching corners count as connected.</p>' +
                 '<div id="development-connectivity-summary" class="development-detail">Loading baseline high-flow exposure…</div>' +
-                '<button data-open-connectivity>Compare a modelled path</button>' +
+                '<button data-open-connectivity>Compare routes before and with development</button>' +
                 '<details><summary>Landscape totals</summary>' + row('Existing mapped forest', area(result.baselineHa) + ' ha') +
                 row('Forest after this scenario', area(result.remainingLandscapeHa) + ' ha') + '</details>';
             if (!result.affected.length) html += '<p class="development-detail">' + (result.outsideDatasetExtent ? 'This footprint is outside the extent of the supplied forest data.' : 'No mapped forest overlaps this footprint. This result does not assess other habitats or development impacts.') + '</p>';
@@ -290,7 +292,9 @@
             html += '<button id="development-export">Download scenario</button>';
             container.innerHTML = html;
             container.querySelectorAll('[data-view]').forEach(el => el.addEventListener('click', () => {
-                view = el.dataset.view; container.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('selected', b.dataset.view === view)); applyMapView(); updateActions();
+                view = el.dataset.view; container.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('selected', b.dataset.view === view));
+                container.querySelector('.development-legend').innerHTML = view === 'before' ? '<span class="forest-key"></span>Forest before development <span class="footprint-key"></span>Your footprint' : '<span class="forest-key"></span>Remaining forest <span class="loss-key"></span>Forest cleared <span class="footprint-key"></span>Your footprint';
+                applyMapView(); updateActions();
             }));
             get('development-export').addEventListener('click', () => {
                 const output = { landscape: FOREST_PATCH_LAYER_ID, assumption: 'Complete mapped forest clearance inside the footprint',
