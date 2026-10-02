@@ -35,11 +35,16 @@ async function run() {
         });
         await home.goto(origin + '/index.html');
         await home.evaluate(()=>document.fonts.ready);
-        assert.equal(await home.locator('.region-card').first().getAttribute('href'), 'kuantan-map.html');
-        await home.locator('[data-task="development"]').click();
-        assert.ok((await home.locator('.region-card').first().getAttribute('href')).includes('task=development'));
-        await home.locator('[data-task="explore"]').click();
-        assert.ok(!(await home.locator('.region-card').first().getAttribute('href')).includes('task=development'));
+        assert.equal(await home.locator('[data-task]').count(),0);
+        assert.equal(await home.locator('.development-link').count(),0);
+        assert.equal(await home.locator('#home-about-content').isVisible(),false);
+        await home.locator('#home-about-toggle').click();
+        assert.equal(await home.locator('#home-about-content').isVisible(),true);
+        assert.equal(await home.locator('#home-about-toggle').getAttribute('aria-expanded'),'true');
+        await home.locator('#home-about-toggle').click();
+        assert.equal(await home.locator('#home-about-content').isVisible(),false);
+        assert.equal(await home.locator('.map-link').first().getAttribute('href'),'kuantan-map.html');
+        assert.equal(await home.locator('.map-link').nth(1).getAttribute('href'),'klang-valley-map.html');
         if (process.env.SCENARIO_SCREENSHOT_DIR) await home.screenshot({path:path.join(process.env.SCENARIO_SCREENSHOT_DIR,'homepage-desktop.png'),fullPage:true});
         await home.setViewportSize({width:390,height:844});
         await home.locator('#mobile-popup button').click();
@@ -48,6 +53,7 @@ async function run() {
         assert.equal(await home.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
         if (process.env.SCENARIO_SCREENSHOT_DIR) await home.screenshot({path:path.join(process.env.SCENARIO_SCREENSHOT_DIR,'homepage-mobile.png'),fullPage:true});
         await home.close();
+        if (process.env.SCENARIO_HOME_ONLY) return;
         for (const landscape of ['kuantan', 'klang-valley']) {
             const data = JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(root, 'data', landscape + '-patches.geojson.gz'))));
             const patch = data.features.find(f => turf.area(f) > 20000 && turf.area(f) < 100000 && f.geometry.coordinates.length === 1);
