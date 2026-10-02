@@ -307,14 +307,15 @@ initializeTierFilters();
         if (!minAreaInput || !maxAreaInput || !applyAreaBtn || !resetAreaBtn || !areaFilterError) return;
         applyAreaBtn.addEventListener('click', () => {
             areaFilterError.style.display = 'none'; areaFilterError.textContent = '';
-            currentMinArea = (minAreaInput.value === '' || isNaN(parseFloat(minAreaInput.value)) || parseFloat(minAreaInput.value) < 0) ? null : parseFloat(minAreaInput.value);
-            currentMaxArea = (maxAreaInput.value === '' || isNaN(parseFloat(maxAreaInput.value)) || parseFloat(maxAreaInput.value) < 0) ? null : parseFloat(maxAreaInput.value);
-            minAreaInput.value = currentMinArea === null ? '' : currentMinArea;
-            maxAreaInput.value = currentMaxArea === null ? '' : currentMaxArea;
-            if (currentMinArea !== null && currentMaxArea !== null && currentMaxArea < currentMinArea) {
+            const nextMinArea = (minAreaInput.value === '' || isNaN(parseFloat(minAreaInput.value)) || parseFloat(minAreaInput.value) < 0) ? null : parseFloat(minAreaInput.value);
+            const nextMaxArea = (maxAreaInput.value === '' || isNaN(parseFloat(maxAreaInput.value)) || parseFloat(maxAreaInput.value) < 0) ? null : parseFloat(maxAreaInput.value);
+            if (nextMinArea !== null && nextMaxArea !== null && nextMaxArea < nextMinArea) {
                 areaFilterError.textContent = "Max Area cannot be less than Min Area.";
                 areaFilterError.style.display = 'block'; return;
             }
+            currentMinArea=nextMinArea; currentMaxArea=nextMaxArea;
+            minAreaInput.value=currentMinArea===null?'':currentMinArea;
+            maxAreaInput.value=currentMaxArea===null?'':currentMaxArea;
             applyForestFilter();
         });
         resetAreaBtn.addEventListener('click', () => {
@@ -328,6 +329,15 @@ initializeTierFilters();
             inp.addEventListener('input', () => { areaFilterError.style.display = 'none'; areaFilterError.textContent = ''; });
         });
     }
+    window._forestExplorer = {
+        get layerId() { return resolvedPatchId; },
+        get filters() { return { min:currentMinArea, max:currentMaxArea, tiers:Array.from(document.querySelectorAll('.tier-toggle:checked')).map(el=>el.value) }; },
+        resetFilters() {
+            if (window._forestMapInteraction && window._forestMapInteraction.active) return;
+            document.querySelectorAll('.tier-toggle').forEach(el=>el.checked=true);
+            document.getElementById('reset-area-filter-btn').click();
+        }
+    };
     function applyForestFilter() {
         if (!map.isStyleLoaded() || !map.getLayer(resolvedPatchId)) {
             if (!map.isStyleLoaded()) setTimeout(applyForestFilter, 300);
@@ -345,6 +355,7 @@ initializeTierFilters();
         try {
             const baseFilter = allFilters.length ? ['all', ...allFilters] : null;
             map.setFilter(resolvedPatchId, window._developmentScenario ? window._developmentScenario.decoratePatchFilter(baseFilter) : baseFilter);
+            document.dispatchEvent(new CustomEvent('forestconnect:filters'));
             if (typeof debouncedUpdateStats === 'function') debouncedUpdateStats();
         } catch (error) { console.error('Error applying filter:', error); }
     }
@@ -360,7 +371,9 @@ initializeTierFilters();
         }
         let features = [];
         try { features = map.queryRenderedFeatures({ layers: [resolvedPatchId] }); } catch(err) {}
+        features=Array.from(new Map(features.map(f=>[String(f.properties[PATCH_ID_ATTRIBUTE]),f])).values());
         countEl.textContent = features.length.toLocaleString();
+        document.dispatchEvent(new CustomEvent('forestconnect:visible-patches',{detail:{count:features.length}}));
         let totalArea = 0, totalEnn = 0, validEnn = 0;
         const tierStats = {};
         const checkedTiers = Array.from(document.querySelectorAll('.tier-toggle:checked')).map(cb => cb.value);
@@ -497,6 +510,7 @@ initializeTierFilters();
         h += '<div id="metric-inline-popup" style="display:none;margin-top:8px;background:#f0f4ff;border:1px solid #c0cfe8;border-radius:4px;padding:8px 10px;font-size:0.83em;line-height:1.5;color:#212529"></div>';
         h += '</details></div>';
         el.innerHTML = h;
+        document.dispatchEvent(new CustomEvent('forestconnect:patch-selected',{detail:properties}));
 
         el.style.opacity = '0';
         requestAnimationFrame(() => { el.style.transition = 'opacity 0.2s ease'; el.style.opacity = '1'; });

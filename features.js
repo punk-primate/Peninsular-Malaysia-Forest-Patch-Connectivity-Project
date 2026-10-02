@@ -9,7 +9,7 @@
     // after a marker is placed or a drawing finishes.
     const interaction = window._forestMapInteraction = {
         get active() {
-            return !!(window._developmentScenario && window._developmentScenario.active) ||
+            return !!(window._mapTools && window._mapTools.measuring) || !!(window._developmentScenario && window._developmentScenario.active) ||
                 !!(window._connectivityExplorer && window._connectivityExplorer.active);
         },
         ownsClick(event) { return !!event.forestToolClick || this.active; },
@@ -18,7 +18,7 @@
             if (!cue) return;
             cue.hidden = !this.active;
             const connections = window._connectivityExplorer, development = window._developmentScenario;
-            cue.textContent = connections && connections.picking ? 'Place ' + connections.selectedPoint + ': click the map. Patch details are paused.' :
+            cue.textContent = window._mapTools && window._mapTools.measuring ? 'Measuring on the map. Place points, then select Finish measurement.' : connections && connections.picking ? 'Place ' + connections.selectedPoint + ': click the map. Patch details are paused.' :
                 development && development.drawing ? 'Drawing development. Patch details are paused.' :
                 'Testing development. Use Return to patch explorer to inspect patches.';
             document.dispatchEvent(new CustomEvent('forestconnect:interaction'));

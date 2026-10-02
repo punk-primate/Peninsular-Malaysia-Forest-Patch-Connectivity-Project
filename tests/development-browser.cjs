@@ -97,6 +97,76 @@ async function run() {
             const helpText=await page.locator('#howto-modal').textContent();
             assert.doesNotMatch(helpText,/Connectivity potential rating|connectivity rating|High \(cyan\)|Barrier \(dark purple\)/);
             assert.match(helpText,/future corridor opportunity before one is established/);
+            // Exploration tools operate on the actual map and WebGL canvas.
+            assert.equal(await page.locator('#patch-id-input').count(),0);
+            await page.locator('#measurement-tools > summary').click();
+            await page.locator('#measure-distance').click();
+            await page.waitForFunction(()=>window._mapTools.measuring);
+            const measurePoints=[[cx,cy],[cx+0.001,cy],[cx+0.001,cy+0.001]];
+            await page.evaluate(coords=>coords.forEach(c=>window._mapInstance.fire('click',{lngLat:mapboxgl.LngLat.convert(c),point:window._mapInstance.project(c)})),measurePoints);
+            await page.locator('#measure-finish').click();
+            const expectedLength=turf.length(turf.lineString(measurePoints),{units:'kilometers'})*1000;
+            assert.ok(Math.abs(await page.evaluate(()=>window._mapTools.measurement.value)-expectedLength)<0.01);
+            assert.equal(await page.evaluate(()=>window._mapTools.measuring),false);
+            await page.locator('#measure-area').click();
+            await page.waitForFunction(()=>window._mapTools.measuring);
+            await page.evaluate(coords=>coords.forEach(c=>window._mapInstance.fire('click',{lngLat:mapboxgl.LngLat.convert(c),point:window._mapInstance.project(c)})),measurePoints);
+            await page.locator('#measure-finish').click();
+            const expectedArea=turf.area(turf.polygon([measurePoints.concat([measurePoints[0]])]))/10000;
+            assert.ok(Math.abs(await page.evaluate(()=>window._mapTools.measurement.value)-expectedArea)<0.001);
+            await page.locator('#measure-clear').click();
+            assert.equal(await page.evaluate(()=>window._mapTools.measurement),null);
+            // Too few points and a crossing boundary cannot produce an area result.
+            await page.locator('#measure-area').click();await page.waitForFunction(()=>window._mapTools.measuring);
+            await page.locator('#measure-finish').click();
+            assert.match(await page.locator('#measurement-status').textContent(),/at least 3/);
+            await page.keyboard.press('Escape');
+            assert.equal(await page.evaluate(()=>window._mapTools.measuring),false);
+            const cross=[[cx,cy],[cx+0.001,cy+0.001],[cx+0.001,cy],[cx,cy+0.001]];
+            await page.locator('#measure-area').click();await page.waitForFunction(()=>window._mapTools.measuring);
+            await page.evaluate(coords=>coords.forEach(c=>window._mapInstance.fire('click',{lngLat:mapboxgl.LngLat.convert(c),point:window._mapInstance.project(c)})),cross);
+            await page.locator('#measure-finish').click();
+            assert.match(await page.locator('#measurement-status').textContent(),/crosses itself/);
+            await page.locator('#measure-clear').click();
+            const selectPatch=p=>page.evaluate(props=>{
+                window._lastPatchLngLat=window._mapInstance.getCenter();
+                document.dispatchEvent(new CustomEvent('forestconnect:patch-selected',{detail:props}));
+            },p);
+            const props={id:1,Tier:patch.properties.Tier,area:100,core:60,enn:250,mean_flow:125};
+            for(let i=1;i<=3;i++){
+                // Simulate the existing patch-details selection event, including replacement of its content.
+                await page.evaluate(()=>document.getElementById('patch-info-content').innerHTML='Selected patch');
+                await selectPatch({...props,id:i,area:100+i});
+                await page.locator('#patch-compare-add').click();
+            }
+            assert.equal(await page.evaluate(()=>window._mapTools.comparisonCount),3);
+            assert.equal(await page.locator('.comparison-marker').count(),3);
+            assert.match(await page.locator('#patch-comparison-table').textContent(),/101/);
+            await page.evaluate(()=>document.getElementById('patch-info-content').innerHTML='Selected patch');await selectPatch({...props,id:4});await page.locator('#patch-compare-add').click();
+            assert.match(await page.locator('#comparison-status').textContent(),/up to three/);
+            await page.locator('[data-remove-patch="2"]').click();assert.equal(await page.evaluate(()=>window._mapTools.comparisonCount),2);
+            await page.locator('#comparison-clear').click();assert.equal(await page.locator('.comparison-marker').count(),0);
+            await page.locator('.tier-toggle').first().uncheck();
+            await page.locator('#min-area-input').fill('50');await page.locator('#max-area-input').fill('150');await page.locator('#apply-area-filter-btn').click();
+            assert.match(await page.locator('#active-filters-text').textContent(),/50 to 150 ha/);
+            await page.locator('#max-area-input').fill('10');await page.locator('#apply-area-filter-btn').click();
+            assert.deepEqual(await page.evaluate(()=>[window._forestExplorer.filters.min,window._forestExplorer.filters.max]),[50,150]);
+            await page.locator('#filters-reset-all').click();
+            assert.equal(await page.locator('.tier-toggle:checked').count(),6);
+            assert.deepEqual(await page.evaluate(()=>[window._forestExplorer.filters.min,window._forestExplorer.filters.max]),[null,null]);
+            for(const checkbox of await page.locator('.tier-toggle').all())await checkbox.uncheck();
+            assert.match(await page.locator('#filter-empty-status').textContent(),/No tiers selected/);
+            await page.locator('#filters-reset-all').click();
+            await page.evaluate(()=>window._mapInstance.jumpTo({center:window._mapInstance.getCenter(),zoom:16}));
+            await page.waitForFunction(()=>window._mapInstance.isStyleLoaded()&&!window._mapInstance.isMoving());
+            const downloadPromise=page.waitForEvent('download');await page.locator('#map-export').click();const mapDownload=await downloadPromise;
+            assert.equal(mapDownload.suggestedFilename(),landscape+'-forest-map.png');
+            const png=fs.readFileSync(await mapDownload.path());assert.equal(png.subarray(1,4).toString(),'PNG');
+            assert.ok(png.length>10000,'PNG should include a rendered map, not only an empty canvas');
+            if(process.env.SCENARIO_SCREENSHOT_DIR)await mapDownload.saveAs(path.join(process.env.SCENARIO_SCREENSHOT_DIR,landscape+'-export.png'));
+            await page.locator('#measurement-tools > summary').click();
+            await page.evaluate(()=>document.getElementById('patch-info-content').textContent='Select a patch on the map.');
+            if(process.env.SCENARIO_TOOLS_ONLY){assert.deepEqual(errors,[]);await page.close();continue;}
             const previousFilter = await page.evaluate(layerId => window._mapInstance.getFilter(layerId) || null, layer);
             const interiorCandidates=[];
             for(let x=1;x<30;x++) for(let y=1;y<30;y++) {
@@ -116,6 +186,8 @@ async function run() {
             });
             await page.locator('#development-workflow-toggle').click();
             assert.equal(await page.locator('#development-toggle').isVisible(),false);
+            assert.equal(await page.locator('#measure-distance').isEnabled(),false);
+            assert.equal(await page.locator('#active-filter-summary').isVisible(),false);
             assert.equal(await page.locator('#connectivity-toggle').isVisible(),false);
             assert.equal(await page.locator('[data-workflow-step="forest"]').isEnabled(),false);
             assert.equal(await page.locator('[data-workflow-step="routes"]').isEnabled(),false);
@@ -307,6 +379,13 @@ async function run() {
             await page.locator('[data-guide-view="scenario"]').click();
             await page.locator('#connection-fit').click();
             await page.waitForFunction(() => !window._mapInstance.isMoving());
+            // Export the scenario view as well as the earlier patch explorer view.
+            await page.locator('#measurement-tools > summary').click();
+            const scenarioDownloadPromise=page.waitForEvent('download');await page.locator('#map-export').click();
+            const scenarioDownload=await scenarioDownloadPromise;
+            assert.equal(scenarioDownload.suggestedFilename(),landscape+'-forest-map.png');
+            if(process.env.SCENARIO_SCREENSHOT_DIR)await scenarioDownload.saveAs(path.join(process.env.SCENARIO_SCREENSHOT_DIR,landscape+'-scenario-export.png'));
+            await page.locator('#measurement-tools > summary').click();
             // Check actual computed contrast, including nested result text and
             // expanded method details, against the ancestor background.
             async function verifyContrast() {
@@ -316,7 +395,7 @@ async function run() {
                         const c=n/255; return c<=0.04045 ? c/12.92 : ((c+0.055)/1.055)**2.4;
                     }).reduce((s,c,i)=>s+c*[.2126,.7152,.0722][i],0);
                     const failures=[];
-                    document.querySelectorAll('#development-panel h3, #development-panel p, #development-panel summary, .development-metric span, .development-metric strong, #connectivity-panel h3, #connectivity-panel h4, #connectivity-panel p, #connectivity-panel li, #connectivity-panel label, #connectivity-panel summary, .connection-metric span, .connection-metric strong, .connection-outcome strong, #connection-map-legend strong, #connection-map-legend p, .connection-legend-row, #forest-editing-cue, #development-workflow h3, #workflow-guidance, .workflow-steps button, #workflow-map-view button').forEach(el=>{
+                    document.querySelectorAll('#development-panel h3, #development-panel p, #development-panel summary, .development-metric span, .development-metric strong, #connectivity-panel h3, #connectivity-panel h4, #connectivity-panel p, #connectivity-panel li, #connectivity-panel label, #connectivity-panel summary, .connection-metric span, .connection-metric strong, .connection-outcome strong, #connection-map-legend strong, #connection-map-legend p, .connection-legend-row, #forest-editing-cue, #development-workflow h3, #workflow-guidance, .workflow-steps button, #workflow-map-view button, .map-tool-section summary, .map-tool-body p, .map-tool-body button, #patch-compare-add').forEach(el=>{
                         if(!el.getClientRects().length) return;
                         let ancestor=el, bg;
                         while(ancestor) {
@@ -439,12 +518,15 @@ async function run() {
             assert.deepEqual(await page.evaluate(()=>window._patchInspectionCalls),{fly:1,scroll:1});
             assert.ok(await page.evaluate(()=>window._lastPatchProps));
             assert.equal(await page.locator('.patch-at-glance').isVisible(),true);
+            assert.equal(await page.locator('#patch-compare-add').isVisible(),true);
+            await page.locator('#patch-compare-add').click();
+            assert.equal(await page.evaluate(()=>window._mapTools.comparisonCount),1);
             assert.equal(await page.locator('#stats-section').getAttribute('open'),null);
             // A pending inspection scroll is cancelled if the user opens a tool.
             await page.waitForFunction(()=>!window._mapInstance.isMoving());
             await page.evaluate(c=>{
                 const map=window._mapInstance,p=map.project(c);
-                map.fire('click',{point:p,lngLat:mapboxgl.LngLat.convert(c)});
+                map.fire('click',{point:p,lngLat:mapboxgl.LngLat.convert(c),originalEvent:{target:map.getCanvas()}});
                 document.getElementById('development-workflow-toggle').click();
             },patchPoint);
             await page.waitForTimeout(120);
@@ -458,6 +540,18 @@ async function run() {
             assert.equal(await page.evaluate(()=>window._developmentWorkflow.step),'draw');
             await page.locator('#workflow-exit').click();
             assert.equal(await page.locator('#info-panel-section').isVisible(),true);
+            await page.setViewportSize({width:390,height:844});
+            if(await page.locator('#sidebar').evaluate(el=>el.classList.contains('collapsed')))await page.locator('#toggle-sidebar-btn').click();
+            await page.locator('#measurement-tools > summary').click();
+            await page.locator('#measure-distance').click();await page.waitForFunction(()=>window._mapTools.measuring);
+            await page.evaluate(coords=>coords.forEach(c=>window._mapInstance.fire('click',{lngLat:mapboxgl.LngLat.convert(c),point:window._mapInstance.project(c)})),measurePoints);
+            await page.locator('#measure-finish').click();
+            assert.ok(Math.abs(await page.evaluate(()=>window._mapTools.measurement.value)-expectedLength)<0.01);
+            assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+            await page.locator('#dark-mode-toggle').click();await verifyContrast();
+            await page.locator('#loading-indicator').waitFor({state:'hidden'});
+            await page.locator('#measurement-tools').scrollIntoViewIfNeeded();
+            if(process.env.SCENARIO_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.SCENARIO_SCREENSHOT_DIR,landscape+'-tools-mobile.png')});
             await page.close();
         }
     } finally { await browser.close(); server.close(); }
