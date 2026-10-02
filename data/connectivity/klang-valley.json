@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "landscape": "Klang Valley",
+  "resistance": {
+    "width": 2628,
+    "height": 2976,
+    "crs": "EPSG:3857",
+    "projection": "+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext=True +no_defs=True",
+    "originX": 11272555.0039,
+    "originY": 378946.2078,
+    "cellWidth": 29.953564649923383,
+    "cellHeight": 30.314303931451608,
+    "file": "klang-valley-resistance.bin.gz",
+    "sha256": "8512efa2edbbceca0a5064e2058942c672753dfc1510902cc019ca957788d7ed",
+    "minimum": 1,
+    "maximum": 100,
+    "values": [
+      1,
+      10,
+      25,
+      50,
+      75,
+      100
+    ],
+    "validCells": 7820928
+  },
+  "flow": {
+    "width": 2616,
+    "height": 2964,
+    "crs": "EPSG:3857",
+    "projection": "+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext=True +no_defs=True",
+    "originX": 11272764.6789,
+    "originY": 378734.0077,
+    "cellWidth": 29.95356464067286,
+    "cellHeight": 30.314303947368423,
+    "file": "klang-valley-flow-flags.bin.gz",
+    "sha256": "6611aa2fe8307b5d24bd3de772d3df8e83ed255fb97be2265c43550291f1ef8b",
+    "positiveCells": 3888800,
+    "validCells": 4036682,
+    "highCells": 388880,
+    "threshold": 1.3206146453369871,
+    "percentile": 90,
+    "label": "High-flow areas in supplied normalized current (top 10% of positive cells)",
+    "display": {
+      "file": "klang-valley-high-flow.png",
+      "coordinates": [
+        [
+          101.26496805338559,
+          3.4002278698457817
+        ],
+        [
+          101.96915740460688,
+          3.4002278698457817
+        ],
+        [
+          101.96915740460688,
+          2.593663933114443
+        ],
+        [
+          101.26496805338559,
+          2.593663933114443
+        ]
+      ],
+      "resolutionM": 90,
+      "resampling": "maximum; display only"
+    }
+  },
+  "sourceModel": "Supplied model; resistance calibration, window size and multi-scenario aggregation not specified in TIFF metadata",
+  "provenance": {
+    "Resistance": {
+      "file": "Klang Valley_Resistance.tif",
+      "sha256": "c04ee69c03182543d0ea3e5c84c7c17373e15163588134f7ee495709fb274657"
+    },
+    "cum_currmap": {
+      "file": "Klang Valley_cum_currmap.tif",
+      "sha256": "f7bea9670008ef76be1912a1d64262835bb4fc5cc5097d1a3877c75db5a65745"
+    },
+    "flow_potential": {
+      "file": "Klang Valley_flow_potential.tif",
+      "sha256": "7fb2cdf69fe37cd7ba6f0e06f5c9a1071529da87a8839dead5553db6481eb02f"
+    },
+    "normalized_cum_currmap": {
+      "file": "Klang Valley_normalized_cum_currmap.tif",
+      "sha256": "14a9cf56e71c9e3c1c2735e9ef5ed37e43c2639d83c3422b17f3a163c2d4e90d"
+    }
+  },
+  "normalizationMaxError": 0.0,
+  "restorationPotentialUsed": false
+}
