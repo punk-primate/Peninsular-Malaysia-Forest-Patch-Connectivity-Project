@@ -83,7 +83,11 @@ async function run() {
             await page.locator('[data-view="scenario"]').click();
             const download = page.waitForEvent('download'); await page.locator('#development-export').click();
             assert.equal((await download).suggestedFilename(), 'development-scenario.json');
-            await page.waitForFunction(() => /Baseline high-flow cells touched:/.test(document.getElementById('development-connectivity-summary').textContent), null, { timeout:20000 });
+            try {
+                await page.waitForFunction(() => /Baseline high-flow cells touched:/.test(document.getElementById('development-connectivity-summary').textContent), null, { timeout:20000 });
+            } catch(error) {
+                console.error('Initial exposure state',await page.evaluate(()=>({summary:document.getElementById('development-connectivity-summary').textContent,status:document.getElementById('connection-status').textContent,assessment:window._connectivityExplorer.assessment})),errors);throw error;
+            }
             // Select known native-grid cells near each landscape centre, using
             // both complete resistance models rather than the fixture map tiles.
             const connectionMeta = JSON.parse(fs.readFileSync(path.join(root, 'data/connectivity', landscape + '.json')));
@@ -103,7 +107,7 @@ async function run() {
             await page.locator('#connection-start').click(); await clickCoordinate(startPoint);
             await page.locator('#connection-end').click(); await clickCoordinate(endPoint);
             try {
-                await page.waitForFunction(() => /Path assessment calculated/.test(document.getElementById('connection-status').textContent), null, {timeout:20000});
+                await page.waitForFunction(() => /Comparison ready/.test(document.getElementById('connection-status').textContent), null, {timeout:20000});
             } catch (error) {
                 console.error('Connection state',await page.evaluate(()=>({status:document.getElementById('connection-status').textContent,locations:document.getElementById('connection-locations').textContent,assessment:window._connectivityExplorer.assessment,development:document.getElementById('development-status').textContent})),errors);
                 throw error;
@@ -129,16 +133,91 @@ async function run() {
                     footprint:window._developmentScenario.footprint})),errors); throw error;
             }
             assert.ok(await page.evaluate(() => window._mapInstance.getSource('connection-scenario')._data.features.length>0));
+            assert.equal(await page.locator('.connection-marker').count(), 2);
+            assert.deepEqual(await page.locator('.connection-marker').allTextContents(), ['A','B']);
+            assert.deepEqual(await page.locator('.connection-route-card h4').allTextContents(), ['Before development','With development']);
+            assert.match(await page.locator('.connection-outcome').innerText(), /route changes|No route change/);
+            assert.ok(await page.locator('#connection-map-legend').isVisible());
+            assert.match(await page.locator('#connection-map-legend').innerText(), /With development/);
             await page.locator('[data-view="before"]').click();
             assert.equal(await page.evaluate(() => window._mapInstance.getSource('connection-scenario')._data.features.length), 0);
+            assert.doesNotMatch(await page.locator('#connection-map-legend').innerText(), /With development/);
             await page.locator('[data-view="scenario"]').click();
             await page.locator('#connection-fit').click();
             await page.waitForFunction(() => !window._mapInstance.isMoving());
+            // Check actual computed contrast, including nested result text and
+            // expanded method details, against the ancestor background.
+            async function verifyContrast() {
+                const failures = await page.evaluate(() => {
+                    const rgb = color => color.match(/[\d.]+/g).map(Number);
+                    const luminance = color => rgb(color).slice(0,3).map(n => {
+                        const c=n/255; return c<=0.04045 ? c/12.92 : ((c+0.055)/1.055)**2.4;
+                    }).reduce((s,c,i)=>s+c*[.2126,.7152,.0722][i],0);
+                    const failures=[];
+                    document.querySelectorAll('#development-panel h3, #development-panel p, #development-panel summary, .development-metric span, .development-metric strong, #connectivity-panel h3, #connectivity-panel h4, #connectivity-panel p, #connectivity-panel li, #connectivity-panel label, #connectivity-panel summary, .connection-metric span, .connection-metric strong, .connection-outcome strong, #connection-map-legend strong, #connection-map-legend p, .connection-legend-row').forEach(el=>{
+                        if(!el.getClientRects().length) return;
+                        let ancestor=el, bg;
+                        while(ancestor) {
+                            const color=getComputedStyle(ancestor).backgroundColor, c=rgb(color);
+                            if(c.length===3||c[3]===1){bg=color;break;} ancestor=ancestor.parentElement;
+                        }
+                        if(!bg) bg='rgb(255,255,255)';
+                        const a=luminance(getComputedStyle(el).color),b=luminance(bg),contrast=(Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+                        if(contrast<4.5) failures.push({text:el.textContent.slice(0,60),contrast,color:getComputedStyle(el).color,bg});
+                    }); return failures;
+                });
+                assert.deepEqual(failures, []);
+            }
+            await page.evaluate(()=>document.querySelectorAll('#connectivity-panel details, #development-results details').forEach(el=>el.open=true));
+            await verifyContrast();
+            await page.locator('#dark-mode-toggle').click();
+            await verifyContrast();
+            assert.doesNotMatch(await page.locator('#connectivity-panel').innerText(), /Omniscape has not|not been rerun|Flow has not been recalculated/);
+            await page.locator('.connection-outcome').scrollIntoViewIfNeeded();
+            if (process.env.SCENARIO_SCREENSHOT_DIR) await page.screenshot({ path:path.join(process.env.SCENARIO_SCREENSHOT_DIR, landscape + '-comparison-dark.png') });
+            await page.locator('#dark-mode-toggle').click();
+            await page.evaluate(()=>document.querySelectorAll('#connectivity-panel details, #development-results details').forEach(el=>el.open=false));
+            await page.locator('.connection-outcome').scrollIntoViewIfNeeded();
             if (process.env.SCENARIO_SCREENSHOT_DIR) await page.screenshot({ path:path.join(process.env.SCENARIO_SCREENSHOT_DIR, landscape + '-connectivity.png') });
+            await page.setViewportSize({width:390,height:844});
+            await page.locator('#connection-fit').click();
+            await page.waitForFunction(()=>!window._mapInstance.isMoving());
+            assert.equal(await page.evaluate(()=>document.getElementById('sidebar').classList.contains('collapsed')),true);
+            const legendBounds=await page.locator('#connection-map-legend').boundingBox();
+            const collapsedBounds=await page.locator('#sidebar').boundingBox();
+            assert.ok(legendBounds.x>=collapsedBounds.width && legendBounds.x+legendBounds.width<=390);
+            const barBounds=await page.locator('#map-top-bar').boundingBox();
+            assert.ok(barBounds.x>=collapsedBounds.width && barBounds.x+barBounds.width<=390);
+            assert.ok(legendBounds.y>=0 && legendBounds.y+legendBounds.height<=844);
+            assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
+            if (process.env.SCENARIO_SCREENSHOT_DIR) await page.screenshot({ path:path.join(process.env.SCENARIO_SCREENSHOT_DIR, landscape + '-comparison-mobile.png') });
+            await page.setViewportSize({width:1440,height:1000});
+            await page.locator('#toggle-sidebar-btn').click();
+            // A covered endpoint has no orange route and must not be described
+            // as an available before/with-development comparison.
+            const coveredPoint=connectionEngine.coordinateAt(nativeGrid,middle);
+            await page.evaluate(c=>window._mapInstance.jumpTo({center:c,zoom:14.5}),coveredPoint);
+            await page.locator('#connection-start').click(); await clickCoordinate(coveredPoint);
+            await page.waitForFunction(()=>window._connectivityExplorer.assessment?.scenario?.status==='endpoint-blocked',null,{timeout:20000});
+            assert.match(await page.locator('#connection-status').innerText(),/covers A or B/);
+            assert.equal(await page.evaluate(()=>window._mapInstance.getSource('connection-scenario')._data.features.length),0);
+            assert.doesNotMatch(await page.locator('#connection-map-legend').innerText(),/With development/);
+            await page.evaluate(c=>window._mapInstance.jumpTo({center:c,zoom:14.5}),startPoint);
+            await page.locator('#connection-start').click(); await clickCoordinate(startPoint);
+            await page.waitForFunction(()=>window._connectivityExplorer.assessment?.scenario?.status==='found',null,{timeout:20000});
             await page.locator('#connection-close').click();
             assert.equal(await page.evaluate(() => window._mapInstance.getSource('connection-existing')._data.features.length), 0);
+            assert.equal(await page.locator('.connection-marker').count(), 0);
+            assert.equal(await page.locator('#connection-map-legend').isVisible(), false);
             await page.locator('#development-reset').click();
             await page.waitForFunction(() => !window._connectivityExplorer.assessment?.hasDevelopment, null, {timeout:20000});
+            await page.locator('#connectivity-toggle').click();
+            await page.waitForFunction(()=>window._connectivityExplorer.assessment?.baseline?.status==='found',null,{timeout:20000});
+            assert.deepEqual(await page.locator('.connection-route-card h4').allTextContents(), ['Before development']);
+            assert.doesNotMatch(await page.locator('#connection-map-legend').innerText(), /With development/);
+            await page.locator('#connection-development').click();
+            assert.equal(await page.locator('#development-panel').isVisible(), true);
+            await page.locator('#connection-close').click();
             await page.evaluate(([x,y]) => window._mapInstance.jumpTo({center:[x,y],zoom:16}), [cx,cy]);
             if (process.env.SCENARIO_SCREENSHOT_DIR) await page.screenshot({ path:path.join(process.env.SCENARIO_SCREENSHOT_DIR, landscape + '-scenario.png') });
             await page.locator('[data-shape="line"]').click();

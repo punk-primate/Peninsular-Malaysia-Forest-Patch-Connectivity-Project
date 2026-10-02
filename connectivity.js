@@ -8,25 +8,29 @@
         const metadataURL = new URL('data/connectivity/' + landscape + '.json', location.href).href;
         let worker = null, loading = null, metadata = null, ready = false, busy = false, job = 0;
         let active = false, picking = null, start = null, end = null, result = null, footprint = null, footprintKey = '';
+        const markers = {};
         const button = document.createElement('button'); button.id = 'connectivity-toggle'; button.textContent = 'Connections';
         button.setAttribute('aria-controls', 'connectivity-panel'); button.setAttribute('aria-expanded', 'false');
         document.getElementById('map-top-bar').insertBefore(button, document.getElementById('home-btn'));
         const panel = document.createElement('section'); panel.id = 'connectivity-panel'; panel.className = 'sidebar-section'; panel.hidden = true;
-        panel.innerHTML = '<h3>Modelled connections</h3>' +
-            '<p>Select two locations to find the path with the lowest accumulated resistance in the supplied model.</p>' +
+        panel.innerHTML = '<h3>Compare routes</h3>' +
+            '<p>See how a proposed development changes the modelled route between two locations. The route follows lower-resistance cells across the landscape.</p>' +
+            '<ol class="connection-steps"><li id="connection-step-points">Choose locations A and B</li><li id="connection-step-route">Calculate a route</li><li id="connection-step-development">Draw development and compare</li></ol>' +
             '<div class="connection-points"><button id="connection-start">Choose start A</button><button id="connection-end">Choose end B</button></div>' +
             '<p id="connection-locations">No locations selected.</p>' +
-            '<label class="connection-flow-toggle"><input type="checkbox" id="connection-flow"> Show high-flow areas (blue)</label>' +
+            '<label class="connection-flow-toggle"><input type="checkbox" id="connection-flow"> Show baseline high-flow areas (blue)</label>' +
             '<p id="connection-status" role="status" aria-live="polite">Loading model data…</p>' +
-            '<button id="connection-analyse" class="connection-primary" disabled>Calculate path</button>' +
+            '<div class="connection-route-actions"><button id="connection-analyse" class="connection-primary" disabled>Calculate route</button><button id="connection-fit" disabled>View routes on map</button></div>' +
             '<div id="connection-results" hidden></div>' +
+            '<button id="connection-development" class="connection-development">Draw a development to compare</button>' +
             '<details><summary>How this is calculated</summary><p>Paths use the original approximately 30 m resistance cells and eight-direction movement. Lower accumulated resistance is preferred. NoData cells are blocked; finite resistance values, including 100, remain traversable. Lines show paths, not corridor widths.</p>' +
-            '<p>For a calculated development scenario, every cell touched by the footprint is treated as impassable. This is a scenario assumption. High-flow areas remain the supplied baseline; Omniscape has not been rerun.</p>' +
+            '<p>The before-development route uses the current resistance map. The with-development route treats every cell touched by your calculated footprint as impassable, then finds a route around it. Both routes connect the same A and B.</p>' +
             '<p>Blue areas mark the top 10% of positive supplied normalized-current values, with ties included. This relative threshold does not establish ecological pinch points. The overlay uses 90 m display pixels; footprint counts use the original approximately 30 m cells.</p>' +
             '<p>Modelled paths require field assessment and do not establish canopy continuity, safe road crossings, or observed wildlife movement.</p></details>' +
-            '<button id="connection-fit" disabled>View whole path</button>' +
             '<div class="connection-actions"><button id="connection-export" disabled>Download assessment</button><button id="connection-reset">Clear points</button><button id="connection-close">Close</button></div>';
         document.getElementById('sidebar').insertBefore(panel, document.getElementById('tools-section'));
+        const mapLegend = document.createElement('aside'); mapLegend.id = 'connection-map-legend'; mapLegend.hidden = true;
+        mapLegend.setAttribute('aria-label', 'Route comparison legend'); map.getContainer().appendChild(mapLegend);
         const get = id => document.getElementById(id);
         const status = (text, error = false) => { get('connection-status').textContent = text; get('connection-status').classList.toggle('connection-error', error); };
         const fmt = value => value.toLocaleString('en-GB', { maximumFractionDigits: 2 });
@@ -42,13 +46,19 @@
             const drawing = !!(window._developmentScenario && window._developmentScenario.drawing);
             ['connection-start', 'connection-end'].forEach(id => { get(id).disabled = !ready || busy || drawing; });
             get('connection-analyse').disabled = !ready || busy || drawing || !start || !end;
-            get('connection-analyse').textContent = busy ? 'Calculating…' : 'Calculate path';
+            get('connection-analyse').textContent = busy ? 'Calculating…' : footprint ? 'Compare routes' : 'Calculate route';
+            get('connection-development').disabled = busy || drawing;
+            get('connection-development').textContent = footprint ? 'Edit development footprint' : 'Draw a development to compare';
             get('connection-export').disabled = !result;
             get('connection-fit').disabled = !result || ![result.baseline, result.scenario].some(path => path && path.status === 'found');
             get('connection-start').classList.toggle('selected', picking === 'start');
             get('connection-end').classList.toggle('selected', picking === 'end');
-            get('connection-locations').textContent = 'A: ' + (start ? start.map(n => n.toFixed(5)).join(', ') : 'not selected') +
-                ' · B: ' + (end ? end.map(n => n.toFixed(5)).join(', ') : 'not selected');
+            get('connection-locations').textContent = 'A: ' + (start ? 'placed on map' : 'not selected') + ' · B: ' + (end ? 'placed on map' : 'not selected');
+            const complete = [!!(start && end), !!(result && result.baseline), !!(result && result.scenario)];
+            ['points', 'route', 'development'].forEach((step, i) => {
+                const el = get('connection-step-' + step); el.classList.toggle('complete', complete[i]);
+                if (!complete[i] && (i === 0 || complete[i - 1])) el.setAttribute('aria-current', 'step'); else el.removeAttribute('aria-current');
+            });
         }
         function layers() {
             if (!map.getStyle()) return;
@@ -56,10 +66,12 @@
                 if (!map.getSource(id)) map.addSource(id, { type: 'geojson', data: empty() });
             });
             const definitions = [
-                { id: 'connection-existing-line', type: 'line', source: 'connection-existing', paint: { 'line-color': '#7946bf', 'line-width': 4, 'line-dasharray': [2, 1] } },
+                { id: 'connection-existing-halo', type: 'line', source: 'connection-existing', paint: { 'line-color': '#ffffff', 'line-width': 8 } },
+                { id: 'connection-scenario-halo', type: 'line', source: 'connection-scenario', paint: { 'line-color': '#ffffff', 'line-width': 8 } },
                 { id: 'connection-scenario-line', type: 'line', source: 'connection-scenario', paint: { 'line-color': '#d25b05', 'line-width': 4 } },
+                { id: 'connection-existing-line', type: 'line', source: 'connection-existing', paint: { 'line-color': '#7946bf', 'line-width': 4, 'line-dasharray': [2, 1] } },
                 { id: 'connection-points-circle', type: 'circle', source: 'connection-points', paint: { 'circle-radius': 7,
-                    'circle-color': ['match', ['get', 'point'], 'A', '#7946bf', '#d25b05'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } }
+                    'circle-color': '#23364e', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } }
             ];
             definitions.forEach(layer => { if (!map.getLayer(layer.id)) map.addLayer(layer); });
             if (metadata && !map.getSource('connection-high-flow')) {
@@ -82,16 +94,32 @@
                 { type: 'FeatureCollection', features: [result.baseline.geometry] } : empty());
             map.getSource('connection-scenario').setData(active && !beforeView && result && result.scenario && result.scenario.status === 'found' ?
                 { type: 'FeatureCollection', features: [result.scenario.geometry] } : empty());
-            map.getSource('connection-points').setData({ type: 'FeatureCollection', features: active ? [[start, 'A'], [end, 'B']].filter(([p]) => p).map(([p, label]) =>
+            map.getSource('connection-points').setData({ type: 'FeatureCollection', features: active ? [[result && result.snappedStart || start, 'A'], [result && result.snappedEnd || end, 'B']].filter(([p]) => p).map(([p, label]) =>
                 ({ type: 'Feature', properties: { point: label }, geometry: { type: 'Point', coordinates: p } })) : [] });
             if (map.getLayer('connection-high-flow-raster')) map.setLayoutProperty('connection-high-flow-raster', 'visibility', active && get('connection-flow').checked ? 'visible' : 'none');
+            [[start, 'A', result && result.snappedStart], [end, 'B', result && result.snappedEnd]].forEach(([point, label, snapped]) => {
+                if (!active || !point) { if (markers[label]) { markers[label].remove(); delete markers[label]; } return; }
+                if (!markers[label]) {
+                    const element = document.createElement('div'); element.className = 'connection-marker'; element.textContent = label;
+                    element.setAttribute('aria-label', 'Route endpoint ' + label); element.title = 'Route endpoint ' + label;
+                    markers[label] = new mapboxgl.Marker({ element }).setLngLat(snapped || point).addTo(map);
+                } else markers[label].setLngLat(snapped || point);
+            });
+            const before = active && result && result.baseline && result.baseline.status === 'found';
+            const after = active && !beforeView && result && result.scenario && result.scenario.status === 'found';
+            mapLegend.hidden = !active || (!start && !end && !get('connection-flow').checked);
+            mapLegend.innerHTML = '<strong>Routes between A and B</strong>' +
+                (before ? '<div class="connection-legend-row"><span class="connection-key existing-key"></span>Before development</div>' : '') +
+                (after ? '<div class="connection-legend-row"><span class="connection-key scenario-key"></span>With development</div>' : '') +
+                (before && after ? '<p>Where lines overlap, both routes follow the same cells.</p>' : before ? '<p>' + (beforeView && result.hasDevelopment ? 'Showing the before-development view.' : result.scenario ? result.scenario.status === 'endpoint-blocked' ? 'Your footprint covers A or B. Move that endpoint to compare.' : 'No route found with development under this model.' : 'Draw and calculate development to add a comparison.') + '</p>' : '<p>Place A and B, then calculate a route.</p>') +
+                (get('connection-flow').checked ? '<div class="connection-legend-row"><span class="connection-flow-key"></span>Baseline high-flow areas</div>' : '');
         }
         function flowSummary() {
             const target = get('development-connectivity-summary'); if (!target) return;
             if (!result || !result.exposure) { target.textContent = footprint ? 'Loading baseline high-flow exposure…' : ''; return; }
             const exposure = result.exposure;
             target.textContent = 'Baseline high-flow cells touched: ' + exposure.highCells.toLocaleString() + '. Valid flow cells touched: ' + exposure.validCells.toLocaleString() +
-                '. Counts use whole approximately 30 m cells, including boundary contacts. Flow has not been recalculated.' +
+                '. Counts use whole approximately 30 m cells, including boundary contacts.' +
                 (exposure.outside ? ' The footprint extends beyond this flow grid; counts cover available cells only.' : '') +
                 (exposure.validCells < exposure.touchedCells ? ' Some touched cells have no valid flow data.' : '');
         }
@@ -99,26 +127,39 @@
             const target = get('connection-results'); target.hidden = !result;
             if (!result) { target.innerHTML = ''; flowSummary(); return; }
             const row = (label, value) => '<div class="connection-metric"><span>' + label + '</span><strong>' + value + '</strong></div>';
-            let html = '<p class="connection-legend"><span class="existing-key"></span>Existing path <span class="scenario-key"></span>Development path</p>';
+            let html = '';
             const messages = { 'unreachable': 'No path exists between these cells under this model and its blocked-cell rules.',
                 'endpoint-blocked': 'A selected endpoint cell is covered by the development footprint.' };
+            if (result.baseline && result.baseline.status === 'found') {
+                let heading = 'Before-development route ready', explanation = 'Draw a development footprint and select Calculate changes to see how this route would change.';
+                if (result.scenario && result.scenario.status === 'found') {
+                    const change = 100 * (result.scenario.cost / result.baseline.cost - 1);
+                    const same = JSON.stringify(result.baseline.geometry) === JSON.stringify(result.scenario.geometry);
+                    heading = same ? 'No route change for A to B' : 'The route changes around your development';
+                    explanation = same ? 'The same modelled route remains available for these two locations.' : 'The new route avoids your development footprint.';
+                    explanation += change > 0.005 ? ' Resistance cost increases by ' + fmt(change) + '%.' : Math.abs(change) > 1e-9 ? ' Resistance cost changes by less than 0.01%.' : ' Resistance cost stays the same.';
+                    if (result.scenario.lengthM < result.baseline.lengthM - 1 && change > 0.005) explanation += ' A shorter route can still pass through higher-resistance cells.';
+                } else if (result.scenario) { heading = result.scenario.status === 'endpoint-blocked' ? 'Development covers a selected endpoint' : 'No route found with this development'; explanation = messages[result.scenario.status] + (result.scenario.status === 'endpoint-blocked' ? ' Move A or B outside the footprint to compare routes.' : ' This result applies to this route model and these endpoints.'); }
+                html += '<div class="connection-outcome"><strong>' + heading + '</strong><p>' + explanation + '</p></div>';
+            } else if (!result.baseline) html += '<div class="connection-outcome"><strong>Development footprint assessed</strong><p>Choose A and B to compare a route before and with development.</p></div>';
             if (result.baseline) {
                 if (result.baseline.status === 'found') {
-                    html += row('Existing path length', fmt(result.baseline.lengthM / 1000) + ' km') + row('Existing accumulated cost', fmt(result.baseline.cost)) +
-                        row('Length in highest resistance', fmt(result.baseline.highestResistanceM / 1000) + ' km');
+                    html += '<section class="connection-route-card"><h4><span class="connection-key existing-key"></span>Before development</h4><p>Route through the current landscape.</p>' + row('Route length', fmt(result.baseline.lengthM / 1000) + ' km') + '</section>';
                 } else html += '<p>' + messages[result.baseline.status] + '</p>';
             }
             if (result.scenario) {
                 if (result.scenario.status === 'found') {
-                    html += row('Development path length', fmt(result.scenario.lengthM / 1000) + ' km') + row('Development accumulated cost', fmt(result.scenario.cost)) +
-                        row('Development length in highest resistance', fmt(result.scenario.highestResistanceM / 1000) + ' km');
-                    if (result.baseline.status === 'found') html += row('Change in accumulated cost', fmt(100 * (result.scenario.cost / result.baseline.cost - 1)) + '%');
-                } else html += '<p class="connection-warning">' + messages[result.scenario.status] + ' This does not establish population isolation.</p>';
+                    html += '<section class="connection-route-card"><h4><span class="connection-key scenario-key"></span>With development</h4><p>Route with your footprint treated as a barrier.</p>' + row('Route length', fmt(result.scenario.lengthM / 1000) + ' km') + '</section>';
+                }
                 if (result.outsideResistanceExtent) html += '<p class="connection-warning">Part of the footprint is outside the resistance map. Only available cells are assessed.</p>';
             }
             if (result.exposure) html += row('Baseline high-flow cells touched', result.exposure.highCells.toLocaleString());
-            if (!result.hasDevelopment) html += '<p class="connection-detail">Draw and calculate a development footprint to compare its effect on this path.</p>';
-            html += '<p class="connection-detail">Cost is resistance × projected metres, not a movement probability. Endpoints snap to native cell centres. Finite high resistance remains traversable; paths need feasibility checks.</p>';
+            if (result.baseline && result.baseline.status === 'found') {
+                html += '<details class="connection-cost-details"><summary>Resistance cost and route details</summary><p>Lower cost means the route crosses less resistance overall. Cost combines resistance and distance; it is not a movement probability.</p>' +
+                    row('Before: resistance cost', fmt(result.baseline.cost)) + row('Before: length in highest resistance', fmt(result.baseline.highestResistanceM / 1000) + ' km');
+                if (result.scenario && result.scenario.status === 'found') html += row('With development: resistance cost', fmt(result.scenario.cost)) + row('With development: length in highest resistance', fmt(result.scenario.highestResistanceM / 1000) + ' km');
+                html += '<p>Cost uses resistance × projected metres. Endpoints snap to native cell centres.</p></details>';
+            }
             target.innerHTML = html; flowSummary();
         }
         function load() {
@@ -137,7 +178,7 @@
                 worker.onmessage = event => {
                     const message = event.data;
                     if (message.type === 'ready') {
-                        ready = true; metadata = message.metadata; status('Model loaded. Choose start A and end B on the map.');
+                        ready = true; metadata = message.metadata; status('Choose A and B on the map. These are the same endpoints for both routes.');
                         drawMap(); update(); resolve(); return;
                     }
                     if (message.job != null && message.job !== job) return;
@@ -147,10 +188,17 @@
                         const target = get('development-connectivity-summary'); if (target) target.textContent = message.message;
                         update(); return;
                     }
-                    if (message.type === 'progress') { status('Calculating ' + message.phase + ' path… ' + message.expanded.toLocaleString() + ' cells searched.'); return; }
+                    if (message.type === 'progress') { status(message.phase === 'existing' ? 'Finding the route before development…' : 'Finding a route around your development…'); return; }
                     if (message.type === 'result') {
                         result = message.result; busy = false; drawMap(); render(); update();
-                        status(result.baseline ? 'Path assessment calculated. Purple is existing; orange is the development scenario.' : 'Baseline high-flow exposure calculated. Select two locations to assess a path.');
+                        let completionText = 'Footprint assessed. Choose A and B to compare routes.';
+                        if (result.baseline) {
+                            if (result.baseline.status !== 'found') completionText = 'No route found between A and B under this model.';
+                            else if (!result.scenario) completionText = 'Before-development route ready. Draw a development to add the orange comparison route.';
+                            else if (result.scenario.status === 'found') completionText = 'Comparison ready. Dashed purple: before development. Solid orange: with development.';
+                            else completionText = result.scenario.status === 'endpoint-blocked' ? 'Your footprint covers A or B. Move the covered endpoint outside development.' : 'Comparison complete. No route found with this development under the model.';
+                        }
+                        status(completionText);
                     }
                 };
                 worker.postMessage({ type: 'load', url: metadataURL });
@@ -187,12 +235,17 @@
             if (footprint) analyse();
         });
         get('connection-analyse').addEventListener('click', analyse);
+        get('connection-development').addEventListener('click', () => {
+            if (!window._developmentScenario.active) get('development-toggle').click();
+            else get('development-panel').scrollIntoView({ block: 'start', behavior: 'smooth' });
+        });
         get('connection-flow').addEventListener('change', drawMap);
         get('connection-fit').addEventListener('click', () => {
             const coordinates = [result.baseline, result.scenario].filter(path => path && path.status === 'found').flatMap(path => path.geometry.geometry.coordinates);
             let west = Infinity, east = -Infinity, south = Infinity, north = -Infinity;
             coordinates.forEach(([x,y]) => { west = Math.min(west,x); east = Math.max(east,x); south = Math.min(south,y); north = Math.max(north,y); });
             map.fitBounds([[west,south],[east,north]], { padding:70, maxZoom:17, duration:500 });
+            if (window.matchMedia('(max-width:768px)').matches && !get('sidebar').classList.contains('collapsed')) get('toggle-sidebar-btn').click();
         });
         get('connection-reset').addEventListener('click', () => {
             start = end = null; picking = null; map.getCanvas().style.cursor = ''; invalidate();

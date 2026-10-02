@@ -10,8 +10,8 @@
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="vendor/mapbox-gl-draw-1.4.3.css">
-    <link rel="stylesheet" href="development.css">
-    <link rel="stylesheet" href="connectivity.css">
+    <link rel="stylesheet" href="development.css?v=20261002-clarity">
+    <link rel="stylesheet" href="connectivity.css?v=20261002-clarity">
 
     <style>
         /* ── Font reset ── */
@@ -459,10 +459,10 @@
             <p>The connectivity potential rating is derived from Omniscape circuit theory modelling, which simulates how movement current flows across the landscape. High (cyan) indicates the patch has high connectivity potential, Moderate (yellow) indicates partial connectivity potential; Low (red) indicates high surrounding landscape resistance and low connectivity potential; Barrier (dark purple) indicates the patch is surrounded by effectively impermeable matrix, with no connectivity potential.</p>
 
             <h3>Modelled connections</h3>
-            <p>Click "Connections", choose start and end locations, and calculate a least-cost path using the supplied approximately 30 m resistance grid. Purple shows the existing path; orange shows the path when a calculated development footprint is treated as impassable. Blue high-flow areas come from the supplied normalized-current surface. They are baseline outputs and are not recalculated. Modelled paths do not establish safe crossings or observed wildlife movement.</p>
+            <p>Click "Connections" and place the labelled A and B points on the map. Calculate a route, then draw a development and select "Calculate changes" to compare. The dashed purple route shows the landscape before development. The solid orange route avoids your footprint, which is treated as a barrier. Both routes connect the same A and B. The map legend and result summary explain the comparison; "View routes on map" brings both routes into view. Blue areas show baseline high flow. These are modelled routes that need field assessment.</p>
 
             <h3>Development scenarios</h3>
-            <p>Click "Development", then draw a line with a total width, a rectangle, or a polygon. Choose "Calculate changes" to see the forest area removed and the fragments remaining. Switch between "Existing forest" and "Development scenario" to compare. This assumes complete forest clearance inside the footprint. Connectivity and wildlife movement have not been recalculated.</p>
+            <p>Click "Development", then draw a line with a total width, a rectangle, or a polygon. Choose "Calculate changes" to see the forest area removed and the fragments remaining. Switch between "Before development" and "With development" to compare. Green shows forest remaining, red shows forest cleared, and the orange outline marks your footprint. This assumes complete forest clearance inside the footprint. Select "Compare routes before and with development" to assess a route between A and B.</p>
 
             <h3>Downloading a patch report card</h3>
             <p>Click any forest patch to open its details in the sidebar, then click the <strong>Download report card</strong> button at the bottom of the panel. The card will generate automatically and download as a PNG image to your device.</p>
@@ -482,8 +482,8 @@
     <script src="features.js"></script>
     <script src="config-kuantan.js"></script>
     <script src="app-kuantan.js"></script>
-    <script src="development.js"></script>
-    <script src="connectivity.js"></script>
+    <script src="development.js?v=20261002-clarity"></script>
+    <script src="connectivity.js?v=20261002-clarity"></script>
 </body>
 </html>
 
