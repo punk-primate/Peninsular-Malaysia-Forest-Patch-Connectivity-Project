@@ -21,7 +21,7 @@
             window._mapInstance = this;
             var self = this;
             this.on('click', function (e) {
-                if (window._developmentScenario && window._developmentScenario.active) return;
+                if ((window._developmentScenario && window._developmentScenario.active) || (window._connectivityExplorer && window._connectivityExplorer.picking)) return;
                 try {
                     var style = self.getStyle();
                     if (!style) return;
@@ -47,7 +47,7 @@
 
     function initReportCards() {
         var observer = new MutationObserver(function () {
-            if (window._developmentScenario && window._developmentScenario.active) return;
+            if ((window._developmentScenario && window._developmentScenario.active) || (window._connectivityExplorer && window._connectivityExplorer.picking)) return;
             var content = document.getElementById('patch-info-content');
             if (!content) return;
             if (document.getElementById('report-card-btn')) return;

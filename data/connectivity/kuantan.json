@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "landscape": "Kuantan",
+  "resistance": {
+    "width": 2739,
+    "height": 2214,
+    "crs": "EPSG:32648",
+    "projection": "+proj=utm +zone=48 +datum=WGS84 +units=m +no_defs=True",
+    "originX": 245556.55244330654,
+    "originY": 464253.75669668027,
+    "cellWidth": 29.868170694581046,
+    "cellHeight": 29.86817069458106,
+    "file": "kuantan-resistance.bin.gz",
+    "sha256": "df94cde6d4dcc7a927779846c037d627ddbca3694be598b262b92c770cc2ef72",
+    "minimum": 1,
+    "maximum": 100,
+    "values": [
+      1,
+      10,
+      25,
+      50,
+      75,
+      100
+    ],
+    "validCells": 6036239
+  },
+  "flow": {
+    "width": 2738,
+    "height": 2207,
+    "crs": "EPSG:32648",
+    "projection": "+proj=utm +zone=48 +datum=WGS84 +units=m +no_defs=True",
+    "originX": 245616.2888,
+    "originY": 464074.5477,
+    "cellWidth": 29.86817067202336,
+    "cellHeight": 29.868170729497056,
+    "file": "kuantan-flow-flags.bin.gz",
+    "sha256": "8682f9ee3b7dac00b06b9559ea164d521750b9d0505b9a9a80e265e5d3f84122",
+    "positiveCells": 3326147,
+    "validCells": 3384071,
+    "highCells": 332615,
+    "threshold": 1.3156023579435476,
+    "percentile": 90,
+    "label": "High-flow areas in supplied normalized current (top 10% of positive cells)",
+    "display": {
+      "file": "kuantan-high-flow.png",
+      "coordinates": [
+        [
+          102.70842587667201,
+          4.197001435477931
+        ],
+        [
+          103.44657154563303,
+          4.197001435477931
+        ],
+        [
+          103.44657154563303,
+          3.599303711481198
+        ],
+        [
+          102.70842587667201,
+          3.599303711481198
+        ]
+      ],
+      "resolutionM": 90,
+      "resampling": "maximum; display only"
+    }
+  },
+  "sourceModel": "Supplied model; resistance calibration, window size and multi-scenario aggregation not specified in TIFF metadata",
+  "provenance": {
+    "Resistance": {
+      "file": "Kuantan_Resistance.tif",
+      "sha256": "dbf6872d3f2989d26dcf176aaf573374d29687577e42a4199fbe625089a2a7b8"
+    },
+    "cum_currmap": {
+      "file": "Kuantan_cum_currmap.tif",
+      "sha256": "73d862e5e5d5a35f7133d3ed64b9d95efca2f2bffb0479790b644ced9fabb305"
+    },
+    "flow_potential": {
+      "file": "Kuantan_flow_potential.tif",
+      "sha256": "0bb2c5386126c5a363ba99aed026867d0537cad304617924577373d7292bc47b"
+    },
+    "normalized_cum_currmap": {
+      "file": "Kuantan_normalized_cum_currmap.tif",
+      "sha256": "91731ba4d89116edd62b66261bc71586bb047e5368194ebc1bf9408d82d12980"
+    }
+  },
+  "normalizationMaxError": 0.0,
+  "restorationPotentialUsed": false
+}

@@ -25,8 +25,9 @@ The platform hosts data for 11,466 Klang Valley patches and 4,699 Kuantan patche
 - Explore the spatial distribution of forest patches classified into six conservation tiers based on the Patch Structural Quality Index (PSQI)
 - Filter patches by tier or area
 - Click any patch to retrieve its tier classification, connectivity rating, distance to the nearest adjacent forest, and underlying structural metric values
-- Toggle a corridor overlay showing potential movement pathways between patches, coloured by connectivity level (High / Moderate / Low)
-- Filter corridors independently by connectivity class and tier
+- Select two locations and calculate a native-grid least-cost path using supplied resistance data
+- Draw a development footprint and compare forest clearance, fragmentation, and modelled path changes
+- View supplied baseline high-flow areas and count cells touched by development
 - Search for any location within the study areas
 - Switch between a custom basemap and satellite imagery
 - Share a direct link to any map view
@@ -35,13 +36,15 @@ The platform is designed for use without specialist GIS knowledge and is intende
 
 ---
 
-## Development scenarios (draft first version)
+## Development and connectivity scenarios
 
 The development tool accepts a line with a specified total width, a rectangle, or a custom polygon. It computes direct forest loss and surviving forest fragments from complete supplied patch polygons, and displays existing and development-scenario map views. Calculations assume complete forest clearance inside one footprint; circuit-theory connectivity, structural tiers, and future development growth are not recalculated.
 
-[Calculation methods, data provenance, and verification](docs/development-scenarios.md).
+[Forest-clearance methods](docs/development-scenarios.md) and [connectivity methods, data provenance, and verification](docs/connectivity-scenarios.md).
 
-Geometry tests: `node --test tests/scenario-engine.test.cjs`. For local review, run `python -m http.server 8000` from the repository root and open either map page. Current browsers supporting Web Workers and DecompressionStream are required.
+Connections compares an existing least-cost path with a development scenario that treats every touched resistance cell as impassable. The original approximately 30 m resistance grids are retained. Blue areas show the top 10% of positive supplied normalized-current values, and footprint exposure uses their native grid. These are baseline flow areas; circuit current is not recalculated. Finite high resistance remains traversable outside the footprint, so paths need ecological and crossing-feasibility assessment.
+
+Geometry tests: `node --test tests/scenario-engine.test.cjs tests/connectivity-engine.test.cjs`. For local review, run `python -m http.server 8000` from the repository root and open either map page. Current browsers supporting Web Workers and DecompressionStream are required.
 
 ---
 
