@@ -11,6 +11,9 @@
         const empty = () => ({ type: 'FeatureCollection', features: [] });
         const api = window._developmentScenario = {
             get active() { return active; },
+            get drawing() { return drawing; },
+            get footprint() { return result ? result.footprint : null; },
+            get view() { return view; },
             decoratePatchFilter: function (base) {
                 if (!active || !result || !result.affected.length) return base;
                 const exclude = ['!', ['in', ['to-string', ['get', PATCH_ID_ATTRIBUTE]], ['literal', result.affected.map(p => String(p.id))]]];
@@ -44,6 +47,8 @@
             get('development-analyse').disabled = !ready || !feature || drawing || busy;
             get('development-analyse').textContent = busy ? 'Calculating…' : 'Calculate changes';
             get('development-drawing-actions').hidden = !drawing;
+            document.dispatchEvent(new CustomEvent('forestconnect:development', { detail: { active, drawing,
+                footprint: active && result ? result.footprint : null, view } }));
         }
         function loadScript(url) {
             return new Promise((resolve, reject) => {
@@ -270,6 +275,8 @@
                 row('Patches with new separation', result.splitCount.toLocaleString()) +
                 row('Patches completely removed', result.removedCount.toLocaleString()) +
                 '<p class="development-detail">Additional fragments: ' + result.newFragments + '. Existing disconnected parts are accounted for; touching corners count as connected.</p>' +
+                '<div id="development-connectivity-summary" class="development-detail">Loading baseline high-flow exposure…</div>' +
+                '<button data-open-connectivity>Compare a modelled path</button>' +
                 '<details><summary>Landscape totals</summary>' + row('Existing mapped forest', area(result.baselineHa) + ' ha') +
                 row('Forest after this scenario', area(result.remainingLandscapeHa) + ' ha') + '</details>';
             if (!result.affected.length) html += '<p class="development-detail">' + (result.outsideDatasetExtent ? 'This footprint is outside the extent of the supplied forest data.' : 'No mapped forest overlaps this footprint. This result does not assess other habitats or development impacts.') + '</p>';
@@ -283,12 +290,13 @@
             html += '<button id="development-export">Download scenario</button>';
             container.innerHTML = html;
             container.querySelectorAll('[data-view]').forEach(el => el.addEventListener('click', () => {
-                view = el.dataset.view; container.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('selected', b.dataset.view === view)); applyMapView();
+                view = el.dataset.view; container.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('selected', b.dataset.view === view)); applyMapView(); updateActions();
             }));
             get('development-export').addEventListener('click', () => {
                 const output = { landscape: FOREST_PATCH_LAYER_ID, assumption: 'Complete mapped forest clearance inside the footprint',
                     areaMethod: 'Turf 6.5.0 spherical geodesic area from complete supplied polygons',
                     connectivityRecalculated: false, created: new Date().toISOString(), ...result };
+                if (window._connectivityExplorer) output.connectivityAssessment = window._connectivityExplorer.assessment;
                 const url = URL.createObjectURL(new Blob([JSON.stringify(output)], { type: 'application/json' }));
                 const link = document.createElement('a'); link.href = url; link.download = 'development-scenario.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
             });

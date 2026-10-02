@@ -83,6 +83,63 @@ async function run() {
             await page.locator('[data-view="scenario"]').click();
             const download = page.waitForEvent('download'); await page.locator('#development-export').click();
             assert.equal((await download).suggestedFilename(), 'development-scenario.json');
+            await page.waitForFunction(() => /Baseline high-flow cells touched:/.test(document.getElementById('development-connectivity-summary').textContent), null, { timeout:20000 });
+            // Select known native-grid cells near each landscape centre, using
+            // both complete resistance models rather than the fixture map tiles.
+            const connectionMeta = JSON.parse(fs.readFileSync(path.join(root, 'data/connectivity', landscape + '.json')));
+            const connectionEngine = require('../connectivity-engine.js');
+            const costs = new Uint8Array(zlib.gunzipSync(fs.readFileSync(path.join(root, 'data/connectivity', connectionMeta.resistance.file))));
+            const nativeGrid = connectionEngine.prepare(connectionMeta.resistance, costs), cm = connectionMeta.resistance;
+            const nativeRow = Math.floor(cm.height/2), nativeCol = Math.floor(cm.width/2);
+            const startCell = nativeRow * cm.width + nativeCol - 40, endCell = nativeRow * cm.width + nativeCol + 40;
+            const startPoint = connectionEngine.coordinateAt(nativeGrid, startCell), endPoint = connectionEngine.coordinateAt(nativeGrid, endCell);
+            const baselinePath = connectionEngine.findPath(nativeGrid, startCell, endCell);
+            const middle = baselinePath.indices[Math.floor(baselinePath.indices.length/2)], mx = middle % cm.width, my = Math.floor(middle/cm.width);
+            const developmentCorners = [[mx-10,my-20],[mx+11,my+21]].map(([x,y]) => nativeGrid.projection.inverse([cm.originX+x*cm.cellWidth,cm.originY-y*cm.cellHeight]));
+            await page.locator('[data-open-connectivity]').click();
+            await page.locator('#connection-start').waitFor({state:'visible'});
+            await page.waitForFunction(() => !document.getElementById('connection-start').disabled);
+            await page.evaluate(([a,b]) => window._mapInstance.jumpTo({center:[(a[0]+b[0])/2,(a[1]+b[1])/2],zoom:14.5}), [startPoint,endPoint]);
+            await page.locator('#connection-start').click(); await clickCoordinate(startPoint);
+            await page.locator('#connection-end').click(); await clickCoordinate(endPoint);
+            try {
+                await page.waitForFunction(() => /Path assessment calculated/.test(document.getElementById('connection-status').textContent), null, {timeout:20000});
+            } catch (error) {
+                console.error('Connection state',await page.evaluate(()=>({status:document.getElementById('connection-status').textContent,locations:document.getElementById('connection-locations').textContent,assessment:window._connectivityExplorer.assessment,development:document.getElementById('development-status').textContent})),errors);
+                throw error;
+            }
+            const assessedCost = await page.evaluate(() => window._connectivityExplorer.assessment.baseline.cost);
+            assert.ok(Math.abs(assessedCost-baselinePath.cost)<1e-8);
+            await page.locator('#connection-flow').check();
+            assert.equal(await page.evaluate(() => window._mapInstance.getLayoutProperty('connection-high-flow-raster','visibility')), 'visible');
+            const routeDownload = page.waitForEvent('download'); await page.locator('#connection-export').click();
+            assert.equal((await routeDownload).suggestedFilename(), 'connectivity-assessment.json');
+            await page.evaluate(([a,b]) => window._mapInstance.jumpTo({center:[(a[0]+b[0])/2,(a[1]+b[1])/2],zoom:14.5}), developmentCorners);
+            await page.locator('[data-shape="rectangle"]').click();
+            await clickCoordinate(developmentCorners[0]); await clickCoordinate(developmentCorners[1]); await calculate();
+            try {
+                await page.waitForFunction(() => {
+                    const a=window._connectivityExplorer.assessment;
+                    return a && a.scenario && a.scenario.status==='found' && a.scenario.cost>=a.baseline.cost &&
+                        JSON.stringify(a.scenario.geometry)!==JSON.stringify(a.baseline.geometry);
+                }, null, {timeout:20000});
+            } catch(error) {
+                console.error('Reroute state',await page.evaluate(()=>({status:document.getElementById('connection-status').textContent,
+                    locations:document.getElementById('connection-locations').textContent,assessment:window._connectivityExplorer.assessment,
+                    footprint:window._developmentScenario.footprint})),errors); throw error;
+            }
+            assert.ok(await page.evaluate(() => window._mapInstance.getSource('connection-scenario')._data.features.length>0));
+            await page.locator('[data-view="before"]').click();
+            assert.equal(await page.evaluate(() => window._mapInstance.getSource('connection-scenario')._data.features.length), 0);
+            await page.locator('[data-view="scenario"]').click();
+            await page.locator('#connection-fit').click();
+            await page.waitForFunction(() => !window._mapInstance.isMoving());
+            if (process.env.SCENARIO_SCREENSHOT_DIR) await page.screenshot({ path:path.join(process.env.SCENARIO_SCREENSHOT_DIR, landscape + '-connectivity.png') });
+            await page.locator('#connection-close').click();
+            assert.equal(await page.evaluate(() => window._mapInstance.getSource('connection-existing')._data.features.length), 0);
+            await page.locator('#development-reset').click();
+            await page.waitForFunction(() => !window._connectivityExplorer.assessment?.hasDevelopment, null, {timeout:20000});
+            await page.evaluate(([x,y]) => window._mapInstance.jumpTo({center:[x,y],zoom:16}), [cx,cy]);
             if (process.env.SCENARIO_SCREENSHOT_DIR) await page.screenshot({ path:path.join(process.env.SCENARIO_SCREENSHOT_DIR, landscape + '-scenario.png') });
             await page.locator('[data-shape="line"]').click();
             await clickCoordinate([cx, bbox[1] - 0.0001]);
@@ -107,7 +164,7 @@ async function run() {
             await page.locator('#development-cancel').click(); assert.equal(await page.locator('#development-analyse').isEnabled(), false);
             await page.locator('#development-close').click();
             assert.deepEqual(errors, []);
-            console.log(landscape + ': rectangle, line, polygon, width edit, before/after, download, reset, close, reopen, and cancel passed');
+            console.log(landscape + ': drawing regression, native-grid path, development rerouting, baseline flow exposure, flow overlay, exports, before/after, reset, and controls passed');
             await page.close();
         }
     } finally { await browser.close(); server.close(); }

@@ -1,0 +1,30 @@
+#connectivity-toggle { background:#254f86; color:#fff; border:0; border-radius:4px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; }
+#connectivity-toggle.active { background:#18335a; }
+#connectivity-panel[hidden], #connectivity-panel [hidden] { display:none !important; }
+#connectivity-panel { font-size:13px; line-height:1.5; }
+#connectivity-panel h3 { color:#254f86; border-left-color:#254f86; }
+#connectivity-panel button { border:1px solid #c6ccd5; border-radius:4px; background:#fff; padding:7px; color:#23364e; font-size:12px; cursor:pointer; }
+#connectivity-panel button:disabled { opacity:.45; cursor:default; }
+#connectivity-panel button:focus-visible, #connection-flow:focus-visible { outline:2px solid #2563eb; outline-offset:2px; }
+#connectivity-panel button.selected { background:#254f86; color:#fff; }
+.connection-points, .connection-actions { display:flex; gap:6px; margin:10px 0; }
+.connection-points button, .connection-actions button { flex:1; }
+#connection-locations, .connection-detail { font-size:11px; color:#596775; overflow-wrap:anywhere; }
+.connection-flow-toggle { display:flex; align-items:center; gap:6px; margin:12px 0; }
+#connection-status { padding:9px; border-radius:4px; background:#edf3fa; }
+#connection-status.connection-error, .connection-warning { color:#8b2c1a; background:#fff1ed; padding:8px; }
+#connectivity-panel .connection-primary { width:100%; background:#254f86; color:#fff; font-weight:700; }
+.connection-metric { display:flex; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid #e1e6ee; }
+.connection-metric strong { text-align:right; white-space:nowrap; }
+.connection-legend { display:flex; align-items:center; flex-wrap:wrap; gap:5px; font-size:11px; }
+.connection-legend span { display:inline-block; width:15px; height:4px; margin-left:3px; }
+.existing-key { background:#7946bf; } .scenario-key { background:#d25b05; }
+#connectivity-panel details { margin-top:14px; font-size:11px; }
+#connectivity-panel summary { font-weight:600; cursor:pointer; }
+#development-panel [data-open-connectivity] { width:100%; margin:10px 0; }
+body.dark-mode #connectivity-panel button { background:#233449; color:#e3eaf5; border-color:#536680; }
+body.dark-mode #connectivity-panel button.selected { background:#254f86; }
+body.dark-mode #connection-status { background:#233449; color:#e3eaf5; }
+body.dark-mode #connection-status.connection-error, body.dark-mode .connection-warning { background:#552c22; color:#ffc4a8; }
+body.dark-mode #connection-locations, body.dark-mode .connection-detail { color:#c1cbda; }
+@media(max-width:600px) { #connectivity-toggle { padding:6px; font-size:10px; } }

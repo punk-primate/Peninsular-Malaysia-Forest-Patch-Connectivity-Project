@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="vendor/mapbox-gl-draw-1.4.3.css">
     <link rel="stylesheet" href="development.css">
+    <link rel="stylesheet" href="connectivity.css">
 
     <style>
         /* ── Font reset ── */
@@ -376,14 +377,7 @@
                     <span class="howto-text">How to use this map</span>
                     <span class="howto-icon">?</span>
                 </button>
-                <div id="corridor-controls">
-                    <button id="corridor-toggle-fab">Show corridors</button>
-                    <div id="conn-level-toggles" style="display:none">
-                        <button id="conn-filter-high">High</button>
-                        <button id="conn-filter-moderate">Moderate</button>
-                        <button id="conn-filter-low">Low</button>
-                    </div>
-                </div>
+                <div id="corridor-controls" style="display:none"></div>
                 <a href="index.html" id="home-btn" title="Back to home">🏠</a>
                 <button id="copy-link-btn" title="Copy link to this view" style="background:none;border:1px solid #ccc;border-radius:5px;padding:5px 9px;font-size:12px;font-weight:600;cursor:pointer;transition:background 0.15s">🔗 Share</button>
             </div>
@@ -392,16 +386,7 @@
                 [ SYSTEM NOTICE ]<br>ZOOM IN TO VIEW FOREST PATCHES
             </div>
 
-            <!-- Corridor tier filter — only shown if connector layer has Tier data -->
-            <div id="corridor-tier-filter" style="display:none;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(255,255,255,0.97);border-radius:8px;padding:7px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.18);gap:6px;align-items:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;white-space:nowrap">
-                <span style="font-weight:600;color:#555;margin-right:4px">Show corridors for:</span>
-                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 1 (Primary forest)">T1</button>
-                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 2 (Established forest)">T2</button>
-                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 3 (Functional fragment)">T3</button>
-                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 4 (Vulnerable fragment)">T4</button>
-                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 5 (Marginal fragment)">T5</button>
-                <button class="corr-tier-btn conn-level-btn active" data-tier="Tier 6 (Remnant patch)">T6</button>
-            </div>
+            <div id="corridor-tier-filter" style="display:none"></div>
 
             <!-- First-visit onboarding overlay -->
             <div id="onboarding-overlay" style="display:none;position:absolute;inset:0;z-index:999;background:rgba(0,0,0,0.72);align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
@@ -414,7 +399,7 @@
                         </div>
                         <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
                             <span style="background:#2a8234;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">2</span>
-                            <p style="margin:0;font-size:0.88em;color:#333;line-height:1.5"><strong>Toggle potential movement corridors</strong> using the "Show corridors" button at the top of the map.</p>
+                            <p style="margin:0;font-size:0.88em;color:#333;line-height:1.5"><strong>Explore modelled paths</strong> using "Connections". Select two locations and calculate a least-cost path through the supplied resistance model.</p>
                         </div>
                         <div style="display:flex;align-items:flex-start;gap:12px">
                             <span style="background:#2a8234;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">3</span>
@@ -473,8 +458,8 @@
             <h3>Connectivity potential rating</h3>
             <p>The connectivity potential rating is derived from Omniscape circuit theory modelling, which simulates how movement current flows across the landscape. High (cyan) indicates the patch has high connectivity potential, Moderate (yellow) indicates partial connectivity potential; Low (red) indicates high surrounding landscape resistance and low connectivity potential; Barrier (dark purple) indicates the patch is surrounded by effectively impermeable matrix, with no connectivity potential.</p>
 
-            <h3>Potential movement corridors</h3>
-            <p>Click "Show corridors" to reveal lines connecting forest patches to their nearest neighbours. Each line is coloured by connectivity level. Use the High, Moderate, and Low buttons to toggle each level on or off. Click any corridor line to see details in the sidebar.</p>
+            <h3>Modelled connections</h3>
+            <p>Click "Connections", choose start and end locations, and calculate a least-cost path using the supplied approximately 30 m resistance grid. Purple shows the existing path; orange shows the path when a calculated development footprint is treated as impassable. Blue high-flow areas come from the supplied normalized-current surface. They are baseline outputs and are not recalculated. Modelled paths do not establish safe crossings or observed wildlife movement.</p>
 
             <h3>Development scenarios</h3>
             <p>Click "Development", then draw a line with a total width, a rectangle, or a polygon. Choose "Calculate changes" to see the forest area removed and the fragments remaining. Switch between "Existing forest" and "Development scenario" to compare. This assumes complete forest clearance inside the footprint. Connectivity and wildlife movement have not been recalculated.</p>
@@ -498,6 +483,7 @@
     <script src="config-kuantan.js"></script>
     <script src="app-kuantan.js"></script>
     <script src="development.js"></script>
+    <script src="connectivity.js"></script>
 </body>
 </html>
 

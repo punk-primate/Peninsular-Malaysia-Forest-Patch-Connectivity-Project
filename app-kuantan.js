@@ -95,15 +95,6 @@ initializeTierFilters();
         });
         applyForestFilter();
     }
-    function resolveConnectorLayerId() {
-        if (!CONNECTOR_LAYER_ID) return null;
-        if (map.getLayer(CONNECTOR_LAYER_ID)) return CONNECTOR_LAYER_ID;
-        const layers = map.getStyle().layers || [];
-        const found = layers.find(l => l.type === 'line' && l.id.toLowerCase().includes('connector'));
-        if (found) { console.log('Connector layer resolved to:', found.id); return found.id; }
-        console.warn('No connector layer found. Searched for:', CONNECTOR_LAYER_ID);
-        return null;
-    }
     let resolvedPatchId = FOREST_PATCH_LAYER_ID;
     function resolvePatchLayerId() {
         if (map.getLayer(resolvedPatchId)) { resolvedPatchId = FOREST_PATCH_LAYER_ID; return; }
@@ -123,200 +114,21 @@ initializeTierFilters();
             console.error('Could not resolve patch layer. Config:', FOREST_PATCH_LAYER_ID);
         }
     }
-    const CONN_COLORS = { High: '#00ffff', Moderate: '#ffff00', Low: '#ff3300' };
-    let resolvedConnectorId = null;
-    let corridorVisible     = false;
-    let connAnimFrame       = null;
-    let connActiveFilters   = new Set(['High', 'Moderate', 'Low']);
-    function applyConnectorFilter() {
-        const active = Array.from(connActiveFilters);
-        const filterExpr = active.length === 0
-            ? ['==', ['get', 'connectivity'], '__none__']
-            : active.length === 3
-                ? null
-                : ['match', ['get', 'connectivity'], active, true, false];
-        ['connector-glow', 'connector-solid'].forEach(id => {
-            if (map.getLayer(id)) map.setFilter(id, filterExpr);
-        });
-    }
-    function updateLevelBtn(btn, level) {
-        const on = connActiveFilters.has(level);
-        btn.textContent = (on ? '\u2713 ' : '') + level;
-        btn.classList.toggle('active', on);
-    }
     function initializeConnectorLayer() {
-        resolvedConnectorId = resolveConnectorLayerId();
-        const toggleBtn  = document.getElementById('corridor-toggle-fab');
-        const levelPanel = document.getElementById('conn-level-toggles');
-        if (!resolvedConnectorId) {
-            if (toggleBtn)  toggleBtn.style.display  = 'none';
-            if (levelPanel) levelPanel.style.display = 'none';
-            return;
-        }
-        map.getStyle().layers.forEach(layer => {
-            if (layer.id.toLowerCase().includes('connector'))
-                try { map.setLayoutProperty(layer.id, 'visibility', 'none'); } catch(e) {}
-        });
-        const studioOutlineId = '';
-        try {
-            const styleDef  = map.getStyle();
-            const connLayer = styleDef.layers.find(l => l.id === resolvedConnectorId);
-            const srcName   = connLayer && connLayer.source;
-            const srcLayer  = connLayer && connLayer['source-layer'];
-            const srcDef    = srcName && styleDef.sources[srcName];
-            let tileUrl = null;
-            if (srcDef) {
-                if (srcDef.url)   tileUrl = srcDef.url;
-                if (srcDef.tiles) tileUrl = srcDef.tiles;
+        // Original nearest-neighbour connectors are superseded by native-grid paths.
+        (map.getStyle().layers || []).forEach(layer => {
+            if (layer.id === CONNECTOR_LAYER_ID || /connector/i.test(layer.id)) {
+                try { map.setLayoutProperty(layer.id, 'visibility', 'none'); } catch (_) {}
             }
-            if (tileUrl && srcLayer && !map.getSource('corridor-outline-src')) {
-                const srcSpec = { type: 'vector' };
-                if (Array.isArray(tileUrl)) { srcSpec.tiles = tileUrl; } else { srcSpec.url = tileUrl; }
-                map.addSource('corridor-outline-src', srcSpec);
-                const corrColorExpr = ['match', ['get', 'connectivity'],
-                    'High', '#00ffff', 'Moderate', '#ffff00', 'Low', '#ff3300', '#ffffff'];
-                map.addLayer({
-                    id: 'connector-glow', type: 'line',
-                    source: 'corridor-outline-src', 'source-layer': srcLayer,
-                    minzoom: 10, slot: 'top',
-                    layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
-                    paint: {
-                        'line-color': corrColorExpr,
-                        'line-width': 28, 'line-blur': 14,
-                        'line-opacity': 0.9, 'line-emissive-strength': 1
-                    }
-                });
-                map.addLayer({
-                    id: 'connector-solid', type: 'line',
-                    source: 'corridor-outline-src', 'source-layer': srcLayer,
-                    minzoom: 10, slot: 'top',
-                    layout: { 'line-join': 'round', 'line-cap': 'round', 'visibility': 'none' },
-                    paint: {
-                        'line-color': corrColorExpr,
-                        'line-width': 10, 'line-blur': 0,
-                        'line-opacity': 1.0, 'line-emissive-strength': 1
-                    }
-                });
-                ['connector-glow', 'connector-solid'].forEach(id => {
-                    if (map.getLayer(id)) {
-                        map.moveLayer(id);
-                        map.setLayoutProperty(id, 'visibility', 'none');
-                    }
-                });
-            }
-        } catch(err) {
-            console.warn('Corridor outline setup failed:', err.message);
-        }
-        ['High', 'Moderate', 'Low'].forEach(level => {
-            const btn = document.getElementById('conn-filter-' + level.toLowerCase());
-            if (!btn) return;
-            connActiveFilters.add(level);
-            updateLevelBtn(btn, level);
-            btn.addEventListener('click', () => {
-                if (connActiveFilters.has(level)) connActiveFilters.delete(level);
-                else connActiveFilters.add(level);
-                updateLevelBtn(btn, level);
-                applyConnectorFilter();
-            });
         });
-        const tierFilterPanel = document.getElementById('corridor-tier-filter');
-        if (tierFilterPanel) {
-            setTimeout(() => {
-                try {
-                    const sample = map.queryRenderedFeatures({ layers: [resolvedConnectorId] });
-                    if (sample.length > 0 && sample[0].properties && sample[0].properties[TIER_ATTRIBUTE]) {
-                        tierFilterPanel.style.display = 'flex';
-                    }
-                } catch(e) {}
-            }, 2000);
-            document.querySelectorAll('.corr-tier-btn').forEach(btn => {
-                btn.classList.add('active');
-                btn.addEventListener('click', () => { btn.classList.toggle('active'); applyCorridorTierFilter(); });
-            });
-        }
-        function applyCorridorTierFilter() {
-            const activeTiers = Array.from(document.querySelectorAll('.corr-tier-btn.active')).map(b => b.dataset.tier);
-            const activeConn  = Array.from(connActiveFilters);
-            const filters = [];
-            if (activeTiers.length > 0 && activeTiers.length < 6)
-                filters.push(['match', ['get', TIER_ATTRIBUTE], activeTiers, true, false]);
-            if (activeConn.length === 0)
-                filters.push(['==', ['get', 'connectivity'], '__none__']);
-            else if (activeConn.length < 3)
-                filters.push(['match', ['get', 'connectivity'], activeConn, true, false]);
-            const filterExpr = filters.length ? ['all', ...filters] : null;
-            ['connector-glow', 'connector-solid'].forEach(id => {
-                if (map.getLayer(id)) map.setFilter(id, filterExpr);
-            });
-        }
-        applyConnectorFilter = function() { applyCorridorTierFilter(); };
-        const connPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'custom-hover-popup' });
-        const connInteractId = map.getLayer('connector-solid') ? 'connector-solid' : resolvedConnectorId;
-        map.on('mousemove', connInteractId, (e) => {
-            if (window._developmentScenario && window._developmentScenario.active) return;
-            if (!e.features || !e.features.length) return;
-            map.getCanvas().style.cursor = 'pointer';
-            const f = e.features[0].properties;
-            connPopup.setLngLat(e.lngLat)
-                .setHTML('<strong>Potential movement corridor</strong><br>Gap: ' + f.gap_m + ' m | Connectivity: ' + f.connectivity)
-                .addTo(map);
+        ['corridor-controls', 'corridor-tier-filter'].forEach(id => {
+            const element = document.getElementById(id); if (element) element.style.display = 'none';
         });
-        map.on('mouseleave', connInteractId, () => { map.getCanvas().style.cursor = ''; connPopup.remove(); });
-        map.on('click', connInteractId, (e) => {
-            if (window._developmentScenario && window._developmentScenario.active) return;
-            if (!e.features || !e.features.length) return;
-            const f = e.features[0].properties;
-            const el = document.getElementById('patch-info-content');
-            if (el) {
-                el.innerHTML = '<div style="padding:4px"><strong>Potential movement corridor</strong><br><br>' +
-                    '<strong>Gap to nearest patch:</strong> ' + f.gap_m + ' m<br>' +
-                    '<strong>Connectivity:</strong> ' + f.connectivity + '<br>' +
-                    '<strong>Source patch area:</strong> ' + f.area_ha + ' ha<br>' +
-                    '<strong>Mean composite flow:</strong> ' + f.mean_flow + '<br><br>' +
-                    '<em>' + (f.crossing_note || '') + '</em></div>';
-            }
-            const sidebar = document.getElementById('sidebar');
-            if (sidebar && sidebar.classList.contains('collapsed')) document.getElementById('toggle-sidebar-btn').click();
-        });
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', () => {
-                corridorVisible = !corridorVisible;
-                const vis = corridorVisible ? 'visible' : 'none';
-                ['connector-glow', 'connector-solid'].forEach(id => {
-                    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis);
-                });
-                if (levelPanel) levelPanel.style.display = corridorVisible ? 'flex' : 'none';
-                if (corridorVisible) {
-                    toggleBtn.textContent = 'Hide corridors';
-                    toggleBtn.classList.add('active');
-                    if (!toggleBtn.dataset.counted) {
-                        try {
-                            const allCorridors = map.queryRenderedFeatures({ layers: [resolvedConnectorId] });
-                            if (allCorridors.length > 0)
-                                toggleBtn.textContent = 'Hide corridors (' + allCorridors.length.toLocaleString() + ')';
-                        } catch(e) {}
-                        toggleBtn.dataset.counted = '1';
-                    }
-                    if (connAnimFrame) { cancelAnimationFrame(connAnimFrame); connAnimFrame = null; }
-                    function animate(ts) {
-                        const glowOpacity = 0.5 + 0.5 * Math.sin(ts / 400);
-                        if (map.getLayer('connector-glow'))
-                            map.setPaintProperty('connector-glow', 'line-opacity', glowOpacity);
-                        connAnimFrame = requestAnimationFrame(animate);
-                    }
-                    connAnimFrame = requestAnimationFrame(animate);
-                } else {
-                    toggleBtn.textContent = 'Show corridors';
-                    toggleBtn.classList.remove('active');
-                    if (connAnimFrame) { cancelAnimationFrame(connAnimFrame); connAnimFrame = null; }
-                }
-            });
-        }
     }
     function initializeHoverPopups() {
         const hoverPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'custom-hover-popup' });
         map.on('mousemove', resolvedPatchId, (e) => {
-            if (window._developmentScenario && window._developmentScenario.active) return;
+            if ((window._developmentScenario && window._developmentScenario.active) || (window._connectivityExplorer && window._connectivityExplorer.picking)) return;
             if (e.features && e.features.length > 0) {
                 map.getCanvas().style.cursor = 'pointer';
                 const p         = e.features[0].properties;
@@ -338,7 +150,7 @@ initializeTierFilters();
         const patchInfoContent = document.getElementById('patch-info-content');
         if (!patchInfoContent) return;
         map.on('click', resolvedPatchId, (e) => {
-            if (window._developmentScenario && window._developmentScenario.active) return;
+            if ((window._developmentScenario && window._developmentScenario.active) || (window._connectivityExplorer && window._connectivityExplorer.picking)) return;
             if (e.features && e.features.length > 0) {
                 displayPatchInfo(e.features[0].properties);
                 map.flyTo({ center: e.lngLat, zoom: Math.max(map.getZoom(), 14), duration: 600 });
@@ -466,23 +278,6 @@ initializeTierFilters();
                     if(areaFilterControls) areaFilterControls.style.display = 'block';
                     if(statsSection) statsSection.style.display = 'block';
                     if(patchInfoContent) patchInfoContent.innerHTML = 'Select a patch on the map to see details.';
-                    resolvedConnectorId = null;
-                    corridorVisible = false;
-                    if (connAnimFrame) { cancelAnimationFrame(connAnimFrame); connAnimFrame = null; }
-                    const levelPanel = document.getElementById('conn-level-toggles');
-                    if (levelPanel) levelPanel.style.display = 'none';
-                    const oldBtn = document.getElementById('corridor-toggle-fab');
-                    if (oldBtn) {
-                        const newBtn = oldBtn.cloneNode(true);
-                        newBtn.textContent = 'Show corridors';
-                        newBtn.classList.remove('active');
-                        delete newBtn.dataset.counted;
-                        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-                    }
-                    ['conn-filter-high','conn-filter-moderate','conn-filter-low'].forEach(id => {
-                        const old = document.getElementById(id);
-                        if (old) old.parentNode.replaceChild(old.cloneNode(true), old);
-                    });
                     setTimeout(() => {
                         resolvePatchLayerId();
                         if (map.getLayer(resolvedPatchId)) { applyForestFilter(); initializeHoverPopups(); initializeClickInfoPanel(); }
