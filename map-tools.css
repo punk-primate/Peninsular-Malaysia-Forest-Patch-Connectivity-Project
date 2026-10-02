@@ -1,0 +1,25 @@
+.map-tool-section { color:inherit; }
+.map-tool-section[hidden], .map-tool-body [hidden] { display:none !important; }
+.map-tool-section > summary { font-size:13px; font-weight:700; cursor:pointer; padding:6px 0; }
+.map-tool-body { font:13px/1.5 Arial,sans-serif; padding-top:10px; color:inherit; }
+.map-tool-body button, #patch-compare-add { background:#f4f2df; color:#18382a; border:1px solid #718b59; border-radius:2px; padding:8px; font:12px/1.4 Arial,sans-serif; cursor:pointer; }
+.map-tool-body button:disabled { opacity:.5; cursor:default; }
+.map-tool-body button:focus-visible, .map-tool-section summary:focus-visible { outline:2px solid #827024; outline-offset:3px; }
+.map-tool-row { display:flex; gap:6px; }
+.map-tool-row button { flex:1; }
+.map-tool-primary { display:block; width:100%; margin-top:12px; }
+.map-tool-body p:empty { display:none; }
+#active-filter-summary { margin:0 15px 15px; padding:10px; border:1px solid #718b59; }
+.comparison-scroll { overflow-x:auto; margin:10px 0; }
+.comparison-scroll table { border-collapse:collapse; font-size:12px; min-width:100%; text-align:left; }
+.comparison-scroll caption { text-align:left; font-weight:700; margin-bottom:8px; }
+.comparison-scroll th, .comparison-scroll td { border:1px solid #a4b4a2; padding:8px; min-width:110px; vertical-align:top; }
+.comparison-scroll thead th { background:#e6ecd8; }
+.comparison-scroll th button { display:block; margin-top:6px; }
+.comparison-marker { display:flex; align-items:center; justify-content:center; width:28px; height:28px; background:#f1eed5; color:#18382a; border:2px solid #18382a; border-radius:50%; font:bold 14px Arial,sans-serif; pointer-events:none; }
+body.dark-mode .map-tool-body button, body.dark-mode #patch-compare-add { background:#314635; color:#f1eed5; border-color:#94a777; }
+body.dark-mode .comparison-scroll thead th { background:#314635; }
+body.dark-mode .map-tool-body, body.dark-mode .map-tool-section { color:#f1eed5; }
+
+@media(max-width:600px) { .map-tool-body button, #patch-compare-add { min-height:44px; } .map-tool-section > summary { padding:12px 0; } }
+#sidebar.collapsed > #active-filter-summary { display:none; }

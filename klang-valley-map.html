@@ -10,9 +10,10 @@
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="vendor/mapbox-gl-draw-1.4.3.css">
-    <link rel="stylesheet" href="development.css?v=20261002-site-navigation">
-    <link rel="stylesheet" href="connectivity.css?v=20261002-site-navigation">
-    <link rel="stylesheet" href="development-workflow.css?v=20261002-site-navigation">
+    <link rel="stylesheet" href="development.css?v=20261002-map-tools">
+    <link rel="stylesheet" href="connectivity.css?v=20261002-map-tools">
+    <link rel="stylesheet" href="development-workflow.css?v=20261002-map-tools">
+    <link rel="stylesheet" href="map-tools.css?v=20261002-map-tools">
 
     <style>
         /* ── Font reset ── */
@@ -480,6 +481,15 @@
             <p>These are potential connections, which may need protection or restoration to become functioning wildlife corridors. Development can obstruct a future corridor opportunity before one is established. Blue areas show baseline high flow. Routes need field assessment.</p>
             <p><strong>Resistance cost</strong> combines route distance and mapped resistance. The before-development route is set to 100: a with-development score of 120 means 20% more resistance between the same A and B. This is a route comparison, not a percentage of habitat lost or wildlife survival.</p>
 
+            <h3>Compare forest patches</h3>
+            <p>Select a patch on the map, then choose <strong>Add to comparison</strong> in its details. Add up to three different patches. Numbered markers identify them on the map; use Show on map in the comparison table to revisit a selected patch. Open <strong>Compare patches</strong> to view their area, core area, nearest-neighbour distance and other attributes side by side. The table uses the mapped attributes; unavailable values are shown explicitly. Remove individual patches or clear the comparison to choose another set. It compares attributes and does not rank the patches.</p>
+            <h3>Measure distance or area</h3>
+            <p>Open <strong>Measure and export</strong> in the sidebar. Choose <strong>Measure distance</strong>, then click or tap along a path, including each bend. Use at least two points and select <strong>Finish measurement</strong>, or press Enter. For <strong>Measure area</strong>, place at least three corners around the boundary, then finish. Distances are reported in metres or kilometres and areas in hectares. These are map measurements, without terrain adjustment. Press Escape to cancel an unfinished measurement, or choose <strong>Clear measurement</strong> to remove it. Patch inspection is paused while placing points; the development workflow and measurement drawing operate one at a time.</p>
+            <h3>Manage active filters</h3>
+            <p>The filter summary lists the selected tiers and applied area limits. <strong>Reset all filters</strong> restores all tiers and clears the area limits. An empty-view message refers to the current map view: zoom in, move the map or reset filters to find patches. A rejected area range does not change the filters already applied.</p>
+            <h3>Download the current map</h3>
+            <p>Select <strong>Download map PNG</strong> under Measure and export. The image captures the current map with a legend for the displayed layers, a scale bar, active-filter information, date and map attribution. Visible measurements and numbered comparison markers are included. Move and zoom the map first to frame the area you want. The exported image is a reference map for presentations or discussions.</p>
+
             <h3>Downloading a patch report card</h3>
             <p>Click any forest patch to open its details in the sidebar, then click the <strong>Download report card</strong> button at the bottom of the panel. The card will generate automatically and download as a PNG image to your device.</p>
             <p>Each report card includes the patch's conservation tier, GPS coordinates, and all six structural metrics. It also shows the actual shape of the patch drawn to scale, a tier spectrum bar indicating where it sits relative to the other tiers in the landscape, and a QR code you can scan to reopen that exact patch view in the platform. Where available, the nearest named forest reserve is shown at the top of the card.</p>
@@ -495,11 +505,12 @@
         </div>
     </div>
     
-    <script src="features.js?v=20261002-site-navigation"></script>
+    <script src="features.js?v=20261002-map-tools"></script>
     <script src="config.js"></script>
-    <script src="app.js?v=20261002-site-navigation"></script>
-    <script src="development.js?v=20261002-site-navigation"></script>
-    <script src="connectivity.js?v=20261002-site-navigation"></script>
-    <script src="development-workflow.js?v=20261002-site-navigation"></script>
+    <script src="app.js?v=20261002-map-tools"></script>
+    <script src="development.js?v=20261002-map-tools"></script>
+    <script src="connectivity.js?v=20261002-map-tools"></script>
+    <script src="development-workflow.js?v=20261002-map-tools"></script>
+    <script src="map-tools.js?v=20261002-map-tools"></script>
 </body>
 </html>
