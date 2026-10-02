@@ -37,12 +37,7 @@ Land-cover inputs include Dynamic World V1 (2025), the oil-palm extent dataset o
 
 Development calculations assume complete forest clearance inside a single footprint. Forest loss and remaining fragments use complete polygons, independently of rendered map tiles. Route comparison treats resistance cells touched by development as barriers. These are modelled potential connections, not observations of wildlife movement.
 
-Detailed methods, numerical tolerances and provenance:
-
-- [Development footprints and forest geometry](docs/development-scenarios.md)
-- [Resistance grids, route calculations and high-flow exposure](docs/connectivity-scenarios.md)
-
-The repository contains the website, its prepared data and the raster preparation script. It does not contain the complete land-cover, PSQI or Omniscape research pipeline. Original source GeoTIFFs are needed to reproduce the prepared raster files.
+The repository contains the website and its prepared map data. Native-grid metadata in `data/connectivity/` records the source files, coordinate systems and input hashes.
 
 ## Source files
 
@@ -58,41 +53,8 @@ The repository contains the website, its prepared data and the raster preparatio
 | `map-tools.js`, `map-tools.css` | Comparison, measurement, filters and map export |
 | `data/` | Compressed patch boundaries and prepared native grids |
 | `vendor/` | Pinned browser libraries and their licences |
-| `scripts/` | Raster preparation |
-| `tests/` | Geometry, routing, reference and browser checks |
-| `docs/` | Methods and data provenance |
 
 The site uses Mapbox GL JS 3.1.2. Geometry operations use Turf 6.5.0 and polygon-clipping 0.15.7; native-coordinate conversion uses Proj4js 2.12.1. Map drawing uses Mapbox GL Draw 1.4.3.
-
-## Local review
-
-Serve the repository over HTTP:
-
-```sh
-python -m http.server 8000
-```
-
-Open `http://localhost:8000`. The basemap and place search require an internet connection. Scenario calculations run in browser Web Workers; compressed inputs require a browser supporting DecompressionStream.
-
-Run the geometry and routing tests with Node.js:
-
-```sh
-node --test tests/scenario-engine.test.cjs tests/connectivity-engine.test.cjs
-```
-
-The independent reference check requires Python with NumPy, SciPy, Shapely and pyproj:
-
-```sh
-python tests/verify-connectivity-reference.py
-```
-
-Browser checks require Playwright and Chromium:
-
-```sh
-node tests/development-browser.cjs
-```
-
-These checks use the production analytical datasets with an offline basemap fixture. External hosted tiles and satellite imagery require separate visual review. Optional `SCENARIO_BROWSER_EXECUTABLE`, `SCENARIO_MAPBOX_JS` and `SCENARIO_MAPBOX_CSS` environment variables select cached browser assets.
 
 ## Contact and use
 
