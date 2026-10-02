@@ -56,6 +56,9 @@ async function run() {
             await page.evaluate(([x, y]) => { window._mapInstance.setTerrain(null); window._mapInstance.jumpTo({ center:[x,y], zoom:16 }); }, [cx, cy]);
             await page.waitForTimeout(100);
             await page.locator('#loading-indicator').waitFor({state:'hidden'});
+            const helpText=await page.locator('#howto-modal').textContent();
+            assert.doesNotMatch(helpText,/Connectivity potential rating|connectivity rating|High \(cyan\)|Barrier \(dark purple\)/);
+            assert.match(helpText,/future corridor opportunity before one is established/);
             const previousFilter = await page.evaluate(layerId => window._mapInstance.getFilter(layerId) || null, layer);
             const interiorCandidates=[];
             for(let x=1;x<30;x++) for(let y=1;y<30;y++) {
@@ -205,7 +208,26 @@ async function run() {
             assert.equal(await page.locator('.connection-marker').count(), 2);
             assert.deepEqual(await page.locator('.connection-marker').allTextContents(), ['A','B']);
             assert.deepEqual(await page.locator('.connection-route-card h4').allTextContents(), ['Before development','With development']);
-            assert.match(await page.locator('.connection-outcome').innerText(), /route changes|No route change/);
+            assert.match(await page.locator('.connection-outcome').innerText(), /Potential corridor opportunity obstructed/);
+            assert.match(await page.locator('.connection-outcome').innerText(), /even if no corridor exists there yet/);
+            const blockedBaselineCells=await page.evaluate(()=>window._connectivityExplorer.assessment.baselineCellsBlocked);
+            const scenarioMask=connectionEngine.footprintMask(cm,await page.evaluate(()=>window._developmentScenario.footprint));
+            assert.equal(blockedBaselineCells,baselinePath.indices.filter(index=>scenarioMask.mask[index]).length);
+            assert.ok(blockedBaselineCells>0);
+            // Surround A with a ring while keeping its cell clear. This tests a
+            // genuinely unreachable scenario rather than a covered endpoint.
+            const aCol=startCell%cm.width,aRow=Math.floor(startCell/cm.width);
+            const ring=radius=>[[-radius,-radius],[radius,-radius],[radius,radius],[-radius,radius],[-radius,-radius]].map(([dx,dy])=>nativeGrid.projection.inverse([cm.originX+(aCol+.5+dx)*cm.cellWidth,cm.originY-(aRow+.5+dy)*cm.cellHeight]));
+            const barrierRing={type:'Feature',properties:{},geometry:{type:'Polygon',coordinates:[ring(7),ring(3).reverse()]}};
+            const actualFootprint=await page.evaluate(()=>window._developmentScenario.footprint);
+            await page.evaluate(footprint=>document.dispatchEvent(new CustomEvent('forestconnect:development',{detail:{active:true,drawing:false,footprint,view:'scenario'}})),barrierRing);
+            await page.waitForFunction(()=>window._connectivityExplorer.assessment?.scenario?.status==='unreachable',null,{timeout:20000});
+            assert.deepEqual(await page.evaluate(()=>window._connectivityExplorer.assessment.blockedEndpoints),[]);
+            assert.match(await page.locator('.connection-outcome').innerText(),/Potential connection blocked under this model/);
+            assert.match(await page.locator('.connection-outcome').innerText(),/could sever an opportunity for a future corridor/);
+            assert.match(await page.locator('.connection-outcome').innerText(),/No alternative route remains under this model/);
+            await page.evaluate(footprint=>document.dispatchEvent(new CustomEvent('forestconnect:development',{detail:{active:true,drawing:false,footprint,view:'scenario'}})),actualFootprint);
+            await page.waitForFunction(()=>window._connectivityExplorer.assessment?.scenario?.status==='found',null,{timeout:20000});
             assert.ok(await page.locator('#connection-map-legend').isVisible());
             assert.match(await page.locator('#connection-map-legend').innerText(), /With development/);
             await page.locator('[data-view="before"]').click();
@@ -304,6 +326,7 @@ async function run() {
             await page.locator('#connectivity-toggle').click();
             await page.waitForFunction(()=>window._connectivityExplorer.assessment?.baseline?.status==='found',null,{timeout:20000});
             assert.deepEqual(await page.locator('.connection-route-card h4').allTextContents(), ['Before development']);
+            assert.match(await page.locator('.connection-outcome').innerText(),/Potential connection before development/);
             assert.doesNotMatch(await page.locator('#connection-map-legend').innerText(), /With development/);
             await page.locator('#connection-development').click();
             assert.equal(await page.locator('#development-panel').isVisible(), true);

@@ -46,6 +46,7 @@ self.onmessage = async function (event) {
                 result.snappedEnd = ConnectivityGeometry.coordinateAt(grid, end);
                 if (message.footprint) {
                     const blocked = ConnectivityGeometry.footprintMask(metadata.resistance, message.footprint);
+                    result.baselineCellsBlocked = (baselineCache.path.indices || []).reduce((count, index) => count + (blocked.mask[index] ? 1 : 0), 0);
                     const endpoints = [[start, 'A'], [end, 'B']].filter(([index]) => blocked.mask[index]);
                     result.blockedEndpoints = endpoints.map(([, label]) => label);
                     result.blockedEndpointCells = { type: 'FeatureCollection', features: endpoints.map(([index, label]) => {

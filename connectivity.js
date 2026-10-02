@@ -15,6 +15,7 @@
         const panel = document.createElement('section'); panel.id = 'connectivity-panel'; panel.className = 'sidebar-section'; panel.hidden = true;
         panel.innerHTML = '<h3>Compare routes</h3>' +
             '<p>Compare a route between the same two places before and with your development. Routes favour lower resistance across the landscape.</p>' +
+            '<p>These are potential connections that may need protection or restoration to become functioning wildlife corridors. Development can obstruct that opportunity before a corridor is established.</p>' +
             '<ol class="connection-steps"><li id="connection-step-points">Place A and B on the map</li><li id="connection-step-route">Draw a development footprint</li><li id="connection-step-development">Select Calculate changes</li></ol>' +
             '<div class="connection-points"><button id="connection-start">Choose start A</button><button id="connection-end">Choose end B</button></div>' +
             '<button id="connection-cancel" hidden>Cancel point placement</button>' +
@@ -155,32 +156,35 @@
             const messages = { 'unreachable': 'No path exists between these cells under this model and its blocked-cell rules.',
                 'endpoint-blocked': 'A selected endpoint cell is covered by the development footprint.' };
             if (result.baseline && result.baseline.status === 'found') {
-                let heading = 'Before-development route ready', explanation = 'Draw a development footprint and select Calculate changes to see how this route would change.';
+                let heading = 'Potential connection before development', explanation = 'This modelled route could inform a future corridor, even where no corridor has been established. Draw a development footprint and select Calculate changes to assess this opportunity.';
                 if (result.scenario && result.scenario.status === 'found') {
                     const change = 100 * (result.scenario.cost / result.baseline.cost - 1);
                     const same = JSON.stringify(result.baseline.geometry) === JSON.stringify(result.scenario.geometry);
-                    heading = same ? 'No route change for A to B' : 'The route changes around your development';
-                    explanation = same ? 'The same modelled route remains available for these two locations.' : 'The new route avoids your development footprint.';
+                    const obstructed = result.baselineCellsBlocked > 0;
+                    heading = same ? 'Potential connection remains available' : obstructed ? 'Potential corridor opportunity obstructed' : 'An alternative potential route is shown';
+                    explanation = same ? 'The same modelled route remains available between A and B with this footprint.' : obstructed ?
+                        'Your development blocks part of the original potential route. This could reduce opportunities for a future corridor through protection or restoration, even if no corridor exists there yet. An alternative route remains available around the footprint under this model.' :
+                        'The original potential route remains outside the footprint. The model shows a different available route between A and B.';
                     explanation += change > 0.005 ? ' Resistance cost increases by ' + fmt(change) + '%.' : Math.abs(change) > 1e-9 ? ' Resistance cost changes by less than 0.01%.' : ' Resistance cost stays the same.';
                     if (result.scenario.lengthM < result.baseline.lengthM - 1 && change > 0.005) explanation += ' A shorter route can still pass through higher-resistance cells.';
                 } else if (result.scenario) {
                     const blocked = result.blockedEndpoints || [];
-                    heading = result.scenario.status === 'endpoint-blocked' ? 'Move ' + blocked.join(' and ') + ' to compare routes' : 'No route found with this development';
+                    heading = result.scenario.status === 'endpoint-blocked' ? 'Move ' + blocked.join(' and ') + ' to compare routes' : 'Potential connection blocked under this model';
                     explanation = result.scenario.status === 'endpoint-blocked' ?
                         'Your development touches the approximately 30 m model ' + (blocked.length > 1 ? 'cells containing ' : 'cell containing ') + blocked.join(' and ') + '. The blocked ' + (blocked.length > 1 ? 'cells are' : 'cell is') + ' outlined in red. Move the marked point farther from the footprint, even if it looks outside the drawn edge.' :
-                        messages[result.scenario.status] + ' This result applies to this route model and these endpoints.';
+                        'Your development cuts off the modelled connection between A and B. This could sever an opportunity for a future corridor, even where none has been established. No alternative route remains under this model and its barrier assumption.';
                 }
                 html += '<div class="connection-outcome"><strong>' + heading + '</strong><p>' + explanation + '</p></div>';
                 if (result.scenario && result.scenario.status === 'endpoint-blocked') html += '<div class="connection-points">' + result.blockedEndpoints.map(label => '<button data-move-endpoint="' + label + '">Move ' + label + '</button>').join('') + '</div>';
             } else if (!result.baseline) html += '<div class="connection-outcome"><strong>Development footprint assessed</strong><p>Choose A and B to compare a route before and with development.</p></div>';
             if (result.baseline) {
                 if (result.baseline.status === 'found') {
-                    html += '<section class="connection-route-card"><h4><span class="connection-key existing-key"></span>Before development</h4><p>Route through the current landscape.</p>' + row('Route length', fmt(result.baseline.lengthM / 1000) + ' km') + '</section>';
+                    html += '<section class="connection-route-card"><h4><span class="connection-key existing-key"></span>Before development</h4><p>Potential route through the current landscape.</p>' + row('Route length', fmt(result.baseline.lengthM / 1000) + ' km') + '</section>';
                 } else html += '<p>' + messages[result.baseline.status] + '</p>';
             }
             if (result.scenario) {
                 if (result.scenario.status === 'found') {
-                    html += '<section class="connection-route-card"><h4><span class="connection-key scenario-key"></span>With development</h4><p>Route with your footprint treated as a barrier.</p>' + row('Route length', fmt(result.scenario.lengthM / 1000) + ' km') + '</section>';
+                    html += '<section class="connection-route-card"><h4><span class="connection-key scenario-key"></span>With development</h4><p>Potential route with your footprint treated as a barrier.</p>' + row('Route length', fmt(result.scenario.lengthM / 1000) + ' km') + '</section>';
                 }
                 if (result.outsideResistanceExtent) html += '<p class="connection-warning">Part of the footprint is outside the resistance map. Only available cells are assessed.</p>';
             }
@@ -198,7 +202,7 @@
             if (loading) return loading;
             status('Loading the supplied resistance and flow models…');
             loading = new Promise((resolve, reject) => {
-                worker = new Worker('connectivity-worker.js?v=20261002-editing');
+                worker = new Worker('connectivity-worker.js?v=20261002-corridor');
                 function failure(text) {
                     ready = busy = false; loading = null; worker.terminate(); worker = null;
                     status(text, true); update();
@@ -225,9 +229,9 @@
                         let completionText = 'Footprint assessed. Choose A and B to compare routes.';
                         if (result.baseline) {
                             if (result.baseline.status !== 'found') completionText = 'No route found between A and B under this model.';
-                            else if (!result.scenario) completionText = 'Before-development route ready. Draw a development to add the orange comparison route.';
+                            else if (!result.scenario) completionText = 'Potential connection ready. Draw a development to assess a future corridor opportunity.';
                             else if (result.scenario.status === 'found') completionText = 'Comparison ready. Dashed purple: before development. Solid orange: with development.';
-                            else completionText = result.scenario.status === 'endpoint-blocked' ? 'Comparison needs a new endpoint. Use Move below.' : 'Comparison complete. No route found with this development under the model.';
+                            else completionText = result.scenario.status === 'endpoint-blocked' ? 'Comparison needs a new endpoint. Use Move below.' : 'Potential connection blocked. See the result below.';
                         }
                         status(completionText);
                     }
