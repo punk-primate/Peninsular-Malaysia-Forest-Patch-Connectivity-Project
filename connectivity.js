@@ -165,7 +165,7 @@
                     explanation = same ? 'The same modelled route remains available between A and B with this footprint.' : obstructed ?
                         'Your development blocks part of the original potential route. This could reduce opportunities for a future corridor through protection or restoration, even if no corridor exists there yet. An alternative route remains available around the footprint under this model.' :
                         'The original potential route remains outside the footprint. The model shows a different available route between A and B.';
-                    explanation += change > 0.005 ? ' Resistance cost increases by ' + fmt(change) + '%.' : Math.abs(change) > 1e-9 ? ' Resistance cost changes by less than 0.01%.' : ' Resistance cost stays the same.';
+                    explanation += change > 0.005 ? ' Total route resistance is ' + fmt(change) + '% greater than before development.' : Math.abs(change) > 1e-9 ? ' Total route resistance changes by less than 0.01%.' : ' Total route resistance stays the same.';
                     if (result.scenario.lengthM < result.baseline.lengthM - 1 && change > 0.005) explanation += ' A shorter route can still pass through higher-resistance cells.';
                 } else if (result.scenario) {
                     const blocked = result.blockedEndpoints || [];
@@ -188,11 +188,24 @@
                 }
                 if (result.outsideResistanceExtent) html += '<p class="connection-warning">Part of the footprint is outside the resistance map. Only available cells are assessed.</p>';
             }
+            if (result.baseline && result.baseline.status === 'found') {
+                html += '<section class="connection-route-card connection-resistance-reference" aria-label="Resistance cost comparison"><h4>Resistance cost in context</h4>' +
+                    '<p>Resistance cost describes how difficult the whole route is to cross in this model. Longer routes and higher-resistance cells increase the cost.</p>' +
+                    '<p>For the same A and B, we set the before-development route to <strong>100</strong> as a reference.</p>' +
+                    row('Before development: reference score', '100');
+                if (result.scenario && result.scenario.status === 'found') {
+                    html += row('With development: relative score', fmt(100 * (result.scenario.cost / result.baseline.cost)));
+                } else if (result.scenario) {
+                    html += '<p>No comparison score: ' + (result.scenario.status === 'endpoint-blocked' ? 'move the blocked endpoint first.' : 'no route was found with development.') + '</p>';
+                } else html += '<p>Draw and calculate development to get a comparison score.</p>';
+                html += '<p>Example: <strong>120</strong> means <strong>20% more resistance</strong> than before; <strong>200</strong> means twice the resistance.</p>' +
+                    '<p>Compare scores for this A/B pair only. They are not percentages of habitat lost or wildlife survival.</p></section>';
+            }
             if (result.exposure) html += row('Baseline high-flow cells touched', result.exposure.highCells.toLocaleString());
             if (result.baseline && result.baseline.status === 'found') {
-                html += '<details class="connection-cost-details"><summary>Resistance cost and route details</summary><p>Lower cost means the route crosses less resistance overall. Cost combines resistance and distance; it is not a movement probability.</p>' +
-                    row('Before: resistance cost', fmt(result.baseline.cost)) + row('Before: length in highest resistance', fmt(result.baseline.highestResistanceM / 1000) + ' km');
-                if (result.scenario && result.scenario.status === 'found') html += row('With development: resistance cost', fmt(result.scenario.cost)) + row('With development: length in highest resistance', fmt(result.scenario.highestResistanceM / 1000) + ' km');
+                html += '<details class="connection-cost-details"><summary>Raw model cost and route details</summary><p>The comparison score above rescales these totals so the before-development route equals 100. Raw cost sums resistance × projected distance along the route; it is not a movement probability.</p>' +
+                    row('Before: raw resistance cost', fmt(result.baseline.cost)) + row('Before: length in highest resistance', fmt(result.baseline.highestResistanceM / 1000) + ' km');
+                if (result.scenario && result.scenario.status === 'found') html += row('With development: raw resistance cost', fmt(result.scenario.cost)) + row('With development: length in highest resistance', fmt(result.scenario.highestResistanceM / 1000) + ' km');
                 html += '<p>Cost uses resistance × projected metres. Endpoints snap to native cell centres.</p></details>';
             }
             target.innerHTML = html; flowSummary();

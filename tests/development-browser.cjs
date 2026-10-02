@@ -207,9 +207,15 @@ async function run() {
             }),'Routes must stay above filled overlays even when Connections opens first');
             assert.equal(await page.locator('.connection-marker').count(), 2);
             assert.deepEqual(await page.locator('.connection-marker').allTextContents(), ['A','B']);
-            assert.deepEqual(await page.locator('.connection-route-card h4').allTextContents(), ['Before development','With development']);
+            assert.deepEqual(await page.locator('.connection-route-card:not(.connection-resistance-reference) h4').allTextContents(), ['Before development','With development']);
             assert.match(await page.locator('.connection-outcome').innerText(), /Potential corridor opportunity obstructed/);
             assert.match(await page.locator('.connection-outcome').innerText(), /even if no corridor exists there yet/);
+            const reference=page.locator('.connection-resistance-reference');
+            assert.match(await reference.innerText(),/before-development route to 100/);
+            assert.deepEqual(await reference.locator('.connection-metric strong').allTextContents(),[
+                '100', (100 * (await page.evaluate(()=>window._connectivityExplorer.assessment.scenario.cost / window._connectivityExplorer.assessment.baseline.cost))).toLocaleString('en-GB',{maximumFractionDigits:2})
+            ]);
+            assert.match(await reference.innerText(),/20% more resistance/);
             const blockedBaselineCells=await page.evaluate(()=>window._connectivityExplorer.assessment.baselineCellsBlocked);
             const scenarioMask=connectionEngine.footprintMask(cm,await page.evaluate(()=>window._developmentScenario.footprint));
             assert.equal(blockedBaselineCells,baselinePath.indices.filter(index=>scenarioMask.mask[index]).length);
@@ -223,6 +229,7 @@ async function run() {
             await page.evaluate(footprint=>document.dispatchEvent(new CustomEvent('forestconnect:development',{detail:{active:true,drawing:false,footprint,view:'scenario'}})),barrierRing);
             await page.waitForFunction(()=>window._connectivityExplorer.assessment?.scenario?.status==='unreachable',null,{timeout:20000});
             assert.deepEqual(await page.evaluate(()=>window._connectivityExplorer.assessment.blockedEndpoints),[]);
+            assert.match(await page.locator('.connection-resistance-reference').innerText(),/No comparison score: no route was found/);
             assert.match(await page.locator('.connection-outcome').innerText(),/Potential connection blocked under this model/);
             assert.match(await page.locator('.connection-outcome').innerText(),/could sever an opportunity for a future corridor/);
             assert.match(await page.locator('.connection-outcome').innerText(),/No alternative route remains under this model/);
@@ -325,7 +332,7 @@ async function run() {
             await page.waitForFunction(() => !window._connectivityExplorer.assessment?.hasDevelopment, null, {timeout:20000});
             await page.locator('#connectivity-toggle').click();
             await page.waitForFunction(()=>window._connectivityExplorer.assessment?.baseline?.status==='found',null,{timeout:20000});
-            assert.deepEqual(await page.locator('.connection-route-card h4').allTextContents(), ['Before development']);
+            assert.deepEqual(await page.locator('.connection-route-card:not(.connection-resistance-reference) h4').allTextContents(), ['Before development']);
             assert.match(await page.locator('.connection-outcome').innerText(),/Potential connection before development/);
             assert.doesNotMatch(await page.locator('#connection-map-legend').innerText(), /With development/);
             await page.locator('#connection-development').click();
