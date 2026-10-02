@@ -240,11 +240,9 @@
         .region-card { width:350px; padding:22px 26px 26px; background:#18382a; border:2px solid #779457; color:#f1eed5; box-shadow:7px 7px 0 #06170f; }
         .region-card:hover { transform:none; background:#18382a; color:#f1eed5; border-color:#b6d365; box-shadow:7px 7px 0 #06170f; }
         .mesh-container { height:130px; margin-bottom:4px; }
-        .region-card:hover .wireframe-mesh { transform:rotateX(50deg) rotateZ(-25deg); }
+        .region-card:hover .wireframe-mesh { transform:rotateX(0deg) rotateZ(135deg) scale(.9); }
         .region-card:hover .mesh-layer { stroke:#b6d365; }
-        .region-card:hover .layer-top { transform:translateZ(45px); opacity:1; }
-        .region-card:hover .layer-mid { transform:translateZ(22px); opacity:.7; }
-        .region-card:hover .layer-base { transform:translateZ(0); opacity:.4; }
+        .region-card:hover .mesh-layer { transform:translateZ(0); opacity:1; }
         .region-title { font-size:13px; margin:12px 0 0; color:#f1eed5; line-height:1.7; }
         .region-stats { font:14px/1.8 monospace; color:#d0dec4; opacity:1; margin:10px 0 22px; letter-spacing:0; }
         .region-actions { display:grid; gap:10px; width:100%; }
@@ -262,6 +260,24 @@
         .site-footer { display:flex; align-items:center; gap:15px; max-width:800px; font:12px/1.8 monospace; color:#c5d4b6; }
         .site-footer a { color:#f1eed5; }
         .popup-overlay { overflow-y:auto; }
+        @media(min-width:900px) {
+            body { padding:clamp(12px,3vh,28px) 22px; }
+            h1 { font-size:clamp(15px,2.2vh,20px); }
+            .title-container { margin-bottom:clamp(12px,2vh,20px); }
+            .subtitle { margin-top:12px; }
+            .home-intro { font-size:16px; line-height:1.5; max-width:760px; margin-top:12px; }
+            .landscape-label { margin-bottom:14px; }
+            .map-container { margin-bottom:18px; }
+            .region-card { padding:14px 24px 18px; }
+            .mesh-container { height:100px; }
+            .region-title { margin-top:4px; }
+            .region-stats { margin:8px 0 14px; }
+            .region-actions a { padding:11px 10px; }
+            .home-about { margin-bottom:14px; }
+            #home-about-toggle { padding:8px 4px; }
+            .site-footer { margin-top:0; }
+            .site-footer img { width:72px !important; }
+        }
         @media(max-width:600px) {
             body { padding:30px 18px 22px; }
             h1 { font-size:13px; padding:0; line-height:1.9; }
@@ -342,7 +358,7 @@
     <button id="home-about-toggle" type="button" aria-expanded="false" aria-controls="home-about-content">[ About this project ]</button>
     <div id="home-about-content" hidden>
         <h2>Forests in a changing landscape</h2>
-        <p>This research-based website brings together information about forest patches and potential connections for arboreal wildlife in Kuantan and Klang Valley.</p>
+        <p>This research-based website brings together information about forest patches and potential connections for arboreal wildlife in Peninsular Malaysia. More cities will be added in future updates.</p>
         <p>Open a landscape, zoom in and select a forest patch to see its area, structural characteristics and modelled connectivity information. The map also includes a development tool for exploring how a proposed road or site could affect forest and potential routes.</p>
         <p>The maps support exploration and discussion. Potential connections represent modelled opportunities for movement, which need field assessment.</p>
     </div>
