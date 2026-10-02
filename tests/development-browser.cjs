@@ -45,6 +45,16 @@ async function run() {
         assert.equal(await home.locator('#home-about-content').isVisible(),false);
         assert.equal(await home.locator('.map-link').first().getAttribute('href'),'kuantan-map.html');
         assert.equal(await home.locator('.map-link').nth(1).getAttribute('href'),'klang-valley-map.html');
+        const aboutText=await home.locator('#home-about-content').textContent();
+        assert.doesNotMatch(aboutText,/Kuantan|Klang Valley/);
+        assert.match(aboutText,/More cities will be added in future updates/);
+        for (const viewport of [{width:1366,height:768},{width:1280,height:720},{width:1024,height:768}]) {
+            await home.setViewportSize(viewport);
+            assert.equal(await home.evaluate(()=>document.documentElement.scrollHeight<=innerHeight),true,'Desktop homepage should fit vertically');
+            const credits=await home.locator('.site-footer').boundingBox();
+            assert.ok(credits.y+credits.height<=viewport.height,'Credits should be visible without scrolling');
+        }
+        await home.setViewportSize({width:1366,height:768});
         if (process.env.SCENARIO_SCREENSHOT_DIR) await home.screenshot({path:path.join(process.env.SCENARIO_SCREENSHOT_DIR,'homepage-desktop.png'),fullPage:true});
         await home.setViewportSize({width:390,height:844});
         await home.locator('#mobile-popup button').click();
