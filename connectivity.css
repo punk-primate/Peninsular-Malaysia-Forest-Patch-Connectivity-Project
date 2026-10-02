@@ -55,3 +55,10 @@ body.dark-mode .scenario-key { border-color:#ffa45e; }
     #connection-map-legend { bottom:32px; left:50px; max-width:min(245px,calc(100% - 70px)); font-size:11px; }
 }
 @media(max-width:600px) { #connectivity-toggle { padding:6px; font-size:10px; } }
+
+/* One persistent cue explains why patch inspection is paused while tools own the map. */
+#forest-editing-cue { position:absolute; z-index:4; top:65px; left:50%; transform:translateX(-50%); max-width:calc(100% - 32px); box-sizing:border-box; background:#fff; color:#23364e; border:1px solid #c6ccd5; border-radius:6px; padding:8px 12px; font:12px/1.4 Arial,sans-serif; box-shadow:0 2px 8px #0002; pointer-events:none; }
+#forest-editing-cue[hidden] { display:none !important; }
+.connection-marker.connection-marker-blocked { border-color:#a91f1f; color:#a91f1f; background:#fff1ed; }
+body.dark-mode #forest-editing-cue { background:#233449; color:#e7edf5; border-color:#536680; }
+@media(max-width:768px) { #forest-editing-cue { left:calc(50% + 19px); max-width:calc(100% - 70px); } }

@@ -128,7 +128,7 @@ initializeTierFilters();
     function initializeHoverPopups() {
         const hoverPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'custom-hover-popup' });
         map.on('mousemove', resolvedPatchId, (e) => {
-            if ((window._developmentScenario && window._developmentScenario.active) || (window._connectivityExplorer && window._connectivityExplorer.picking)) return;
+            if (window._forestMapInteraction && window._forestMapInteraction.active) { hoverPopup.remove(); return; }
             if (e.features && e.features.length > 0) {
                 map.getCanvas().style.cursor = 'pointer';
                 const p         = e.features[0].properties;
@@ -144,13 +144,17 @@ initializeTierFilters();
                     .addTo(map);
             }
         });
-        map.on('mouseleave', resolvedPatchId, () => { map.getCanvas().style.cursor = ''; hoverPopup.remove(); });
+        document.addEventListener('forestconnect:interaction', () => { if (window._forestMapInteraction.active) hoverPopup.remove(); });
+        map.on('mouseleave', resolvedPatchId, () => {
+            if (!(window._developmentScenario && window._developmentScenario.drawing) && !(window._connectivityExplorer && window._connectivityExplorer.picking)) map.getCanvas().style.cursor = '';
+            hoverPopup.remove();
+        });
     }
     function initializeClickInfoPanel() {
         const patchInfoContent = document.getElementById('patch-info-content');
         if (!patchInfoContent) return;
         map.on('click', resolvedPatchId, (e) => {
-            if ((window._developmentScenario && window._developmentScenario.active) || (window._connectivityExplorer && window._connectivityExplorer.picking)) return;
+            if (window._forestMapInteraction && window._forestMapInteraction.ownsClick(e)) return;
             if (e.features && e.features.length > 0) {
                 displayPatchInfo(e.features[0].properties);
                 map.flyTo({ center: e.lngLat, zoom: Math.max(map.getZoom(), 14), duration: 600 });
@@ -159,7 +163,9 @@ initializeTierFilters();
                     document.getElementById('toggle-sidebar-btn').click();
                 const infoPanel = document.getElementById('info-panel-section');
                 if (infoPanel && sidebar && !sidebar.classList.contains('collapsed'))
-                    setTimeout(() => infoPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                    setTimeout(() => {
+                        if (!(window._forestMapInteraction && window._forestMapInteraction.active)) infoPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 50);
             }
         });
     }
