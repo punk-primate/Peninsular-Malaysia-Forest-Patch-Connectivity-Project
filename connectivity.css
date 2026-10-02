@@ -1,64 +1,349 @@
-#connectivity-toggle { background:#254f86; color:#fff; border:0; border-radius:4px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; }
-#connectivity-toggle.active { background:#18335a; }
-#connectivity-panel, #connection-map-legend { --connection-text:#23364e; --connection-muted:#526277; --connection-surface:#fff; --connection-border:#c6ccd5; --connection-tint:#edf3fa; color:var(--connection-text); font-family:Arial,sans-serif; }
-#connectivity-panel[hidden], #connectivity-panel [hidden], #connection-map-legend[hidden] { display:none !important; }
-#connectivity-panel { font-size:13px; line-height:1.5; }
-#connectivity-panel h3 { color:#254f86; border-left-color:#254f86; }
-#connectivity-panel button { border:1px solid var(--connection-border); border-radius:4px; background:var(--connection-surface); padding:8px; color:var(--connection-text); font-size:12px; cursor:pointer; }
-#connectivity-panel button:disabled { opacity:.45; cursor:default; }
-#connectivity-panel button:focus-visible, #connection-flow:focus-visible { outline:2px solid #2563eb; outline-offset:2px; }
-#connectivity-panel button.selected { background:#254f86; color:#fff; }
-.connection-points, .connection-actions { display:flex; gap:6px; margin:10px 0; }
-.connection-points button, .connection-actions button { flex:1; }
-#connection-locations, .connection-detail { font-size:12px; color:var(--connection-muted); overflow-wrap:anywhere; }
-.connection-steps { padding-left:25px; margin:14px 0; color:var(--connection-muted); }
-.connection-steps li { padding:3px 0; }
-.connection-steps li[aria-current] { color:var(--connection-text); font-weight:700; }
-.connection-steps li.complete { color:var(--connection-text); }
-.connection-flow-toggle { display:flex; align-items:center; gap:6px; margin:12px 0; }
-#connection-status { padding:10px; border-radius:6px; background:var(--connection-tint); }
-#connection-status.connection-error, .connection-warning { color:#8b2c1a; background:#fff1ed; padding:8px; }
-#connectivity-panel .connection-primary { width:100%; background:#254f86; color:#fff; font-weight:700; }
-.connection-route-actions { display:flex; gap:6px; margin:12px 0; }
-.connection-route-actions button { flex:1; min-width:0; }
-#connectivity-panel .connection-development { width:100%; margin:12px 0 0; border-color:#a54b15; color:#8c3c0b; font-weight:600; }
-.connection-outcome { padding:12px; margin:14px 0; background:var(--connection-tint); border:1px solid var(--connection-border); border-radius:6px; }
-.connection-outcome strong { display:block; font-size:14px; }
-.connection-outcome p { margin:6px 0 0; }
-.connection-route-card { padding:12px; border:1px solid var(--connection-border); border-radius:6px; margin:10px 0; background:var(--connection-surface); }
-.connection-route-card h4 { display:flex; align-items:center; gap:8px; font-size:13px; margin:0; }
-.connection-route-card p { color:var(--connection-muted); font-size:12px; margin:6px 0; }
-.connection-metric { display:flex; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid var(--connection-border); }
-.connection-route-card .connection-metric { border-bottom:0; padding-bottom:0; }
-.connection-metric strong { text-align:right; white-space:nowrap; }
-.connection-key { display:inline-block; width:25px; height:0; flex-shrink:0; border-top:4px solid; }
-.existing-key { border-color:#7946bf; border-top-style:dashed; }
-.scenario-key { border-color:#d25b05; }
-#connectivity-panel details { margin-top:14px; font-size:12px; }
-#connectivity-panel summary { font-weight:600; cursor:pointer; }
-#development-panel [data-open-connectivity] { width:100%; margin:10px 0; }
-#connection-map-legend { position:absolute; z-index:4; bottom:32px; left:12px; max-width:270px; box-sizing:border-box; border:1px solid var(--connection-border); background:var(--connection-surface); border-radius:7px; padding:10px 12px; box-shadow:0 2px 8px #0002; font-size:12px; line-height:1.4; pointer-events:none; }
-#connection-map-legend > strong { display:block; margin-bottom:5px; }
-#connection-map-legend p { font-size:11px; color:var(--connection-muted); margin:7px 0 0; }
-.connection-legend-row { display:flex; align-items:center; gap:8px; margin-top:5px; }
-.connection-flow-key { display:inline-block; width:14px; height:12px; background:#206fd3; flex-shrink:0; }
-.connection-marker { width:26px; height:26px; display:flex; align-items:center; justify-content:center; color:#172b42; background:#fff; border:2px solid #172b42; border-radius:50%; box-shadow:0 0 0 2px #fff,0 2px 5px #0005; font:bold 14px Arial,sans-serif; pointer-events:none; }
-body.dark-mode #connectivity-panel, body.dark-mode #connection-map-legend { --connection-text:#e7edf5; --connection-muted:#c1cbda; --connection-surface:#233449; --connection-border:#536680; --connection-tint:#233449; }
-body.dark-mode #connectivity-panel h3 { color:#a7c8fb; border-left-color:#a7c8fb; }
-body.dark-mode #connectivity-panel button.selected { background:#254f86; }
-body.dark-mode #connectivity-panel .connection-development { color:#ffc49b; border-color:#b9825c; }
-body.dark-mode #connection-status.connection-error, body.dark-mode .connection-warning { background:#552c22; color:#ffc4a8; }
-body.dark-mode .existing-key { border-color:#b592f6; }
-body.dark-mode .scenario-key { border-color:#ffa45e; }
-@media(max-width:768px) {
-    #map-container #map-top-bar { left:calc(50% + 19px); gap:4px; max-width:calc(100% - 58px); padding:6px 8px; box-sizing:border-box; }
-    #connection-map-legend { bottom:32px; left:50px; max-width:min(245px,calc(100% - 70px)); font-size:11px; }
+#connectivity-toggle {
+    background: #254f86;
+    color: #fff;
+    border: 0;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
 }
-@media(max-width:600px) { #connectivity-toggle { padding:6px; font-size:10px; } }
+#connectivity-toggle.active {
+    background: #18335a;
+}
+#connectivity-panel,
+#connection-map-legend {
+    --connection-text: #23364e;
+    --connection-muted: #526277;
+    --connection-surface: #fff;
+    --connection-border: #c6ccd5;
+    --connection-tint: #edf3fa;
+    color: var(--connection-text);
+    font-family: Arial, sans-serif;
+}
+#connectivity-panel[hidden],
+#connectivity-panel [hidden],
+#connection-map-legend[hidden] {
+    display: none !important;
+}
+#connectivity-panel {
+    font-size: 13px;
+    line-height: 1.5;
+}
+#connectivity-panel h3 {
+    color: #254f86;
+    border-left-color: #254f86;
+}
+#connectivity-panel button {
+    border: 1px solid var(--connection-border);
+    border-radius: 4px;
+    background: var(--connection-surface);
+    padding: 8px;
+    color: var(--connection-text);
+    font-size: 12px;
+    cursor: pointer;
+}
+#connectivity-panel button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+#connectivity-panel button:focus-visible,
+#connection-flow:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+#connectivity-panel button.selected {
+    background: #254f86;
+    color: #fff;
+}
+.connection-points,
+.connection-actions {
+    display: flex;
+    gap: 6px;
+    margin: 10px 0;
+}
+.connection-points button,
+.connection-actions button {
+    flex: 1;
+}
+#connection-locations,
+.connection-detail {
+    font-size: 12px;
+    color: var(--connection-muted);
+    overflow-wrap: anywhere;
+}
+.connection-steps {
+    padding-left: 25px;
+    margin: 14px 0;
+    color: var(--connection-muted);
+}
+.connection-steps li {
+    padding: 3px 0;
+}
+.connection-steps li[aria-current] {
+    color: var(--connection-text);
+    font-weight: 700;
+}
+.connection-steps li.complete {
+    color: var(--connection-text);
+}
+.connection-flow-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 12px 0;
+}
+#connection-status {
+    padding: 10px;
+    border-radius: 6px;
+    background: var(--connection-tint);
+}
+#connection-status.connection-error,
+.connection-warning {
+    color: #8b2c1a;
+    background: #fff1ed;
+    padding: 8px;
+}
+#connectivity-panel .connection-primary {
+    width: 100%;
+    background: #254f86;
+    color: #fff;
+    font-weight: 700;
+}
+.connection-route-actions {
+    display: flex;
+    gap: 6px;
+    margin: 12px 0;
+}
+.connection-route-actions button {
+    flex: 1;
+    min-width: 0;
+}
+#connectivity-panel .connection-development {
+    width: 100%;
+    margin: 12px 0 0;
+    border-color: #a54b15;
+    color: #8c3c0b;
+    font-weight: 600;
+}
+.connection-outcome {
+    padding: 12px;
+    margin: 14px 0;
+    background: var(--connection-tint);
+    border: 1px solid var(--connection-border);
+    border-radius: 6px;
+}
+.connection-outcome strong {
+    display: block;
+    font-size: 14px;
+}
+.connection-outcome p {
+    margin: 6px 0 0;
+}
+.connection-route-card {
+    padding: 12px;
+    border: 1px solid var(--connection-border);
+    border-radius: 6px;
+    margin: 10px 0;
+    background: var(--connection-surface);
+}
+.connection-route-card h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    margin: 0;
+}
+.connection-route-card p {
+    color: var(--connection-muted);
+    font-size: 12px;
+    margin: 6px 0;
+}
+.connection-metric {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--connection-border);
+}
+.connection-route-card .connection-metric {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+.connection-metric strong {
+    text-align: right;
+    white-space: nowrap;
+}
+.connection-key {
+    display: inline-block;
+    width: 25px;
+    height: 0;
+    flex-shrink: 0;
+    border-top: 4px solid;
+}
+.existing-key {
+    border-color: #7946bf;
+    border-top-style: dashed;
+}
+.scenario-key {
+    border-color: #d25b05;
+}
+#connectivity-panel details {
+    margin-top: 14px;
+    font-size: 12px;
+}
+#connectivity-panel summary {
+    font-weight: 600;
+    cursor: pointer;
+}
+#development-panel [data-open-connectivity] {
+    width: 100%;
+    margin: 10px 0;
+}
+#connection-map-legend {
+    position: absolute;
+    z-index: 4;
+    bottom: 32px;
+    left: 12px;
+    max-width: 270px;
+    box-sizing: border-box;
+    border: 1px solid var(--connection-border);
+    background: var(--connection-surface);
+    border-radius: 7px;
+    padding: 10px 12px;
+    box-shadow: 0 2px 8px #0002;
+    font-size: 12px;
+    line-height: 1.4;
+    pointer-events: none;
+}
+#connection-map-legend > strong {
+    display: block;
+    margin-bottom: 5px;
+}
+#connection-map-legend p {
+    font-size: 11px;
+    color: var(--connection-muted);
+    margin: 7px 0 0;
+}
+.connection-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+}
+.connection-flow-key {
+    display: inline-block;
+    width: 14px;
+    height: 12px;
+    background: #206fd3;
+    flex-shrink: 0;
+}
+.connection-marker {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #172b42;
+    background: #fff;
+    border: 2px solid #172b42;
+    border-radius: 50%;
+    box-shadow:
+        0 0 0 2px #fff,
+        0 2px 5px #0005;
+    font:
+        bold 14px Arial,
+        sans-serif;
+    pointer-events: none;
+}
+body.dark-mode #connectivity-panel,
+body.dark-mode #connection-map-legend {
+    --connection-text: #e7edf5;
+    --connection-muted: #c1cbda;
+    --connection-surface: #233449;
+    --connection-border: #536680;
+    --connection-tint: #233449;
+}
+body.dark-mode #connectivity-panel h3 {
+    color: #a7c8fb;
+    border-left-color: #a7c8fb;
+}
+body.dark-mode #connectivity-panel button.selected {
+    background: #254f86;
+}
+body.dark-mode #connectivity-panel .connection-development {
+    color: #ffc49b;
+    border-color: #b9825c;
+}
+body.dark-mode #connection-status.connection-error,
+body.dark-mode .connection-warning {
+    background: #552c22;
+    color: #ffc4a8;
+}
+body.dark-mode .existing-key {
+    border-color: #b592f6;
+}
+body.dark-mode .scenario-key {
+    border-color: #ffa45e;
+}
+@media (max-width: 768px) {
+    #map-container #map-top-bar {
+        left: calc(50% + 19px);
+        gap: 4px;
+        max-width: calc(100% - 58px);
+        padding: 6px 8px;
+        box-sizing: border-box;
+    }
+    #connection-map-legend {
+        bottom: 32px;
+        left: 50px;
+        max-width: min(245px, calc(100% - 70px));
+        font-size: 11px;
+    }
+}
+@media (max-width: 600px) {
+    #connectivity-toggle {
+        padding: 6px;
+        font-size: 10px;
+    }
+}
 
 /* One persistent cue explains why patch inspection is paused while tools own the map. */
-#forest-editing-cue { position:absolute; z-index:4; top:65px; left:50%; transform:translateX(-50%); max-width:calc(100% - 32px); box-sizing:border-box; background:#fff; color:#23364e; border:1px solid #c6ccd5; border-radius:6px; padding:8px 12px; font:12px/1.4 Arial,sans-serif; box-shadow:0 2px 8px #0002; pointer-events:none; }
-#forest-editing-cue[hidden] { display:none !important; }
-.connection-marker.connection-marker-blocked { border-color:#a91f1f; color:#a91f1f; background:#fff1ed; }
-body.dark-mode #forest-editing-cue { background:#233449; color:#e7edf5; border-color:#536680; }
-@media(max-width:768px) { #forest-editing-cue { left:calc(50% + 19px); max-width:calc(100% - 70px); } }
+#forest-editing-cue {
+    position: absolute;
+    z-index: 4;
+    top: 65px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: calc(100% - 32px);
+    box-sizing: border-box;
+    background: #fff;
+    color: #23364e;
+    border: 1px solid #c6ccd5;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font:
+        12px/1.4 Arial,
+        sans-serif;
+    box-shadow: 0 2px 8px #0002;
+    pointer-events: none;
+}
+#forest-editing-cue[hidden] {
+    display: none !important;
+}
+.connection-marker.connection-marker-blocked {
+    border-color: #a91f1f;
+    color: #a91f1f;
+    background: #fff1ed;
+}
+body.dark-mode #forest-editing-cue {
+    background: #233449;
+    color: #e7edf5;
+    border-color: #536680;
+}
+@media (max-width: 768px) {
+    #forest-editing-cue {
+        left: calc(50% + 19px);
+        max-width: calc(100% - 70px);
+    }
+}
