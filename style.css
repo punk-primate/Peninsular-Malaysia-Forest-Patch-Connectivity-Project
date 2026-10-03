@@ -98,25 +98,42 @@
 
 
 .patch-forest-name {
-    margin: 0 0 14px;
-    padding: 10px 12px;
-    border: 1px solid currentColor;
-    border-radius: 3px;
-    font-size: 0.85em;
+    margin: 0 0 10px;
+    font-size: 0.8em;
     line-height: 1.5;
     color: inherit;
 }
 .patch-forest-name:empty {
     display: none;
 }
+.patch-forest-name summary {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    list-style: none;
+}
+.patch-forest-name summary::-webkit-details-marker {
+    display: none;
+}
+.patch-forest-name summary::before {
+    content: '\25B8';
+    flex: 0 0 auto;
+}
+.patch-forest-name details[open] > summary::before {
+    transform: rotate(90deg);
+}
+.forest-name-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .patch-forest-name p {
     margin: 4px 0;
 }
-.forest-name-heading {
-    font-weight: 700;
-}
 .forest-name-list {
-    margin: 6px 0;
+    margin: 8px 0;
     padding: 0;
     list-style: none;
 }

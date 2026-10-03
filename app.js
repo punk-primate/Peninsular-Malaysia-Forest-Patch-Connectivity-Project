@@ -650,7 +650,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let h =
             '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">';
-        h += '<section id="patch-forest-name" class="patch-forest-name" aria-label="Mapped forest name" aria-live="polite"></section>';
         const tierDisplay =
             (typeof TIER_DISPLAY_NAMES !== 'undefined' && TIER_DISPLAY_NAMES[tier]) ||
             tier ||
@@ -698,6 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 : 'Not available') +
             '</strong></div>';
         h += '</div>';
+        h += '<section id="patch-forest-name" class="patch-forest-name" aria-label="Mapped forest name" aria-live="polite"></section>';
         h +=
             '<details><summary style="cursor:pointer;font-weight:700;font-size:0.87em;color:inherit">Show technical details</summary>';
 

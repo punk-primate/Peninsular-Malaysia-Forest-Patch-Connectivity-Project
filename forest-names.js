@@ -56,19 +56,26 @@
         const panel = document.getElementById('patch-forest-name');
         if (!panel) return;
         panel.replaceChildren();
-        paragraph(panel, 'Loading mapped forest name...', 'forest-name-status');
+        paragraph(panel, 'Finding forest name...', 'forest-name-status');
         const matches = await lookup(event.detail);
         if (token !== selection || !panel.isConnected) return;
         panel.replaceChildren();
 
         if (matches === null) {
-            paragraph(panel, 'Forest names unavailable', 'forest-name-heading');
-            paragraph(panel, 'Name data could not be loaded. Select the patch again to retry.');
+            paragraph(panel, 'Forest name unavailable', 'forest-name-status');
         } else if (!matches.length) {
-            paragraph(panel, 'No mapped forest name', 'forest-name-heading');
-            paragraph(panel, 'No matching named boundary was found. Some forests are not yet named or mapped.');
+            paragraph(panel, 'Forest name not mapped', 'forest-name-status');
         } else {
-            paragraph(panel, matches.length === 1 ? 'Mapped forest name' : 'Named forests overlapping this patch', 'forest-name-heading');
+            const details = document.createElement('details');
+            const summary = document.createElement('summary');
+            const label = document.createElement('span');
+            label.className = 'forest-name-label';
+            label.textContent = 'Forest name: ' + matches[0].name +
+                (matches.length > 1 ? ' (+' + (matches.length - 1) + ')' : '');
+            label.title = label.textContent;
+            summary.append(label);
+            details.append(summary);
+            panel.append(details);
             const list = document.createElement('ul');
             list.className = 'forest-name-list';
             for (const match of matches) {
@@ -91,12 +98,12 @@
                 item.append(sources);
                 list.append(item);
             }
-            panel.append(list);
-            paragraph(panel, 'Names describe mapped overlaps, not confirmed legal boundaries.', 'forest-name-note');
+            details.append(list);
+            paragraph(details, 'Names describe mapped overlaps, not confirmed legal boundaries.', 'forest-name-note');
         }
 
-        if (matches !== null) {
-            const source = paragraph(panel, 'Name source: ', 'forest-name-note');
+        if (matches && matches.length) {
+            const source = paragraph(panel.children[0], 'Name source: ', 'forest-name-note');
             const link = document.createElement('a');
             link.href = 'https://www.openstreetmap.org/copyright';
             link.target = '_blank';
