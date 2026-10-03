@@ -31,7 +31,7 @@ The Patch Structural Quality Index (PSQI) combines five metrics, normalised with
 | Contiguity | 0.10 | Higher |
 | Perimeter-area ratio | 0.10 | Lower |
 
-Lower PSQI values indicate more favourable patch structure. The six tiers use within-landscape percentile boundaries at 1%, 15%, 25%, 50% and 75%. Tier 1 also applies a minimum patch-area threshold of 30 ha.
+Lower PSQI values indicate more favourable patch structure. The six tiers use within-landscape percentile boundaries at 1%, 15%, 25%, 50% and 75%. Tier 1 also applies a minimum patch-area threshold of 30 ha. Tier titles refer to this structural ranking, rather than an assessment of forest age, species richness or wildlife occupancy.
 
 Land-cover inputs include Dynamic World V1 (2025), the oil-palm extent dataset of Danylo et al. (2021), and MyGDI roads (2021). Baseline connectivity surfaces come from the associated Omniscape analysis.
 

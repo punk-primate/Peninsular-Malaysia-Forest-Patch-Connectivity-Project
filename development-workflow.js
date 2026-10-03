@@ -1,4 +1,4 @@
-/* One guided interface around the existing forest and route calculations. */
+/* Guided development and route assessment. */
 (function () {
     'use strict';
     document.addEventListener('DOMContentLoaded', function () {
@@ -155,7 +155,7 @@
             } else sync();
         });
         sync();
-        // A homepage task link opens the workflow after the map's initial setup.
+        // A development task link opens the workflow after the map is ready.
         if (new URLSearchParams(location.search).get('task') === 'development') {
             const map = window._mapInstance;
             if (map)

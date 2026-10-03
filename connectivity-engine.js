@@ -1,4 +1,4 @@
-/* Native-grid least-cost paths. No terrain, resistance or flow values are invented. */
+/* Least-cost routing on the supplied native resistance grid. */
 (function (root, factory) {
     const api = factory(
         typeof module === 'object' && module.exports

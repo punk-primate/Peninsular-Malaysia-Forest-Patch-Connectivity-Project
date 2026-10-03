@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     function initializeConnectorLayer() {
-        // Original nearest-neighbour connectors are superseded by native-grid paths.
+        // Hide legacy connector layers from the basemap style.
         (map.getStyle().layers || []).forEach((layer) => {
             if (layer.id === CONNECTOR_LAYER_ID || /connector/i.test(layer.id)) {
                 try {
@@ -589,61 +589,47 @@ document.addEventListener('DOMContentLoaded', () => {
         const biomass = properties['biomass_mgha'];
 
         const tierDesc = {
-            'Tier 1 (Primary forest)':
-                'One of the more structurally important forest patches in this landscape. Large enough to support a high level of biodiversity, with substantial interior area protected from edge effects.',
-            'Tier 2 (Established forest)':
-                'A high-quality patch that could function as a key hub or stepping stone in a potential movement network. Important for regional habitat connectivity.',
-            'Tier 3 (Functional fragments)':
-                'A moderately connected forest fragment that could play a bridging role between larger patches in the landscape.',
-            'Tier 4 (Vulnerable fragments)':
-                'A patch with significant edge exposure relative to its size. Functionally important but vulnerable to further habitat loss or degradation.',
-            'Tier 5 (Marginal fragments)':
-                'A small, isolated forest fragment with limited connectivity potential to the surrounding landscape.',
-            'Tier 6 (Remnant patches)':
-                'A highly isolated micro-patch or remnant forest fragment. Generally too small and disconnected to support resident populations, but may provide temporary shelter.',
+            'Tier 1 (Core Habitat)':
+                'Among the patches with the most favourable structural scores in this landscape, with a total area of at least 30 hectares. The tier describes patch structure; it does not establish forest age, species richness or occupancy.',
+            'Tier 2 (Major Stepping Stones)':
+                'A patch with a relatively favourable structural score in this landscape. It may merit assessment as habitat or as part of a potential movement network.',
+            'Tier 3 (Connected Fragments)':
+                'A patch in the next structural tier below Tier 2. Its role in connecting forest areas depends on the surrounding landscape and the species being considered.',
+            'Tier 4 (Vulnerable Edge Fragments)':
+                'A patch with a less favourable combined structural score than Tiers 1 to 3. The individual metrics help show whether area, shape or isolation contributes to its score.',
+            'Tier 5 (Isolated Fragments)':
+                'A patch towards the less favourable end of the structural ranking in this landscape. Its habitat value and possible role in restoration need local assessment.',
+            'Tier 6 (Isolated Micro Patches)':
+                'A patch in the least favourable structural tier in this landscape. The classification does not establish whether wildlife is present or whether the patch can support a population.',
         };
         const connDesc = {
-            High: 'This patch has high connectivity potential. The surrounding landscape presents less barriers to movement to neighbouring patches, suitable for a corridor.',
-            Moderate:
-                'This patch has moderate connectivity potential. A corridor to neighbouring patches is possible but depends on the routes available through the landscape.',
-            Low: 'This patch has low connectivity potential. The surrounding landscape presents significant resistance to movement between patches, even with a corridor in place.',
-            Barrier:
-                'This patch is surrounded by an impermeable barrier zone such as dense urban development. Movement to neighbouring patches is effectively impossible.',
+            High: 'This patch falls in the high relative connectivity class for this landscape. The model indicates greater potential movement flow, but a usable corridor still needs assessment on the ground.',
+            Moderate: 'This patch falls in the moderate relative connectivity class for this landscape. Potential connections depend on the routes, habitat conditions and species involved.',
+            Low: 'This patch falls in the low relative connectivity class for this landscape. The model indicates lower potential movement flow; this does not rule out local wildlife movement.',
+            Barrier: 'This patch falls in the lowest connectivity class, labelled Barrier. This is a model classification, not confirmation that wildlife movement is impossible.',
             'No Data': 'Connectivity data is not available for this patch.',
         };
         const metricInfo = {
             area: 'The total area of the forest patch in hectares.',
-            core: 'The area of the patch buffered from external disturbance. The most ecologically stable part of the patch.',
-            contig: 'Compactness of the patch, 0–1. Higher = more solid shape.',
+            core: 'The interior area remaining after applying the edge buffer used in the analysis. This is a geometric measure, not a direct assessment of habitat condition.',
+            contig: 'Contiguity of cells within the patch, on a scale from 0 to 1. Higher values indicate a more contiguous patch.',
             para: 'Perimeter-to-area ratio. Higher = more irregular or elongated shape.',
             enn: 'Straight-line distance to the nearest adjacent forest patch, in metres.',
-            flow: 'Mean composite current flow, 0–300 scale. Higher = more central to the connectivity network.',
-            canopy: 'Mean canopy height across the patch in metres, derived from the ETH Global Canopy Height Model (2020) at 10 m resolution. Higher values indicate taller.',
+            flow: 'Mean modelled composite current flow within the patch. Higher values indicate greater relative potential movement flow in the model.',
+            canopy: 'Mean canopy height across the patch in metres, derived from the ETH Global Canopy Height Model (2020) at 10 m resolution. Higher values indicate taller canopy.',
             elev: 'Mean elevation above sea level in metres, derived from the SRTM 30 m digital elevation model.',
-            slope: 'Mean terrain slope within the patch in degrees, derived from SRTM. Steeper terrain can influence edge permeability and movement costs for wildlife.',
+            slope: 'Mean terrain slope within the patch in degrees, derived from SRTM. Higher values indicate steeper terrain.',
             biomass:
-                'Mean aboveground biomass in megagrams per hectare (Mg/ha), derived from the ESA CCI Biomass map (v6.0, 2022) at 100 m resolution. Higher values reflect greater forest maturity and carbon storage capacity.',
+                'Mean aboveground biomass in megagrams per hectare (Mg/ha), derived from the ESA CCI Biomass map (v6.0, 2022) at 100 m resolution. Higher values indicate more estimated aboveground biomass per hectare.',
         };
 
         const ennNum = typeof enn === 'number' ? enn : parseFloat(enn);
         let ennMsg = 'Distance data not available.';
-        if (!isNaN(ennNum)) {
-            if (ennNum <= 30) ennMsg = 'Directly adjacent to another forest area.';
-            else if (ennNum <= 800)
-                ennMsg =
-                    'The nearest patch is ' +
-                    Math.round(ennNum) +
-                    ' m away, within typical dispersal range for arboreal animals.';
-            else if (ennNum <= 2000)
-                ennMsg =
-                    'The nearest patch is ' +
-                    Math.round(ennNum) +
-                    ' m away, beyond typical single-generation dispersal distance for most arboreal animals.';
-            else
-                ennMsg =
-                    'The nearest patch is ' +
-                    Math.round(ennNum) +
-                    ' m away. This patch is functionally isolated at the landscape scale.';
+        if (Number.isFinite(ennNum) && ennNum >= 0) {
+            ennMsg =
+                'The nearest patch is ' +
+                Math.round(ennNum).toLocaleString('en-GB') +
+                ' m away in a straight line. This distance does not show whether the gap is passable for wildlife.';
         }
 
         const tc = TIER_COLORS && TIER_COLORS[tier] ? TIER_COLORS[tier] : '#555';
@@ -744,7 +730,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 properties[PERIMETER_AREA_RATIO_ATTRIBUTE].toFixed(5) +
                 infoBtn('para') +
                 '</li>';
-        if (!isNaN(ennNum))
+        if (Number.isFinite(ennNum) && ennNum >= 0)
             h +=
                 '<li><strong>ENN distance:</strong> ' +
                 Math.round(ennNum) +

@@ -73,11 +73,10 @@ const CONNECTIVITY_COLORS = {
 
 let CURRENT_COLOR_MODE = 'tier';
 
-// --- CONNECTOR LAYER CONFIGURATION ---
+// --- LEGACY CONNECTOR LAYER ---
 const CONNECTOR_LAYER_ID = 'Klang_Valley_Connectors';
 
 // --- MAP INITIAL VIEW ---
 const INITIAL_CENTER = [101.58, 3.05];
 const INITIAL_ZOOM = 11;
 
-// Complete polygons used for development scenario calculations.

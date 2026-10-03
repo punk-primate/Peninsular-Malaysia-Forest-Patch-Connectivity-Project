@@ -431,7 +431,7 @@
                 el.style.display = 'none';
             });
             get('basemap-toggle').disabled = true;
-            // Existing illustrative corridors must not be confused with scenario outputs.
+            // Hide legacy corridor controls during development assessment.
             const corridorButton = get('corridor-toggle-fab');
             if (corridorButton && corridorButton.classList.contains('active')) {
                 corridorButton.click();

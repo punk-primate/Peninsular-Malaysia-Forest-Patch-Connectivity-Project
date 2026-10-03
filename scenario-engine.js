@@ -1,4 +1,4 @@
-/* Development footprint geometry, shared by the browser worker and Node tests.
+/* Development footprint geometry and forest fragmentation.
  * Turf 6.5.0: geodesic area and metre buffers. polygon-clipping 0.15.7:
  * union/intersection/difference, including holes and multipart polygons.
  */
