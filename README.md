@@ -60,4 +60,4 @@ The site uses Mapbox GL JS 3.1.2. Geometry operations use Turf 6.5.0 and polygon
 
 Benjamin Galea: [email](mailto:bengalea97@gmail.com) · [ResearchGate](https://www.researchgate.net/profile/Benjamin-Galea)
 
-Patch data and connectivity outputs are made available for non-commercial research and educational use. Please credit the author and cite the associated research when using the data. Third-party libraries retain the licences provided in `vendor/`.
+Patch data and connectivity outputs are made available for non-commercial research and educational use. Please credit the author and cite the associated research when using the data.
