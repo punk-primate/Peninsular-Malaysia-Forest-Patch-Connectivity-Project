@@ -39,22 +39,7 @@ Development calculations assume complete forest clearance inside a single footpr
 
 The repository contains the website and its prepared map data. Native-grid metadata in `data/connectivity/` records the source files, coordinate systems and input hashes.
 
-## Source files
-
-| Files | Purpose |
-|---|---|
-| `index.html` | Homepage |
-| `kuantan-map.html`, `klang-valley-map.html` | Map pages and help |
-| `app-kuantan.js`, `app.js` | Map interaction and patch information |
-| `config-kuantan.js`, `config.js` | Landscape configuration |
-| `features.js` | Report cards and shared interaction handling |
-| `development*`, `scenario*` | Footprint workflow and forest geometry |
-| `connectivity*` | Resistance routing, flow exposure and route display |
-| `map-tools.js`, `map-tools.css` | Comparison, measurement, filters and map export |
-| `data/` | Compressed patch boundaries and prepared native grids |
-| `vendor/` | Pinned browser libraries and their licences |
-
-The site uses Mapbox GL JS 3.1.2. Geometry operations use Turf 6.5.0 and polygon-clipping 0.15.7; native-coordinate conversion uses Proj4js 2.12.1. Map drawing uses Mapbox GL Draw 1.4.3.
+The site uses Mapbox GL JS 3.1.2. Geometry operations use Turf 6.5.0 and polygon-clipping 0.15.7. Native-coordinate conversion uses Proj4js 2.12.1. Map drawing uses Mapbox GL Draw 1.4.3.
 
 ## Contact and use
 
