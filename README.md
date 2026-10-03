@@ -37,6 +37,8 @@ Land-cover inputs include Dynamic World V1 (2025), the oil-palm extent dataset o
 
 Development calculations assume complete forest clearance inside a single footprint. Forest loss and remaining fragments use complete polygons, independently of rendered map tiles. Route comparison treats resistance cells touched by development as barriers. These are modelled potential connections, not observations of wildlife movement.
 
+Forest names use named forest and reserve boundaries from OpenStreetMap, dated 2 October 2026. Names are matched by polygon overlap of at least 100 m² and 1% of the patch area. Boundaries sharing a name are combined before calculating coverage. Generic vegetation labels and obvious development or residential labels are excluded. A patch may overlap several named forests; names do not establish legal reserve status. The name lookup files in `data/forest-names/` are derived from © OpenStreetMap contributors and are available under the [Open Database License (ODbL)](https://www.openstreetmap.org/copyright). Name coverage is incomplete.
+
 The repository contains the website and its prepared map data. Native-grid metadata in `data/connectivity/` records the source files, coordinate systems and input hashes.
 
 The site uses Mapbox GL JS 3.1.2. Geometry operations use Turf 6.5.0 and polygon-clipping 0.15.7. Native-coordinate conversion uses Proj4js 2.12.1. Map drawing uses Mapbox GL Draw 1.4.3.

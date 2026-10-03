@@ -142,129 +142,12 @@
         return new Promise(function (resolve) {
             var lat = lngLat ? lngLat.lat : null;
             var lng = lngLat ? lngLat.lng : null;
-            fetchForestName(lat, lng).then(function (name) {
+            window._forestNames.lookup(p).then(function (matches) {
+                var name = window._forestNames.reportLabel(matches);
                 renderCard(p, lat, lng, geometry, name);
                 resolve();
             });
         });
-    }
-
-    function fetchForestName(lat, lng) {
-        return new Promise(function (resolve) {
-            if (!lat || !lng) {
-                resolve(null);
-                return;
-            }
-            var q1 =
-                '[out:json][timeout:10];is_in(' +
-                lat +
-                ',' +
-                lng +
-                ')->.a;(' +
-                'way(pivot.a)["landuse"="forest"];relation(pivot.a)["landuse"="forest"];' +
-                'way(pivot.a)["leisure"="nature_reserve"];relation(pivot.a)["leisure"="nature_reserve"];' +
-                'way(pivot.a)["boundary"="protected_area"];relation(pivot.a)["boundary"="protected_area"];' +
-                ');out tags;';
-            overpass(q1)
-                .then(function (data) {
-                    var n = extractName(data);
-                    if (n) {
-                        resolve(n);
-                        return Promise.resolve(null);
-                    }
-                    var q2 =
-                        '[out:json][timeout:10];(' +
-                        'way["landuse"="forest"](around:2000,' +
-                        lat +
-                        ',' +
-                        lng +
-                        ');' +
-                        'relation["landuse"="forest"](around:2000,' +
-                        lat +
-                        ',' +
-                        lng +
-                        ');' +
-                        'way["leisure"="nature_reserve"](around:2000,' +
-                        lat +
-                        ',' +
-                        lng +
-                        ');' +
-                        'relation["leisure"="nature_reserve"](around:2000,' +
-                        lat +
-                        ',' +
-                        lng +
-                        ');' +
-                        'way["boundary"="protected_area"](around:2000,' +
-                        lat +
-                        ',' +
-                        lng +
-                        ');' +
-                        'relation["boundary"="protected_area"](around:2000,' +
-                        lat +
-                        ',' +
-                        lng +
-                        ');' +
-                        ');out tags;';
-                    return overpass(q2);
-                })
-                .then(function (data) {
-                    if (!data) return Promise.resolve(null);
-                    var n = extractName(data);
-                    if (n) {
-                        resolve(n);
-                        return Promise.resolve(null);
-                    }
-                    return fetch(
-                        'https://nominatim.openstreetmap.org/reverse?lat=' +
-                            lat +
-                            '&lon=' +
-                            lng +
-                            '&format=json&zoom=14&addressdetails=1',
-                        {
-                            headers: {
-                                'Accept-Language': 'en',
-                                'User-Agent': 'myforestconnect.online',
-                            },
-                        }
-                    )
-                        .then(function (r) {
-                            return r.json();
-                        })
-                        .then(function (d) {
-                            var a = d.address || {};
-                            var nm =
-                                d.name ||
-                                a.nature_reserve ||
-                                a.forest ||
-                                a.park ||
-                                a.suburb ||
-                                a.village ||
-                                a.town ||
-                                null;
-                            resolve(nm ? nm.toUpperCase() : null);
-                        });
-                })
-                .catch(function () {
-                    resolve(null);
-                });
-        });
-    }
-
-    function overpass(q) {
-        return fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q))
-            .then(function (r) {
-                return r.json();
-            })
-            .catch(function () {
-                return null;
-            });
-    }
-    function extractName(data) {
-        if (!data || !data.elements || !data.elements.length) return null;
-        var el = data.elements.find(function (e) {
-            return e.tags && e.tags.name;
-        });
-        return el ? el.tags.name.toUpperCase() : null;
     }
 
     var TIER_ORDER = [
@@ -492,7 +375,7 @@
         ctx.strokeStyle = L;
         ctx.lineWidth = 1;
         ctx.strokeRect(PAD, PLY, W - PAD * 2, 32);
-        var pn = forestName ? '[ ' + forestName + ' ]' : '[ LOCATION DATA UNAVAILABLE ]';
+        var pn = forestName ? '[ ' + forestName + ' ]' : '[ FOREST NAME UNAVAILABLE ]';
         ctx.fillStyle = B;
         ctx.font = F(11);
         while (ctx.measureText(pn).width > W - PAD * 2 - 24 && pn.length > 10)
@@ -724,6 +607,11 @@
             ctx.font = F(10);
             var dis = 'FOR REFERENCE ONLY';
             ctx.fillText(dis, W - PAD - ctx.measureText(dis).width, FY + 22);
+            if (forestName) {
+                ctx.fillStyle = B;
+                ctx.font = F(8);
+                ctx.fillText('NAME: (C) OPENSTREETMAP CONTRIBUTORS / ODbL / MAPPED OVERLAP', PAD, FY + 42);
+            }
         }
 
         // load QR then download

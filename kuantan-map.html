@@ -8,7 +8,7 @@
 
         <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet" />
         <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
-        <link rel="stylesheet" href="style.css" />
+        <link rel="stylesheet" href="style.css?v=20261003-forest-names" />
         <link rel="stylesheet" href="vendor/mapbox-gl-draw-1.4.3.css" />
         <link rel="stylesheet" href="development.css?v=20261002-map-tools" />
         <link rel="stylesheet" href="connectivity.css?v=20261002-map-tools" />
@@ -1148,6 +1148,14 @@
                     metric has a small "i" button you can click for a plain-language explanation.
                 </p>
 
+                <p>
+                    Where available, the panel also shows forest names from OpenStreetMap and how
+                    much of the patch each named boundary covers. A patch can overlap several named
+                    forests. Select <strong>View mapped boundary</strong> to see the source. These
+                    names do not confirm legal reserve boundaries; an unnamed patch can still be
+                    forest. The same matches are used on downloaded report cards.
+                </p>
+
                 <h3>Test a development: draw and calculate</h3>
                 <p>
                     Click <strong>Test a development</strong> to assess a proposed road, building
@@ -1305,9 +1313,10 @@
             </div>
         </div>
 
-        <script src="features.js?v=20261002-map-tools"></script>
+        <script src="features.js?v=20261003-forest-names"></script>
         <script src="config-kuantan.js"></script>
-        <script src="app-kuantan.js?v=20261002-map-tools"></script>
+        <script src="forest-names.js?v=20261003"></script>
+        <script src="app-kuantan.js?v=20261003-forest-names"></script>
         <script src="development.js?v=20261002-map-tools"></script>
         <script src="connectivity.js?v=20261002-map-tools"></script>
         <script src="development-workflow.js?v=20261002-map-tools"></script>
