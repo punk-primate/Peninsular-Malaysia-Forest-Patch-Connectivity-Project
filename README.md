@@ -37,7 +37,7 @@ Land-cover inputs include Dynamic World V1 (2025), the oil-palm extent dataset o
 
 Development calculations assume complete forest clearance inside a single footprint. Forest loss and remaining fragments use complete polygons, independently of rendered map tiles. Route comparison treats resistance cells touched by development as barriers. These are modelled potential connections, not observations of wildlife movement.
 
-Forest names use named forest and reserve boundaries from OpenStreetMap, dated 2 October 2026. Names are matched by polygon overlap of at least 100 m² and 1% of the patch area. Boundaries sharing a name are combined before calculating coverage. Generic vegetation labels and obvious development or residential labels are excluded. A patch may overlap several named forests; names do not establish legal reserve status. The name lookup files in `data/forest-names/` are derived from © OpenStreetMap contributors and are available under the [Open Database License (ODbL)](https://www.openstreetmap.org/copyright). Name coverage is incomplete.
+Forest names use named forest and reserve boundaries from OpenStreetMap, dated 2 October 2026. Names are matched by polygon overlap of at least 100 m² and 1% of the patch area. Boundaries sharing a name are combined before calculating coverage. Generic vegetation labels and obvious development or residential labels are excluded. A patch may overlap several named forests; names do not establish legal reserve status. The name lookup files in `data/forest-names/` are derived from © OpenStreetMap contributors and are available under the [Open Database License (ODbL)](https://www.openstreetmap.org/copyright). Name coverage is incomplete (i.e., names are not available for every forest patch).
 
 The repository contains the website and its prepared map data. Native-grid metadata in `data/connectivity/` records the source files, coordinate systems and input hashes.
 
@@ -45,6 +45,6 @@ The site uses Mapbox GL JS 3.1.2. Geometry operations use Turf 6.5.0 and polygon
 
 ## Contact and use
 
-Benjamin Galea: [email](mailto:bengalea97@gmail.com) · [ResearchGate](https://www.researchgate.net/profile/Benjamin-Galea)
+Benjamin Galea: [email](mailto:bengalea.eco@gmail.com) · [ResearchGate](https://www.researchgate.net/profile/Benjamin-Galea)
 
 Patch data and connectivity outputs are made available for non-commercial research and educational use. Please credit the author and cite the associated research when using the data.
