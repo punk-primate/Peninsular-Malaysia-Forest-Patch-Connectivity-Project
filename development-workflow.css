@@ -2,6 +2,7 @@
 #connectivity-toggle {
     display: none !important;
 }
+
 #development-workflow-toggle {
     background: #8b1a1a;
     color: #fff;
@@ -12,23 +13,26 @@
     font-weight: 600;
     cursor: pointer;
 }
+
 #development-workflow-toggle.active {
     background: #5b1010;
 }
+
 #development-workflow {
     color: #23364e;
-    font:
-        13px/1.5 Arial,
-        sans-serif;
+    font: 13px/1.5 Arial, sans-serif;
 }
+
 #development-workflow[hidden],
 #development-workflow [hidden] {
     display: none !important;
 }
+
 #development-workflow h3 {
     color: #8b1a1a;
     border-left-color: #8b1a1a;
 }
+
 #development-workflow button {
     cursor: pointer;
     border: 1px solid #c6ccd5;
@@ -38,15 +42,18 @@
     color: #23364e;
     font-size: 12px;
 }
+
 #development-workflow button:disabled {
     opacity: 0.5;
     cursor: default;
 }
+
 #development-workflow button:focus-visible,
 #development-workflow-toggle:focus-visible {
     outline: 2px solid #2563eb;
     outline-offset: 2px;
 }
+
 .workflow-steps {
     list-style: none;
     padding: 0;
@@ -54,30 +61,36 @@
     display: grid;
     gap: 6px;
 }
+
 .workflow-steps button {
     width: 100%;
     text-align: left;
 }
+
 .workflow-steps span {
     float: right;
     font-size: 11px;
 }
+
 #development-workflow .workflow-steps [aria-current='step'] {
     background: #8b1a1a;
     color: #fff;
     border-color: #8b1a1a;
     font-weight: 700;
 }
+
 #workflow-guidance {
     padding: 10px;
     background: #edf3fa;
     border-radius: 6px;
 }
+
 #workflow-content > .sidebar-section {
     padding: 0;
     margin: 0;
     border: 0;
 }
+
 #workflow-content #development-panel > h3,
 #workflow-content .development-intro,
 #workflow-content .development-actions,
@@ -86,44 +99,27 @@
 #workflow-content .connection-steps {
     display: none;
 }
+
 #development-workflow[data-step='draw'] .development-assumption {
     display: none;
 }
+
 #workflow-map-view,
 .workflow-actions {
     display: flex;
     gap: 6px;
     margin: 12px 0;
 }
+
 #workflow-map-view button,
 .workflow-actions button {
     flex: 1;
 }
+
 #development-workflow #workflow-map-view button.selected {
     background: #254f86;
     color: #fff;
     border-color: #254f86;
-}
-body.dark-mode #development-workflow {
-    color: #e7edf5;
-}
-body.dark-mode #development-workflow h3 {
-    color: #ffb7ae;
-    border-color: #ffb7ae;
-}
-body.dark-mode #development-workflow button {
-    background: #233449;
-    color: #e7edf5;
-    border-color: #536680;
-}
-body.dark-mode #workflow-guidance {
-    background: #233449;
-}
-@media (max-width: 600px) {
-    #development-workflow-toggle {
-        padding: 6px;
-        font-size: 10px;
-    }
 }
 
 #development-workflow nav {
@@ -133,11 +129,9 @@ body.dark-mode #workflow-guidance {
     background: #fff;
     padding: 2px 0;
 }
+
 #workflow-content #connectivity-panel > p:first-of-type {
     display: none;
-}
-body.dark-mode #development-workflow nav {
-    background: #1e1e1e;
 }
 
 .development-draw-help {
@@ -146,14 +140,164 @@ body.dark-mode #development-workflow nav {
     background: #edf3fa;
     border-radius: 4px;
 }
+
 .development-width-help {
     display: block;
     font-size: 12px;
     font-weight: 400;
     margin-top: 5px;
 }
+
+.workflow-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+#development-workflow .workflow-heading h3 {
+    margin: 0;
+}
+
+#development-workflow #workflow-methods-open {
+    padding: 5px 8px;
+    background: #f4f0d8;
+    color: #213d2c;
+    border: 1px solid #526b42;
+    border-radius: 2px;
+    font-size: 11px;
+}
+
+#workflow-methods {
+    box-sizing: border-box;
+    width: min(640px, calc(100vw - 32px));
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 0 22px 22px;
+    background: #f7f3e3;
+    color: #213d2c;
+    border: 2px solid #526b42;
+    border-radius: 3px;
+    font: 14px/1.6 Arial, sans-serif;
+}
+
+#workflow-methods::backdrop {
+    background: rgba(0, 0, 0, 0.55);
+}
+
+#workflow-methods .workflow-methods-heading {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 16px 0 12px;
+    background: inherit;
+    border-bottom: 1px solid #a8b28d;
+}
+
+#workflow-methods h4 {
+    margin: 0;
+    color: inherit;
+    font-size: 18px;
+    line-height: 1.35;
+}
+
+#workflow-methods p {
+    margin: 0 0 16px;
+    color: inherit;
+}
+
+#workflow-methods .workflow-formula {
+    padding: 12px;
+    background: #e9e6d0;
+    border-left: 3px solid #526b42;
+    overflow-wrap: anywhere;
+}
+
+#workflow-methods form {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+#development-workflow #workflow-methods button {
+    background: #f4f0d8;
+    color: #213d2c;
+    border-color: #526b42;
+    border-radius: 2px;
+}
+
+#workflow-methods .workflow-methods-footer {
+    text-align: right;
+}
+
+body.dark-mode #development-workflow {
+    color: #e7edf5;
+}
+
+body.dark-mode #development-workflow h3 {
+    color: #ffb7ae;
+    border-color: #ffb7ae;
+}
+
+body.dark-mode #development-workflow button {
+    background: #233449;
+    color: #e7edf5;
+    border-color: #536680;
+}
+
+body.dark-mode #workflow-guidance {
+    background: #233449;
+}
+
+body.dark-mode #development-workflow nav {
+    background: #1e1e1e;
+}
+
 body.dark-mode .development-draw-help {
     background: #233449;
     border-color: #8db8ef;
     color: #e7edf5;
+}
+
+body.dark-mode #workflow-methods {
+    background: #1e3024;
+    color: #f1eed5;
+    border-color: #a5b878;
+}
+
+body.dark-mode #workflow-methods .workflow-methods-heading {
+    border-color: #657a53;
+}
+
+body.dark-mode #workflow-methods .workflow-formula {
+    background: #2b4230;
+    border-color: #a5b878;
+}
+
+body.dark-mode #development-workflow #workflow-methods-open,
+body.dark-mode #development-workflow #workflow-methods button {
+    background: #314635;
+    color: #f1eed5;
+    border-color: #a5b878;
+}
+
+@media (max-width: 600px) {
+    #development-workflow-toggle {
+        padding: 6px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 400px) {
+    #workflow-methods {
+        padding: 0 14px 14px;
+    }
+
+    #workflow-methods h4 {
+        font-size: 16px;
+    }
 }
