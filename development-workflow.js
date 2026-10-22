@@ -81,7 +81,7 @@
                 </p>
 
                 <p>
-                    The results report the development area, forest
+                    The results show the development area, forest
                     removed, forest remaining within affected patches,
                     patches affected, patches split, and patches completely
                     removed. Additional fragments are counted relative to
